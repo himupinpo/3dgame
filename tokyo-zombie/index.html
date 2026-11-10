@@ -3065,7 +3065,7 @@ function setupMenus() {
 //  銃声は「破裂音（高い雑音）＋胴鳴り（低い音）＋街にひびく残響」を重ねる
 // =========================================================================================
 const AUDIO = {
-  ac: null, out: null, revIn: null, nb: null, modeName: 'title', windG: null, droneG: null, droneF: null, heliG: null, padG: null, tension: 0, beatT: 0, farT: 8, live: 0, stepN: 0, padT: 0, padI: 0, ducked: false,
+  ac: null, out: null, revIn: null, nb: null, modeName: 'title', windG: null, droneG: null, droneF: null, heliG: null, padG: null, tension: 0, beatT: 0, farT: 8, ends: [], stepN: 0, padT: 0, padI: 0, ducked: false,
   init() {
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     const ac = this.ac = new AC(), sr = ac.sampleRate;
@@ -3094,19 +3094,22 @@ const AUDIO = {
   mode(m) { this.modeName = m; if (!this.ac) return; const t = this.ac.currentTime; this.windG.gain.setTargetAtTime(m === 'end' ? .03 : .075, t, .8); this.droneG.gain.setTargetAtTime(m === 'end' ? 0 : m === 'play' ? .1 : .16, t, 1.2); this.padG.gain.setTargetAtTime(m === 'end' ? .9 : 0, t, 1.5); this.padT = 0; this.padI = 0; },
   heli(on) { this.heliOn = on; if (!on && this.heliG) this.heliG.gain.setTargetAtTime(0, this.ac.currentTime, .5); },
   heliAt(p) { if (!this.ac || !this.heliOn) return; const d = p.distanceTo(camera.position); this.heliG.gain.setTargetAtTime(clamp(1.4 / (1 + d * d * .0016), 0, 1.1), this.ac.currentTime, .15); },
+  // 同時に鳴っている数が多すぎるか（多いときは新しい音を出さない）
+  full(dur, max = 44) { const t = this.ac.currentTime; if (this.ends.length > 30) this.ends = this.ends.filter(e => e > t); if (this.ends.length > max) return true; this.ends.push(t + dur + .05); return false; },
+  get live() { return this.ends.length; },
   // 雑音の音：{dur, f, f1, q, type, vol, t0, atk, rev, pan}
   n(o) {
-    const ac = this.ac; if (!ac || this.live > 44) return; const t = ac.currentTime + (o.t0 || 0), s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    const ac = this.ac; if (!ac || this.full(o.dur + (o.t0 || 0))) return; const t = ac.currentTime + (o.t0 || 0), s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
     s.buffer = this.nb; s.loop = true; f.type = o.type || 'lowpass'; f.frequency.setValueAtTime(o.f, t); if (o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t + o.dur); f.Q.value = o.q || .7;
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(o.vol, t + (o.atk || .002)); g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
-    s.connect(f); f.connect(g); this.route(g, o); s.start(t, Math.random() * 1.5); s.stop(t + o.dur + .02); this.live++; s.onended = () => this.live--;
+    s.connect(f); f.connect(g); this.route(g, o); s.start(t, Math.random() * 1.5); s.stop(t + o.dur + .02);
   },
   // 音程のある音：{type, f, f1, dur, vol, t0, atk, rev, pan}
   o(o) {
-    const ac = this.ac; if (!ac || this.live > 44) return; const t = ac.currentTime + (o.t0 || 0), s = ac.createOscillator(), g = ac.createGain();
+    const ac = this.ac; if (!ac || this.full(o.dur + (o.t0 || 0))) return; const t = ac.currentTime + (o.t0 || 0), s = ac.createOscillator(), g = ac.createGain();
     s.type = o.type || 'sine'; s.frequency.setValueAtTime(o.f, t); if (o.f1) s.frequency.exponentialRampToValueAtTime(o.f1, t + o.dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(o.vol, t + (o.atk || .003)); g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
-    s.connect(g); this.route(g, o); s.start(t); s.stop(t + o.dur + .02); this.live++; s.onended = () => this.live--;
+    s.connect(g); this.route(g, o); s.start(t); s.stop(t + o.dur + .02);
   },
   route(g, o) {
     let node = g; if (o.pan && this.ac.createStereoPanner) { const p = this.ac.createStereoPanner(); p.pan.value = o.pan; g.connect(p); node = p; }
@@ -3114,13 +3117,13 @@ const AUDIO = {
   },
   // 声（ゾンビのうなり・叫び）：のこぎり波をふるわせ、口の形のフィルター（フォルマント）に通す
   voice(f0, f1, dur, fm1, fm2, vol, pan, rev = .25, rough = 30, type = 'sawtooth') {
-    const ac = this.ac; if (!ac || this.live > 40) return; const t = ac.currentTime, s = ac.createOscillator(), g = ac.createGain(), am = ac.createOscillator(), ag = ac.createGain(), vib = ac.createOscillator(), vg = ac.createGain(), mix = ac.createGain();
+    const ac = this.ac; if (!ac || this.full(dur, 38)) return; const t = ac.currentTime, s = ac.createOscillator(), g = ac.createGain(), am = ac.createOscillator(), ag = ac.createGain(), vib = ac.createOscillator(), vg = ac.createGain(), mix = ac.createGain();
     s.type = type; s.frequency.setValueAtTime(f0, t); s.frequency.linearRampToValueAtTime(f1, t + dur); vib.frequency.value = rr(5, 9); vg.gain.value = f0 * .05; vib.connect(vg); vg.connect(s.frequency);
     am.type = 'square'; am.frequency.value = rough * rr(.8, 1.2); ag.gain.value = .45; am.connect(ag); ag.connect(g.gain);
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(.55, t + Math.min(.12, dur * .3)); g.gain.setValueAtTime(.55, t + dur * .6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     s.connect(g); mix.gain.value = vol;
     for (const fq of [fm1, fm2]) { const b = ac.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = fq; b.Q.value = 3.5; g.connect(b); b.connect(mix); }
-    this.route(mix, { pan, rev }); s.start(t); vib.start(t); am.start(t); s.stop(t + dur + .05); vib.stop(t + dur + .05); am.stop(t + dur + .05); this.live++; s.onended = () => this.live--;
+    this.route(mix, { pan, rev }); s.start(t); vib.start(t); am.start(t); s.stop(t + dur + .05); vib.stop(t + dur + .05); am.stop(t + dur + .05);
     this.n({ dur: dur * .8, f: fm1 * 1.6, type: 'bandpass', q: 1.2, vol: vol * .12, atk: .08, pan });
   },
   gun(k) {
