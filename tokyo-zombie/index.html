@@ -18,7 +18,7 @@ html, body { margin: 0; height: 100%; background: var(--ground); color: var(--in
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none; }
 #rot { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; overflow: hidden; }
 #c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-.fx { position: absolute; inset: 0; pointer-events: none; }
+.fx { position: absolute; inset: 0; pointer-events: none; will-change: opacity; }
 #vignette { background: radial-gradient(ellipse at 50% 52%, transparent 52%, rgba(0,0,0,.5) 100%); }
 #hurt { opacity: 0; background: radial-gradient(ellipse at 50% 50%, transparent 38%, rgba(150,8,6,.62) 100%); }
 #low { opacity: 0; box-shadow: inset 0 0 calc(18 * var(--sh)) rgba(170,0,0,.75); }
@@ -93,8 +93,8 @@ body.hub #obj { left: calc(58px + env(safe-area-inset-left, 0px)); }   /* 3dgame
 #hint { left: 50%; top: calc(56px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: var(--shade); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; font-size: 13px;
   line-height: 1.6; max-width: calc(60 * var(--sw)); text-align: center; opacity: 0; transition: opacity .3s; }
 #hint b { color: var(--amber); }
-#prog { left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(300px, calc(34 * var(--sw))); text-align: center; display: none; }
-#prog .pl { font-size: 13px; font-weight: 700; letter-spacing: .08em; } #prog .pb { height: 7px; margin-top: 4px; background: rgba(0,0,0,.55); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+#prog { width: min(230px, calc(40 * var(--sw))); margin-top: 7px; display: none; }
+#prog .pl { font-size: 13px; font-weight: 700; letter-spacing: .06em; color: var(--amber); } #prog .pb { height: 7px; margin-top: 3px; background: rgba(0,0,0,.55); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
 #prog .pb b { display: block; height: 100%; width: 0; background: var(--amber); }
 #prompt { left: 50%; top: 61%; transform: translateX(-50%); background: var(--shade); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; font-size: 14px; font-weight: 600; display: none; white-space: nowrap; }
 #prompt b { display: inline-block; color: #14110a; background: var(--ink); border-radius: 4px; padding: 0 7px; margin-right: 8px; text-shadow: none; }
@@ -112,14 +112,17 @@ body.hub #obj { left: calc(58px + env(safe-area-inset-left, 0px)); }   /* 3dgame
 .tb.big { width: 88px; height: 88px; font-size: 16px; border-color: rgba(255,90,76,.8); }
 .tb.sm { width: 48px; height: 48px; font-size: 11px; }
 .tb.hide { display: none; }
-#bFireL { position: absolute; left: calc(18px + env(safe-area-inset-left, 0px)); top: 34%; display: none; }
+#bFireL { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); top: 30%; display: none; width: 72px; height: 72px; font-size: 14px; }
 body.touch #tbtns { display: block; } body.touch #bFireL { display: flex; }
-body.touch #stat { bottom: auto; top: calc(64px + env(safe-area-inset-top, 0px)); width: 190px; }
-body.touch.hub #stat { left: calc(14px + env(safe-area-inset-left, 0px)); }
-body.touch #hp .n { font-size: 22px; min-width: 40px; }
-body.touch #ammo { bottom: auto; top: calc(142px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); }
-body.touch #ammo .m { font-size: 30px; } body.touch #ammo .m small { font-size: 15px; }
-body.touch #sub { bottom: calc(30px + env(safe-area-inset-bottom, 0px)); width: calc(52 * var(--sw)); font-size: 15px; }
+body.touch #stat { bottom: auto; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: 210px; }
+body.touch #team { display: flex; gap: 8px; margin-bottom: 2px; }
+body.touch #team .al { flex: 1; margin: 0; flex-direction: column; align-items: stretch; gap: 1px; font-size: 10px; } body.touch #team .al span { width: auto; } body.touch #team .al i { flex: none; height: 5px; }
+body.touch #hp .n { font-size: 20px; min-width: 34px; } body.touch #hp .plus { transform: scale(.78); }
+body.touch #obj { max-width: calc(50 * var(--sw) - 124px); } body.touch #obj .ox { font-size: 14px; }
+body.touch #hint { top: calc(68px + env(safe-area-inset-top, 0px)); }
+body.touch #ammo { bottom: auto; top: calc(6px + env(safe-area-inset-top, 0px)); right: calc(186px + env(safe-area-inset-right, 0px)); }
+body.touch #ammo .w { font-size: 10px; } body.touch #ammo .m { font-size: 27px; } body.touch #ammo .m small { font-size: 14px; } body.touch #ammo .g { font-size: 11px; margin-top: 0; } body.touch #slots { display: none; }
+body.touch #sub { bottom: calc(26px + env(safe-area-inset-bottom, 0px)); width: calc(50 * var(--sw)); font-size: 15px; }
 body.touch #prompt b { display: none; }
 /* 画面（タイトル・一時停止・読み込み・物語） */
 .screen { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(6,7,10,.74); z-index: 5; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
@@ -169,11 +172,10 @@ body.cine .hud:not(#sub):not(#big), body.cine #tbtns, body.cine #bFireL, body.ci
 <div id="cross"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><b></b></div><div id="hitm"><i></i><i></i><i></i><i></i></div>
 <div id="dmg"><i></i><i></i><i></i><i></i></div>
 <div class="hud" id="fps"></div>
-<div class="hud" id="obj"><div class="ot">目標</div><div class="ox"><span id="objText"></span><span class="od" id="objDist"></span></div></div>
+<div class="hud" id="obj"><div class="ot">目標</div><div class="ox"><span id="objText"></span><span class="od" id="objDist"></span></div><div id="prog"><div class="pl" id="progL"></div><div class="pb"><b id="progB"></b></div></div></div>
 <div class="hud" id="radar"><canvas id="radarC" width="248" height="248"></canvas></div>
 <div class="hud" id="stat"><div id="team"></div><div id="hp"><div class="plus"></div><div class="n" id="hpN">100</div><div class="bar"><b id="hpB"></b></div></div></div>
 <div class="hud" id="ammo"><div class="w" id="wName"></div><div class="m" id="wMag">0<small>/ 0</small></div><div class="g" id="wGren"></div><div id="slots"></div></div>
-<div class="hud" id="prog"><div class="pl" id="progL"></div><div class="pb"><b id="progB"></b></div></div>
 <div class="hud" id="sub"></div>
 <div class="hud" id="big"><small></small><h1></h1><p></p></div>
 <div class="hud" id="hint"></div>
@@ -364,6 +366,7 @@ function applyQuality() {
   const q = SET.quality, hi = q === 'high', lo = q === 'low';
   renderer.setPixelRatio(Math.min(devicePixelRatio, hi ? 1.5 : lo ? 0.8 : 1.1));
   QUAL.post = !lo; QUAL.shadow = !lo; QUAL.zombies = lo ? 14 : hi ? 28 : 20;
+  LIGHTS.lamp[1].visible = LIGHTS.lamp[2].visible = LIGHTS.ally.visible = LIGHTS.fx[1].visible = !lo;   // 低画質では光の数をへらす
   if (QUAL.post) { const s = hi ? 4 : 0; if (composerSamples !== s) makeComposer(s); }
   renderer.shadowMap.enabled = QUAL.shadow;
   const ms = hi ? 2048 : 1024;
@@ -383,7 +386,7 @@ function onResize() {
   camera.aspect = vmCam.aspect = w / h; camera.updateProjectionMatrix(); vmCam.updateProjectionMatrix();
 }
 addEventListener('resize', onResize);
-const baseFov = () => (VW() < VH() ? 86 : 72);
+const baseFov = () => (VW() < VH() ? 84 : 62);
 
 // ---------- 入力（キーボード・マウス・タッチ） ----------
 const IN = {
@@ -818,8 +821,8 @@ function makeMaterials() {
   const Gv = makeNoiseTex(256, [16, 64, 128], [.3, .3, .4], 25, (h, o) => { o[0] = 128 + h * 60; o[1] = 118 + h * 56; o[2] = 100 + h * 50; }, 2.6);
   MAT.gravel = std({ map: Gv.map, normalMap: Gv.normalMap, roughness: 0.95 });
   const Fa = TEX.facade = makeFacadeAtlas();
-  MAT.facade = std({ map: Fa.map, emissiveMap: Fa.emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.2, roughnessMap: Fa.roughnessMap, roughness: 1, normalMap: Fa.normalMap, normalScale: new THREE.Vector2(0.9, 0.9), vertexColors: true, envMapIntensity: 1.2 });
-  MAT.sign = new THREE.MeshBasicMaterial({ map: TEX.sign }); MAT.sign.color.setRGB(1.05, 1.05, 1.05);
+  MAT.facade = std({ map: Fa.map, emissiveMap: Fa.emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.0, roughnessMap: Fa.roughnessMap, roughness: 1, normalMap: Fa.normalMap, normalScale: new THREE.Vector2(0.9, 0.9), vertexColors: true, envMapIntensity: 1.2 });
+  MAT.sign = new THREE.MeshBasicMaterial({ map: TEX.sign }); MAT.sign.color.setRGB(.88, .88, .88);
   const Pa = makePropAtlases();
   MAT.propE = std({ map: Pa.e, emissiveMap: Pa.e, emissive: 0xffffff, emissiveIntensity: 0.8, roughness: 0.45 });
   MAT.propD = std({ map: Pa.d, transparent: true, depthWrite: false, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
@@ -908,8 +911,8 @@ function setSky(k) {
   vmDir.color.copy(moon.color); vmDir.intensity = moon.intensity * 1.2 + 0.25; vmKey.intensity = lerp(1.5, .6, smooth(.7, 1, k));
   SKY.city = L('city');
   if (MAT.facade) {
-    MAT.facade.emissiveIntensity = 1.2 * SKY.city; MAT.propE.emissiveIntensity = 0.8 * (0.4 + 0.6 * SKY.city);
-    const s = 0.5 + 0.55 * SKY.city; MAT.sign.color.setRGB(s, s, s); MAT.pool.opacity = SKY.city; MAT.pool.color.setScalar(clamp(SKY.city * 1.2 - 0.2, 0, 1));
+    MAT.facade.emissiveIntensity = 1.0 * SKY.city; MAT.propE.emissiveIntensity = 0.8 * (0.4 + 0.6 * SKY.city);
+    const s = 0.42 + 0.46 * SKY.city; MAT.sign.color.setRGB(s, s, s); MAT.pool.opacity = SKY.city; MAT.pool.color.setScalar(clamp(SKY.city * 1.2 - 0.2, 0, 1));
     if (bloom) bloom.strength = 0.2 + 0.24 * SKY.city;
   }
   if (Math.abs(k - SKY.envK) > 0.045) {
@@ -1458,11 +1461,11 @@ function jam(axis, c, a, b, ry, o = {}) {   // 乗り捨てられた車の列
     axis === 'z' ? car(M, c + off, t, yaw, paint, { lights: !fire && R() < .16, fire }) : car(M, t, c + off, yaw, paint, { lights: !fire && R() < .16, fire });
   }
 }
-function roomWalls(x0, z0, x1, z1, h, col, doors) {   // 部屋の壁（厚さ 0.25）。doors：[{side:'w', a, b}]（その辺の a〜b を開ける。高さ 2.3 より上は壁）
+function roomWalls(x0, z0, x1, z1, h, col, doors, key = 'concrete') {   // 部屋の壁（厚さ 0.25）。doors：[{side:'w', a, b}]（その辺の a〜b を開ける。高さ 2.3 より上は壁）
   const T = .25, seg = (side, a, b, y0, y1, solid = true) => {
     const mid = (a + b) / 2, len = b - a; let cx, cz, sx, sz;
     if (side === 'w' || side === 'e') { cx = side === 'w' ? x0 + T / 2 : x1 - T / 2; cz = mid; sx = T; sz = len; } else { cz = side === 'n' ? z0 + T / 2 : z1 - T / 2; cx = mid; sx = len; sz = T; }
-    bbox('concrete', cx, (y0 + y1) / 2, cz, sx, y1 - y0, sz, { col }); if (solid) COL.add(cx, cz, sx / 2, sz / 2, y0, y1, 0, { mat: 'stone' });
+    bbox(key, cx, (y0 + y1) / 2, cz, sx, y1 - y0, sz, { col }); if (solid) COL.add(cx, cz, sx / 2, sz / 2, y0, y1, 0, { mat: 'stone' });
   };
   for (const side of ['n', 's', 'e', 'w']) {
     const lo = side === 'n' || side === 's' ? x0 : z0, hi = side === 'n' || side === 's' ? x1 : z1, ds = (doors || []).filter(d => d.side === side).sort((p, q) => p.a - q.a);
@@ -1537,13 +1540,13 @@ async function buildWorld(say) {
   }
   // ----- 交番 -----
   { const wc = [.86, .86, .84];
-    roomWalls(14, 69, 22, 75, 3.2, wc, [{ side: 'w', a: 71, b: 73 }]);
-    bbox('concrete', 18, 3.36, 72, 9, .32, 7, { col: [.5, .5, .52] }); bquad('concrete', [14, 3.2, 69], [22, 3.2, 69], [22, 3.2, 75], [14, 3.2, 75], [0, 0, 2, 1.5], wc);
-    bquad('walk', [14, CURB + .015, 75], [22, CURB + .015, 75], [22, CURB + .015, 69], [14, CURB + .015, 69], [0, 0, 3.3, 2.5], [.7, .74, .78]);
+    roomWalls(14, 69, 22, 75, 3.2, wc, [{ side: 'w', a: 71, b: 73 }], 'paint');
+    bbox('concrete', 18, 3.36, 72, 9, .32, 7, { col: [.5, .5, .52] }); bquad('paint', [14, 3.2, 69], [22, 3.2, 69], [22, 3.2, 75], [14, 3.2, 75], [0, 0, 2, 1.5], wc);
+    bquad('walk', [14, CURB + .034, 75], [22, CURB + .034, 75], [22, CURB + .034, 69], [14, CURB + .034, 69], [0, 0, 3.3, 2.5], [.7, .74, .78]);
     decalW('facade', FUV(2, 4), 21, 69, -1, 0, CURB, 6, 2.6, 0.02, wc);   // 通りに向いたガラス
     decalW('sign', signH('交番 KOBAN'), 14, 70.6, 0, 1, 2.42, 2.8, .7, 0.03);
     bsph('emis', 13.7, 2.9, 73.4, .2, .2, .2, [2.6, .22, .12]); glow(13.7, 2.9, 73.4, 3.2, [1, .12, .08]);
-    bbox('emis', 18, 3.17, 72, 2.2, .04, .5, { col: [2.2, 2.2, 2.1], faces: 'y' }); LAMPS.push({ x: 18, y: 2.8, z: 72 }); pool(18, 72, 5, [.26, .27, .28], CURB + .03); pool(11.5, 72, 4, [.3, .12, .1], CURB + .03);
+    bbox('emis', 18, 3.17, 72, 2.2, .04, .5, { col: [1.5, 1.5, 1.4], faces: 'y' }); LAMPS.push({ x: 18, y: 2.5, z: 72, dim: .22 }); pool(18, 72, 5, [.26, .27, .28], CURB + .03); pool(11.5, 72, 4, [.3, .12, .1], CURB + .03);
     desk(19.6, 70.2, 0, 2); locker(21.5, 73.2, Math.PI / 2, 1.6); bbox('paint', 16, CURB + .45, 74.4, 1.6, .06, .5, { col: [.2, .3, .5] });
     sandbags(10.6, 69.6, Math.PI / 2, 3.6, 3); sandbags(10.6, 75.6, Math.PI / 2, 3.2, 3); barricade(8, 67.2, .1, 2.2); cone(6, 68); cone(9.5, 78);
     car('Cop', 24.5, 62.2, -Math.PI / 2 + .2, WHITE, { siren: true, lights: true });
@@ -1596,16 +1599,18 @@ async function buildWorld(say) {
   bike(-62.6, -30, 1.5); bike(-57.4, -15, -1.4); bike(-57.5, -51, -1.6);
   for (const [z, c2] of [[-21, [.7, .16, .12]], [-46, [.12, .3, .6]], [-33, [.8, .6, .1]]]) bbox('matte', -62.4, CURB + 3.1, z, 1.4, .12, 4.5, { col: c2 });
   for (const [z, c2] of [[-17, [.1, .4, .25]], [-49, [.7, .16, .12]]]) bbox('matte', -57.6, CURB + 3.1, z, 1.4, .12, 4.5, { col: c2 });
-  for (const [x, z] of [[-62.5, -20], [-57.4, -38.5], [-62.5, -49]]) { LAMPS.push({ x, y: 4, z }); }
+  for (const z of [-20, -38.5, -49]) LAMPS.push({ x: -60, y: 4.3, z, dim: .55 });
   // ----- 水瀬診療所（1階は中に入れる） -----
   { const wc = [.84, .86, .84];
     building({ x0: -57, z0: -41, x1: -45, z1: -29, floors: 3, style: 2, col: [.82, .84, .82], lit: .3, shut: 0, signs: false, hollow: true, faces: { w: 'street' } });
-    roomWalls(-57, -41, -49, -29, GH, wc, [{ side: 'w', a: -36.2, b: -33.8 }]); COL.box(-49, -41, -45, -29, 0, GH, { mat: 'stone' });
-    bquad('concrete', [-57, GH - .02, -41], [-49, GH - .02, -41], [-49, GH - .02, -29], [-57, GH - .02, -29], [0, 0, 2, 3], wc);
+    roomWalls(-57, -41, -49, -29, GH, wc, [{ side: 'w', a: -36.2, b: -33.8 }], 'paint'); COL.box(-49, -41, -45, -29, 0, GH, { mat: 'stone' });
+    bquad('paint', [-57, GH - .02, -41], [-49, GH - .02, -41], [-49, GH - .02, -29], [-57, GH - .02, -29], [0, 0, 2, 3], wc);
+    for (const z of [-40.86, -29.14]) bbox('paint', -53, CURB + .55, z, 7.6, 1.0, .04, { col: [.42, .62, .56] });   // 腰壁（うすい緑）
+    bbox('paint', -49.14, CURB + .55, -35, .04, 1.0, 11.6, { col: [.42, .62, .56] });
     bquad('walk', [-57, CURB + .015, -29], [-49, CURB + .015, -29], [-49, CURB + .015, -41], [-57, CURB + .015, -41], [0, 0, 3.3, 5], [.8, .86, .84]);
     for (const [a, b] of [[-40.4, -36.8], [-33.2, -29.6]]) decalW('facade', FUV(3, 4), -57, a, 0, 1, CURB + .5, b - a, 2.4, 0.02, WHITE);
-    decalW('sign', signH('水瀬診療所'), -57, -37.4, 0, 1, 2.62, 4.8, 1.2, 0.04); glow(-57.4, 3.2, -35, 5, [.2, 1, .5]); pool(-59.5, -35, 4.5, [.1, .3, .16], CURB + .03);
-    for (const z of [-38, -32]) { bbox('emis', -53, GH - .06, z, 2.4, .04, .5, { col: [2.2, 2.3, 2.2], faces: 'y' }); LAMPS.push({ x: -53, y: 3.5, z }); pool(-53, z, 5, [.22, .25, .24], CURB + .03); }
+    decalW('sign', signH('水瀬診療所'), -57, -37.4, 0, 1, 2.62, 4.8, 1.2, 0.04); glow(-57.4, 3.2, -35, 2.4, [.1, .5, .25]); pool(-59.5, -35, 4.5, [.1, .3, .16], CURB + .03);
+    for (const z of [-38, -32]) { bbox('emis', -53, GH - .06, z, 2.4, .04, .5, { col: [1.5, 1.6, 1.5], faces: 'y' }); LAMPS.push({ x: -53, y: 3.0, z, dim: .2 }); pool(-53, z, 5, [.22, .25, .24], CURB + .03); }
     desk(-51.4, -38.6, 0, 2.6); desk(-50, -31.2, Math.PI / 2, 2); locker(-49.6, -35, Math.PI / 2, 2.4); bench(-55.6, -39.4, Math.PI / 2); bench(-55.6, -31, Math.PI / 2);
     bbox('paint', -50, CURB + 1.05, -31.2, .1, .44, .7, { col: [.08, .08, .09] }); bbox('emis', -50.06, CURB + 1.05, -31.2, .02, .36, .6, { col: [.5, .9, 1.4] });   // 解析中の画面
     decalW('propD', PUV(PD.poster[0]), -49, -37, 0, -1, 1.4, .8, 1.1, .02); decalW('propE', PUV(PE.exit), -57 + .26, -34.4, 0, -1, 2.55, .8, .32, 0.0);
@@ -1629,7 +1634,7 @@ async function buildWorld(say) {
     for (const [x, ux] of [[-11, 1], [11, -1]]) for (let i = 0; i < 8; i++) { const z0 = ux > 0 ? -130 + i * 3 : -106 - i * 3; bquad('facade', [x, 0, z0], [x, 0, z0 + ux * 3], [x, y1, z0 + ux * 3], [x, y1, z0], FUV(R() < .6 ? 7 : 6, 5), [.7, .7, .66]); }
     bquad('concrete', [-11, y1, -130], [11, y1, -130], [11, y1, -106], [-11, y1, -106], [0, 0, 5, 6], [.3, .3, .3]);
     for (const z of [-111, -118, -125]) { bbox('concrete', 0, y1 / 2, z, .9, y1, .9, { col: [.55, .55, .54] }); bbox('markY', 0, .6, z, .94, 1.2, .94, { faces: 'xXzZ' }); COL.add(0, z, .45, .45, 0, y1, 0, { mat: 'stone' }); }
-    for (const [x, z, on] of [[-5, -110, 1], [5, -116, 0], [-5, -122, 1], [5, -128, 0], [5, -108, 0]]) { bbox('emis', x, y1 - .12, z, .12, .06, 1.5, { col: on ? [1.6, 1.8, 1.6] : [.12, .13, .12] }); if (on) { pool(x, z, 4.2, [.12, .16, .13], 0.03); LAMPS.push({ x, y: y1 - .6, z, dim: .5 }); glow(x, y1 - .2, z, 2, [.6, .8, .6], 3); } }
+    for (const [x, z, on] of [[-5, -110, 1], [5, -116, 0], [-5, -122, 1], [5, -128, 0], [5, -108, 0]]) { bbox('emis', x, y1 - .12, z, .12, .06, 1.5, { col: on ? [1.6, 1.8, 1.6] : [.12, .13, .12] }); if (on) { pool(x, z, 4.2, [.12, .16, .13], 0.03); LAMPS.push({ x, y: y1 - 2.2, z, dim: .3 }); glow(x, y1 - .2, z, 2, [.6, .8, .6], 3); } }
     for (let i = 0; i < 3; i++) decalW('propD', PUV(PD.graf[i]), -11, -127 + i * 7, 0, 1, 1, 4, 2, 0.03);
     decalW('propD', PUV(PD.poster[2]), 11, -112, 0, -1, 1.3, 1, 1.4, .03); decalW('propD', PUV(PD.poster[1]), 11, -120, 0, -1, 1.3, 1, 1.4, .03);
     car('NormalCar1', -5.6, -113, Math.PI + .5, CAR_PAINTS[5]); truck(5.4, -121, .12, [.34, .36, .3], [.3, .32, .26]); car('NormalCar2', -4.6, -126.5, -1.2, CAR_PAINTS[2], { lights: true }); trash(9.6, -110, 5); trash(-9.4, -124, 4);
@@ -2007,9 +2012,9 @@ const m_count = m => m.count;
 //  銃の座標：銃口が -z、上が +y、右が +x。原点はグリップの上（にぎった手のあたり）
 // =========================================================================================
 const WEAPONS = [
-  { id: 'pistol', name: '9mm けん銃', mag: 15, max: Infinity, dmg: 36, rpm: 420, auto: false, hip: .015, ads: .003, bloom: .011, kick: .019, kickY: .007, reload: 1.55, adsFov: 58, pellets: 1, range: 110, snd: 0, vmKick: .03, vmRot: .1, flash: .11, shellR: .0045, shellL: .019 },
-  { id: 'rifle', name: 'アサルトライフル', mag: 30, max: 180, dmg: 31, rpm: 690, auto: true, hip: .021, ads: .0026, bloom: .0065, kick: .0105, kickY: .006, reload: 2.25, adsFov: 45, pellets: 1, range: 160, snd: 1, vmKick: .022, vmRot: .035, flash: .16, shellR: .0045, shellL: .03 },
-  { id: 'shotgun', name: 'ショットガン', mag: 6, max: 36, dmg: 19, rpm: 66, auto: false, hip: .055, ads: .042, bloom: .0, kick: .058, kickY: .016, reload: .5, adsFov: 60, pellets: 9, range: 42, snd: 2, vmKick: .075, vmRot: .16, flash: .22, shellR: .0095, shellL: .055 },
+  { id: 'pistol', name: '9mm けん銃', mag: 15, max: Infinity, dmg: 36, rpm: 420, auto: false, hip: .015, ads: .003, bloom: .011, kick: .019, kickY: .007, reload: 1.55, adsFov: 50, pellets: 1, range: 110, snd: 0, vmKick: .03, vmRot: .1, flash: .11, shellR: .0045, shellL: .019 },
+  { id: 'rifle', name: 'アサルトライフル', mag: 30, max: 180, dmg: 31, rpm: 690, auto: true, hip: .021, ads: .0026, bloom: .0065, kick: .0105, kickY: .006, reload: 2.25, adsFov: 40, pellets: 1, range: 160, snd: 1, vmKick: .022, vmRot: .035, flash: .16, shellR: .0045, shellL: .03 },
+  { id: 'shotgun', name: 'ショットガン', mag: 6, max: 36, dmg: 19, rpm: 66, auto: false, hip: .055, ads: .042, bloom: .0, kick: .058, kickY: .016, reload: .5, adsFov: 52, pellets: 9, range: 42, snd: 2, vmKick: .075, vmRot: .16, flash: .22, shellR: .0095, shellL: .055 },
 ];
 const VMAT = {};
 const _wv = V3(), _wq = new THREE.Quaternion(), _we = new THREE.Euler(), _wm = new THREE.Matrix4(), _w1 = V3(1, 1, 1);
@@ -2054,19 +2059,19 @@ function buildRifle() {
   ;
   for (let i = 0; i < 6; i++) pb.box('metal', .05, .012, .014, 0, .03, -.17 - i * .036);
   // 光学サイト（ドットサイト）とライト
-  pb.box('metal', .03, .014, .064, 0, .072, -.03).box('metal', .005, .036, .05, -.02, .095, -.03).box('metal', .005, .036, .05, .02, .095, -.03).box('metal', .045, .005, .05, 0, .1145, -.03).box('metal', .045, .004, .05, 0, .0795, -.03)
+  pb.box('metal', .03, .03, .064, 0, .08, -.03).box('metal', .005, .036, .05, -.02, .112, -.03).box('metal', .005, .036, .05, .02, .112, -.03).box('metal', .045, .005, .05, 0, .1315, -.03).box('metal', .045, .004, .05, 0, .0965, -.03)
     .cyl('metal', .016, .085, .0, -.008, -.33).cyl('poly', .019, .02, 0, -.008, -.38);
   pb.build(g);
   const stock = grp(g); pb.cyl('metal', .0135, .2, 0, .028, .18).box('poly', .04, .1, .15, 0, .004, .27).box('poly', .042, .112, .02, 0, .0, .35).box('poly', .03, .03, .1, 0, .05, .25).build(stock);
-  const dot = new THREE.Mesh(new THREE.SphereGeometry(.0011, 6, 4), VMAT.dot); dot.position.set(0, .097, -.03); g.add(dot);
-  const lens = new THREE.Mesh(new THREE.PlaneGeometry(.036, .032), VMAT.lens); lens.position.set(0, .097, -.05); g.add(lens);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(.0011, 6, 4), VMAT.dot); dot.position.set(0, .114, -.03); g.add(dot);
+  const lens = new THREE.Mesh(new THREE.PlaneGeometry(.036, .032), VMAT.lens); lens.position.set(0, .114, -.05); g.add(lens);
   const led = new THREE.Mesh(new THREE.CircleGeometry(.013, 10), VMAT.led); led.position.set(0, -.008, -.3905); led.rotation.y = Math.PI; g.add(led);
   const bolt = grp(g); pb.box('steel', .012, .014, .03, .026, .04, -.01).box('brass', .003, .016, .05, .0225, .036, -.05).build(bolt);
   const mag = grp(g); pb.box('poly', .026, .1, .056, 0, -.1, -.078, -.1).box('poly', .026, .07, .056, 0, -.172, -.062, -.34).build(mag);
   pb.box('glove', .054, .08, .06, .006, -.062, .034, .26).box('glove', .05, .05, .022, 0, -.058, .0, .26).box('glove', .012, .013, .05, .021, -.026, -.012);
   rightArm(pb, [.014, -.1, .075], [.1, -.27, .42]); pb.build(g);
   const lh = grp(g); pb.box('glove', .07, .042, .085, -.004, -.004, -.25).box('glove', .016, .05, .08, .03, .02, -.25).limb('sleeve', [-.03, -.03, -.2], [-.27, -.25, .22], .036, .052).limb('glove', [-.01, -.012, -.235], [-.03, -.03, -.2], .034, .038).build(lh);
-  return { g, bolt, mag, lh, dot, led, stock, sightY: .097, muzzle: V3(0, .032, -.66), eject: V3(.03, .045, -.04), hip: V3(.105, -.136, -.3), hipR: V3(0, .055, 0), adsZ: -.21, lhMag: V3(.03, -.14, .19), lhRack: V3(.03, .05, .23) };
+  return { g, bolt, mag, lh, dot, led, stock, sightY: .114, muzzle: V3(0, .032, -.66), eject: V3(.03, .045, -.04), hip: V3(.105, -.136, -.3), hipR: V3(0, .055, 0), adsZ: -.21, lhMag: V3(.03, -.14, .19), lhRack: V3(.03, .05, .23) };
 }
 function buildShotgun() {
   const g = new THREE.Group(), pb = new PB();
@@ -2080,7 +2085,7 @@ function buildShotgun() {
   pb.box('glove', .052, .07, .07, .006, -.02, .1, -.22).box('glove', .012, .013, .05, .021, -.004, -.02);
   rightArm(pb, [.014, -.06, .15], [.1, -.26, .44]); pb.build(g);
   const lh = grp(pump); pb.box('glove', .07, .044, .09, -.004, -.018, -.3).box('glove', .016, .05, .08, .032, .008, -.3).limb('sleeve', [-.03, -.045, -.25], [-.27, -.26, .2], .036, .052).limb('glove', [-.01, -.03, -.285], [-.03, -.045, -.25], .034, .038).build(lh);
-  return { g, pump, lh, stock, sightY: .0565, muzzle: V3(0, .038, -.66), eject: V3(.03, .035, -.03), hip: V3(.105, -.128, -.3), hipR: V3(0, .055, 0), adsZ: -.24, lhMag: V3(.02, -.03, .22), lhRack: V3(0, 0, 0) };
+  return { g, pump, lh, stock, sightY: .07, muzzle: V3(0, .038, -.66), eject: V3(.03, .035, -.03), hip: V3(.105, -.128, -.3), hipR: V3(0, .055, 0), adsZ: -.24, lhMag: V3(.02, -.03, .22), lhRack: V3(0, 0, 0) };
 }
 // 0〜1 の時間 t で、点 [[t0,v0],[t1,v1],…] をなめらかにつなぐ
 function kf(t, K) { if (t <= K[0][0]) return K[0][1]; for (let i = 1; i < K.length; i++) if (t <= K[i][0]) return lerp(K[i - 1][1], K[i][1], sm((t - K[i - 1][0]) / (K[i][0] - K[i - 1][0]))); return K[K.length - 1][1]; }
@@ -2090,7 +2095,7 @@ const VM = {
   init() {
     const std = o => new THREE.MeshStandardMaterial(o);
     Object.assign(VMAT, {
-      metal: std({ color: 0x33363b, metalness: .8, roughness: .38, envMapIntensity: 1.8 }), steel: std({ color: 0x5a5d63, metalness: .9, roughness: .3, envMapIntensity: 1.6 }), poly: std({ color: 0x1d1e21, metalness: .1, roughness: .55 }),
+      metal: std({ color: 0x3b3e44, metalness: .35, roughness: .46, envMapIntensity: 1.6 }), steel: std({ color: 0x6a6d73, metalness: .6, roughness: .34, envMapIntensity: 1.6 }), poly: std({ color: 0x232427, metalness: .05, roughness: .6 }),
       wood: std({ color: 0x4f2c14, roughness: .5, metalness: 0 }), glove: std({ color: 0x2b2c30, roughness: .8 }), sleeve: std({ color: 0x141c33, roughness: .9 }), brass: std({ color: 0xb08a3a, metalness: .9, roughness: .3 }),
       dot: new THREE.MeshBasicMaterial({ color: new THREE.Color(4, .2, .12) }), tri: new THREE.MeshBasicMaterial({ color: new THREE.Color(.5, 1.9, .8) }),
       lens: new THREE.MeshBasicMaterial({ color: 0x0c1620, transparent: true, opacity: .22, depthWrite: false }), led: new THREE.MeshBasicMaterial({ color: 0x0a0a0a }), hull: std({ color: 0x8a1410, roughness: .5 }),
@@ -2190,7 +2195,7 @@ const PLAYER = {
   switchTo(i) { if (i === this.w || !this.own[i] || this.sw.t > 0) return; this.sw.to = i; this.sw.t = 1e-4; this.reloadT = 0; this.pumpT = 0; AUDIO.sfx('cloth'); },
   cycle(d) { let i = this.w; for (let k = 0; k < 3; k++) { i = (i + d + 3) % 3; if (this.own[i]) break; } this.switchTo(i); },
   hurt(d, fx, fz) {
-    if (!this.alive || GAME.cine) return;
+    if (!this.alive || GAME.cine || this.hurtT < .3) return;   // 続けざまには当たらない（囲まれても一瞬では倒れない）
     this.hp -= d * DIFF[GAME.diff].dmg; this.hurtT = 0; this.shake = Math.max(this.shake, .5); this.roll += rr(-.06, .06);
     UI.hurt(Math.atan2(fx - this.pos.x, fz - this.pos.z) - this.yaw); AUDIO.sfx('hurt');
     if (this.hp <= 0) { this.hp = 0; this.alive = false; GAME.fail('dead'); }
@@ -2203,7 +2208,7 @@ const PLAYER = {
   update(dt) {
     const W = this.W, i = this.w; this.st.time += dt; this.hurtT += dt; this.lastShot += dt;
     // ----- 視点 -----
-    const sens = SET.sens * HUB.sens * lerp(1, W.adsFov / 72 * .85, this.ads);
+    const sens = SET.sens * HUB.sens * lerp(1, W.adsFov / 62 * .9, this.ads);
     let lx = IN.lookX * sens, ly = IN.lookY * sens * (SET.inv ? -1 : 1); IN.lookX = IN.lookY = 0;
     if (this.frozen) { lx = ly = 0; }
     if (IS_TOUCH && SET.assist && !this.frozen) { const r = this.assist(dt, lx, ly); lx = r[0]; ly = r[1]; }
@@ -2251,7 +2256,7 @@ const PLAYER = {
     const ready = this.sw.t <= 0 && VM.melee <= 0 && VM.throwT <= 0 && VM.sprint < .35 && this.pumpT <= 0 && !this.frozen;
     if (ready && (W.auto ? hold : (press || (hold && this.cool < -.13))) && this.cool <= 0) {
       if (this.mag[i] > 0 && (this.reloadT <= 0 || W.id === 'shotgun')) { this.reloadT = 0; this.shoot(); }
-      else if (this.mag[i] <= 0 && this.reloadT <= 0) { if (press) AUDIO.sfx('dry'); if (this.res[i] > 0) this.startReload(); else if (press) UI.hint('弾切れ！ <b>武器</b>を持ちかえろ（けん銃の弾は無限）', 3); this.cool = .25; }
+      else if (this.mag[i] <= 0 && this.reloadT <= 0) { if (press) AUDIO.sfx('dry'); if (this.res[i] > 0) this.startReload(); else if (press) UI.hint('弾切れ！ <b>武器</b>を持ちかえろ（けん銃の弾は無限。弾薬箱で補給できる）', 3.5); this.cool = .25; }
     }
     if (this.mag[i] === 0 && this.reloadT <= 0 && this.res[i] > 0 && this.lastShot > .35 && this.sw.t <= 0 && this.pumpT <= 0) this.startReload();
     // リロードの進み
@@ -2308,7 +2313,7 @@ const PLAYER = {
       let t = W.range;
       if (hz && (!hw || hz.t < hw.t)) {
         t = hz.t; const x = o.x + _pd.x * t, y = o.y + _pd.y * t, z = o.z + _pd.z * t, isHead = hz.part === 'head';
-        let dmg = W.dmg * (t > W.range * .55 ? lerp(1, .5, (t - W.range * .55) / (W.range * .45)) : 1) * (isHead ? (W.pellets > 1 ? 2 : 3.5) : hz.part === 'leg' ? .7 : 1);
+        let dmg = W.dmg * (t > W.range * .55 ? lerp(1, .5, (t - W.range * .55) / (W.range * .45)) : 1) * (isHead ? (hz.z.type === 'brute' ? 1.5 : W.pellets > 1 ? 2 : 3.5) : hz.part === 'leg' ? .7 : 1);
         FX.blood(x, y, z, _pd.x, _pd.y, _pd.z, isHead); anyHit = true; if (isHead) head = true;
         if (ZOMBIES.hurt(hz.z, dmg, hz.part, _pd.x, _pd.z, true)) kill = true;
       } else if (hw) {
@@ -2368,9 +2373,9 @@ const GRENADES = {
 //  見通しがあれば一直線に来る。近づくと腕をふって攻撃。頭に当たると大ダメージ
 // =========================================================================================
 const ZTYPES = {
-  walker: { hp: 95, sp: [1.15, 1.85], dmg: 12, reach: 1.3, sc: [.9, .98], atk: .85, turn: 3.2, rad: .3 },
+  walker: { hp: 90, sp: [1.15, 1.85], dmg: 12, reach: 1.3, sc: [.9, .98], atk: .85, turn: 3.2, rad: .3 },
   runner: { hp: 62, sp: [4.5, 5.4], dmg: 9, reach: 1.3, sc: [.88, .95], atk: .62, turn: 6.5, rad: .3 },
-  brute: { hp: 1500, sp: [2.5, 2.5], dmg: 28, reach: 2.0, sc: [1.42, 1.42], atk: 1.15, turn: 2.6, rad: .52 },
+  brute: { hp: 1700, sp: [2.5, 2.5], dmg: 28, reach: 2.0, sc: [1.42, 1.42], atk: 1.15, turn: 2.6, rad: .52 },
 };
 const Z_MODELS = ['M_Casual_2', 'M_Casual_Hoodie', 'M_Suit', 'M_Suit', 'M_Worker', 'M_Punk', 'W_Casual', 'W_Formal', 'W_Suit', 'W_Worker', 'W_Punk', 'W_Casual', 'M_Casual_2'];
 const _zf = V3(), _zd = { x: 0, z: 0 }, _zv = V3(), _zh = { z: null, t: 0, part: '' };
@@ -2549,10 +2554,11 @@ const ALLIES = {
       let sp = 0, mx = 0, mz = 0;
       if (d > (a.sp > 0 ? stopR : stopR + 1.3)) {
         sp = d > 5 || P.sprint ? 6.4 : d > 2.2 ? 4.2 : 2.2; if (a.target && d < 7) sp = Math.min(sp, 3.2);
-        if (COL.los(a.x, a.y + .6, a.z, gx, a.y + .6, gz) || a.hold) { mx = dx / d; mz = dz / d; } else if (NAV.dir(a.x, a.z, _ad)) { mx = _ad.x; mz = _ad.z; } else { mx = dx / d; mz = dz / d; }
+        if (COL.los(a.x, a.y + .6, a.z, gx, a.y + .6, gz)) { mx = dx / d; mz = dz / d; } else if (NAV.dir(a.x, a.z, _ad)) { mx = _ad.x; mz = _ad.z; } else { mx = dx / d; mz = dz / d; }
         const ox = a.x, oz = a.z; a.x += mx * sp * dt; a.z += mz * sp * dt; COL.move(a, .32, a.y, 1.7, .4);
         if (Math.hypot(a.x - ox, a.z - oz) < sp * dt * .3) a.stuck += dt; else a.stuck = Math.max(0, a.stuck - dt * 2);
       } else a.stuck = 0;
+      if (a.hold && a.stuck > 2.5) { a.x = a.hold.x; a.z = a.hold.z; a.stuck = 0; }   // 守る場所へ行けないときは、そこへ移す
       a.sp = sp;
       // 置いていかれたら、主人公のうしろへ
       if (!a.hold && (dP > 46 || a.stuck > 3.5) && !GAME.cine) { const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw); for (let k = 0; k < 12; k++) { const x = P.pos.x + sy * rr(3, 7) + rr(-3, 3), z = P.pos.z + cy * rr(3, 7) + rr(-3, 3); if (NAV.free(x, z) && NAV.steps(x, z) < 14) { a.x = x; a.z = z; a.stuck = 0; break; } } }
@@ -2590,14 +2596,14 @@ const ALLIES = {
     if (a.reloadT > 0) { a.reloadT -= dt; if (a.reloadT <= 0) a.mag = 30; return; }
     if (a.fireT > 0 || Math.abs(angDiff(a.yaw, Math.atan2(T.x - a.x, T.z - a.z))) > .3) return;
     if (a.burst <= 0) { a.burst = 3 + ((Math.random() * 3) | 0); }
-    a.burst--; a.fireT = a.burst > 0 ? .1 : rr(.45, 1.0); a.mag--; a.recoil = 1;
+    a.burst--; a.fireT = a.burst > 0 ? .11 : rr(.8, 1.6); a.mag--; a.recoil = 1;
     const d = Math.hypot(T.x - a.x, T.z - a.z), sy = Math.sin(a.yaw), cy = Math.cos(a.yaw), mx = a.x + sy * .6 + cy * -.12, my = a.y + 1.36, mz = a.z + cy * .6 - sy * -.12;
     // 主人公が射線に入っているときは撃たない
     { const px = PLAYER.pos.x - a.x, pz = PLAYER.pos.z - a.z, t = (px * (T.x - a.x) + pz * (T.z - a.z)) / (d * d); if (t > 0 && t < 1 && Math.hypot(px - (T.x - a.x) * t, pz - (T.z - a.z) * t) < .55) { a.fireT = .25; a.burst = 0; return; } }
-    const hitP = clamp(.92 - d * .014, .4, .9), head = Math.random() < .2, ty = T.y + (head ? 1.6 : 1.2) * T.hs;
+    const hitP = clamp(.86 - d * .016, .35, .85), head = Math.random() < .12, ty = T.y + (head ? 1.6 : 1.2) * T.hs;
     if (Math.random() < hitP) {
       const ux = (T.x - mx) / d, uz = (T.z - mz) / d; FX.tracer(mx, my, mz, T.x, ty, T.z); FX.blood(T.x - ux * .2, ty, T.z - uz * .2, ux, 0, uz, head);
-      ZOMBIES.hurt(T, head ? 70 : 23, head ? 'head' : 'body', ux, uz, false);
+      ZOMBIES.hurt(T, (head ? 48 : 15) * (GAME.diff === 0 ? 1.4 : 1), head ? 'head' : 'body', ux, uz, false);
       if (T.state === 'dead') { a.target = null; a.thinkT = 0; if (Math.random() < .22) SAY.bark(a.id, 'kill'); }
     } else FX.tracer(mx, my, mz, T.x + rr(-1.2, 1.2), ty + rr(-.6, 1), T.z + rr(-1.2, 1.2));
     FX.flashAt(mx, my, mz, true); FX.add.emit(mx, my, mz, 0, 0, 0, .05, 1.1, .5, 2.6, 2, 1.2, 1); AUDIO.at('agun', a.x, a.z, 1);
@@ -2632,6 +2638,8 @@ const _uv = V3();
 const UI = {
   hitT: 0, hurtA: 0, arcs: [0, 0, 0, 0], arcI: 0, hintT: 0, bigT: 0, objPos: null, objTxt: '', last: {}, rf: 0, lockT: 0, lock: false, prog: null,
   set(id, v) { if (this.last[id] !== v) { this.last[id] = v; $(id).textContent = v; } },
+  // 見た目の値は、変わったときだけ書く（毎フレーム書くと、そのたびに画面を作り直すので重い）
+  css(id, prop, v) { const k = id + prop; if (this.last[k] !== v) { this.last[k] = v; $(id).style[prop] = v; } },
   setObj(text, pos) { this.objTxt = text; this.objPos = pos || null; $('objText').textContent = text; if (text) AUDIO.sfx('obj'); },
   hint(html, sec = 5) { $('hint').innerHTML = html; $('hint').style.opacity = 1; this.hintT = sec; },
   big(small, title, sub, sec = 4) { const b = $('big'); b.children[0].textContent = small; b.children[1].textContent = title; b.children[2].textContent = sub; b.style.opacity = 1; this.bigT = sec; },
@@ -2646,16 +2654,16 @@ const UI = {
     const hp = Math.ceil(P.hp); this.set('hpN', hp); if (this.last.hpw !== hp) { this.last.hpw = hp; $('hpB').style.width = hp + '%'; $('hp').classList.toggle('lowhp', hp <= 35); }
     const ak = W.id + P.mag[i] + '/' + P.res[i] + P.gren + P.own.join('');
     if (this.last.ak !== ak) { this.last.ak = ak; $('wName').textContent = W.name; $('wMag').innerHTML = `${P.mag[i]}<small>/ ${P.res[i] === Infinity ? '∞' : P.res[i]}</small>`; $('wMag').classList.toggle('low', P.mag[i] <= W.mag * .25); $('wGren').innerHTML = P.gren ? `手榴弾 <b>×${P.gren}</b>` : ''; this.slots(); $('bGren').classList.toggle('hide', !P.gren); }
-    $('reload').style.opacity = P.mag[i] <= W.mag * .25 && P.reloadT <= 0 && P.res[i] > 0 ? (Math.sin(GAME.t * 8) > 0 ? 1 : .35) : 0;
+    this.css('reload', 'opacity', P.mag[i] <= W.mag * .25 && P.reloadT <= 0 && P.res[i] > 0 ? (Math.sin(GAME.t * 8) > 0 ? 1 : .35) : 0);
     for (const a of ALLIES.list) { const el = $('al_' + a.id); if (!el) continue; const k = Math.round(a.hp / a.D.hp * 100), key = k + (a.alive ? '' : 'd'); if (a.uiK !== key) { a.uiK = key; el.querySelector('b').style.width = k + '%'; el.classList.toggle('down', !a.alive); } }
     // 照準：弾のばらつきに合わせて開く。狙っているときは消す
     const spread = lerp(W.hip, W.ads, P.ads) + P.bloom + clamp(P.speed / 4.3, 0, 1) * .012 + (P.onGround ? 0 : .035), gap = 3 + spread * (VH() / 2) / Math.tan(camera.fov * Math.PI / 360);
-    const cr = $('cross'); cr.style.setProperty('--gap', gap.toFixed(1) + 'px'); cr.style.opacity = P.ads > .5 || VM.sprint > .5 || P.reloadT > 0 ? 0 : 1;
+    const cr = $('cross'), gp = Math.round(gap); if (this.last.gap !== gp) { this.last.gap = gp; cr.style.setProperty('--gap', gp + 'px'); } this.css('cross', 'opacity', P.ads > .5 || VM.sprint > .5 || P.reloadT > 0 ? 0 : 1);
     this.lockT -= dt; if (this.lockT <= 0) { this.lockT = .08; camera.getWorldDirection(_uv); const o = camera.position, hz = ZOMBIES.ray(o.x, o.y, o.z, _uv.x, _uv.y, _uv.z, 70); let lk = false; if (hz) { const hw = COL.ray(o.x, o.y, o.z, _uv.x, _uv.y, _uv.z, hz.t); lk = !hw; } if (lk !== this.lock) { this.lock = lk; cr.classList.toggle('lock', lk); } }
     if (this.hitT > 0) { this.hitT -= dt; if (this.hitT <= 0) $('hitm').style.opacity = 0; }
     // やられた表示
-    this.hurtA = Math.max(0, this.hurtA - dt * 1.3); $('hurt').style.opacity = Math.max(this.hurtA * .9, P.hp < 35 ? (1 - P.hp / 35) * .55 : 0);
-    $('low').style.opacity = P.hp < 35 ? (.5 + .5 * Math.sin(GAME.t * 5)) * (1 - P.hp / 35) * .8 : 0;
+    this.hurtA = Math.max(0, this.hurtA - dt * 1.3); this.css('hurt', 'opacity', (Math.max(this.hurtA * .9, P.hp < 35 ? (1 - P.hp / 35) * .55 : 0)).toFixed(2));
+    this.css('low', 'opacity', (P.hp < 35 ? (.5 + .5 * Math.sin(GAME.t * 5)) * (1 - P.hp / 35) * .8 : 0).toFixed(2));
     for (let k = 0; k < 4; k++) if (this.arcs[k] > 0) { this.arcs[k] = Math.max(0, this.arcs[k] - dt * .9); $('dmg').children[k].style.opacity = this.arcs[k]; }
     if (this.hintT > 0) { this.hintT -= dt; if (this.hintT <= 0) $('hint').style.opacity = 0; }
     if (this.bigT > 0) { this.bigT -= dt; if (this.bigT <= 0) $('big').style.opacity = 0; }
@@ -2666,8 +2674,8 @@ const UI = {
       _uv.set(op.x, (op.y || 0) + 1.6, op.z).project(camera); const behind = _uv.z > 1;
       let sx = (_uv.x * .5 + .5) * VW(), sy = (-_uv.y * .5 + .5) * VH(); if (behind) { sx = VW() - sx; sy = VH() - 40; }
       const m = 34; sx = clamp(sx, m, VW() - m); sy = clamp(sy, m + 30, VH() - m - 30);
-      mk.style.display = d > 3 ? 'block' : 'none'; mk.style.transform = `translate(${sx.toFixed(0)}px,${sy.toFixed(0)}px)`; if (this.last.md !== (d | 0)) { this.last.md = d | 0; mk.children[1].textContent = (d | 0) + 'm'; }
-    } else { mk.style.display = 'none'; this.set('objDist', ''); }
+      this.css('mark', 'display', d > 3 ? 'block' : 'none'); this.css('mark', 'transform', `translate(${sx.toFixed(0)}px,${sy.toFixed(0)}px)`); if (this.last.md !== (d | 0)) { this.last.md = d | 0; mk.children[1].textContent = (d | 0) + 'm'; }
+    } else { this.css('mark', 'display', 'none'); this.set('objDist', ''); }
     // 調べられる物
     const N = PICK.near, pr = $('prompt');
     if (N) { const t = (IS_TOUCH ? '' : '<b>E</b>') + N.label; if (this.last.pr !== t) { this.last.pr = t; pr.innerHTML = t; pr.style.display = 'block'; $('bAct').classList.remove('hide'); $('bAct').textContent = N.short || '調べる'; } }
@@ -2874,7 +2882,7 @@ const CHAPTERS = [
     steps: [
       { on() { SAY.lines([['go', 'せまい通りだ。走るやつがいる、先に倒せ'], ['sakura', '診療所は通りの東側。緑の看板が目印よ']]); UI.setObj('診療所で、水瀬博士を見つける', PLACES.clinicDoor); DIR.set({ want: 7, runner: .25, rate: 1.3 }); },
         until: () => near(PLACES.clinicIn, 3.6) || near(PLACES.clinicDoor, 1.6) },
-      { on() { DIR.off(); UI.setObj('', null); const s = ALLIES.get('sakura'), g = ALLIES.get('go'); s.hold = { x: -58.7, z: -37.9 }; g.hold = { x: -58.7, z: -32.1 };
+      { on() { DIR.off(); UI.setObj('', null); const s = ALLIES.get('sakura'), g = ALLIES.get('go'); s.hold = { x: -59.3, z: -38.3 }; g.hold = { x: -59.3, z: -31.7 };
           SAY.lines([['doc', '来てくれたのね…！ 感染症研究所の水瀬です'], ['doc', 'でも待って。抗体データの書き出しが、まだ終わっていないの。あと少し、ここを守って！'], ['go', '聞いたな。入口を固めろ！'], ['sakura', '弾薬箱は中にある。今のうちに補給して']]); },
         until: () => !SAY.busy() && STORY.st > 3 },
       { on() { STORY.T = GAME.diff === 0 ? 70 : 90; UI.setObj('データの書き出しが終わるまで、診療所を守る', PLACES.clinicDoor); DIR.set({ want: 12, runner: .35, rate: .55 }); },
@@ -2921,7 +2929,7 @@ const CHAPTERS = [
         until: () => STORY.flags.flare },
       { on() { STORY.T = GAME.diff === 0 ? 120 : 150; FX.flare = { x: PLACES.flare.x, y: CURB + .05, z: PLACES.flare.z }; AUDIO.sfx('flare');
           const d = ALLIES.get('doc'); d.hold = { x: 2.2, z: -169.5 };
-          SAY.lines([['sakura', '点火！ ヘリが来るまで、持ちこたえて！'], ['go', '全方向から来るぞ！ 博士を真ん中に！']]); UI.setObj('ヘリが来るまで、着陸地点を守る', PLACES.lz); DIR.set({ want: 10, runner: .3, rate: .6 }); },
+          SAY.lines([['sakura', '点火！ ヘリが来るまで、持ちこたえて！'], ['go', '全方向から来るぞ！ 博士を真ん中に！'], ['sakura', '弾が切れたら、土のうのそばの弾薬箱で補給して！']]); UI.setObj('ヘリが来るまで、着陸地点を守る', PLACES.lz); DIR.set({ want: 10, runner: .3, rate: .6 }); },
         tick() { const t = STORY.st, T = STORY.T, F = STORY.flags; UI.progress('ヘリ到着まで　' + Math.max(0, Math.ceil(T - t)) + '秒', t / T);
           setSky(lerp(.62, .9, t / T)); DIR.want = lerp(10, 17, t / T); DIR.runner = lerp(.3, .45, t / T);
           if (!F.b1 && t > T * .4) { F.b1 = 1; const s = DIR.pickSpawn(); if (s) { ZOMBIES.spawn('brute', s.x, s.z, { active: true }); SAY.lines([['go', 'でかいのが来たぞ！ 手榴弾を使え！']]); } }
@@ -2980,7 +2988,7 @@ const GAME = {
   toTitle() {
     this.state = 'title'; this.cine = true; this.endCut = this.endShown = false; this.setPlaying(false); document.body.classList.remove('cine'); showScreen('title'); $('fade').style.opacity = 0; $('flash').style.opacity = 0; $('end').classList.remove('day'); VMSTATE.show = false;
     ZOMBIES.clear(); PICK.clear(); ALLIES.clear(); GRENADES.clear(); SAY.clear(); HELI.hide(); HELI.fly = false; FX.flare = null; DIR.off(); UI.progress(null); setSky(.05); AUDIO.mode('title');
-    PLAYER.pos.set(0, 0, 0); PLAYER.alive = false; PLAYER.light = false; LIGHTS.torch.intensity = 0;
+    PLAYER.pos.set(0, 0, 0); PLAYER.alive = false; PLAYER.light = false; LIGHTS.torch.intensity = 0; UI.css('hurt', 'opacity', 0); UI.css('low', 'opacity', 0);
     for (let i = 0; i < 12; i++) zplace('walker', rr(-14, 14), rr(-12, 12));
     const s = readSave(); $('tCont').disabled = !s; $('tContS').textContent = s ? `第${s.ch + 1}章「${CHAPTERS[s.ch].name}」・${DIFF[s.diff | 0] ? DIFF[s.diff | 0].name : ''}` : '';
   },
@@ -2995,7 +3003,7 @@ const GAME = {
     this.state = 'story'; this.setPlaying(false); showScreen('story'); this.storyT = 0; this.storyI = 0; AUDIO.mode('story');
     $('storyLines').innerHTML = INTRO.map(t => `<div class="ln">${t}</div>`).join('');
   },
-  play(ch) { showScreen(null); this.state = 'play'; this.setPlaying(true); VMSTATE.show = true; AUDIO.mode('play'); STORY.begin(ch, false); if (!IS_TOUCH) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* クリックで固定 */ } } },
+  play(ch) { showScreen(null); UI.css('hurt', 'opacity', 0); UI.css('low', 'opacity', 0); UI.hurtA = 0; this.cine = false; document.body.classList.remove('cine'); PLAYER.alive = true; this.failT = 0; $('fade').style.opacity = 0; this.state = 'play'; this.setPlaying(true); VMSTATE.show = true; AUDIO.mode('play'); STORY.begin(ch, false); if (!IS_TOUCH) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* クリックで固定 */ } } },
   pause() { if (this.state !== 'play' || this.failT > 0) return; this.state = 'pause'; this.setPlaying(false); showScreen('pause'); $('pStat').textContent = `第${STORY.ch + 1}章「${CHAPTERS[STORY.ch].name}」・${DIFF[this.diff].name}`; AUDIO.duck(true); IN.fire = false; },
   resume() { this.state = 'play'; this.setPlaying(true); showScreen(null); AUDIO.duck(false); if (!IS_TOUCH) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* クリックで固定 */ } } },
   fail(why) { if (this.state !== 'play' || this.failT > 0 || this.cine) return; this.failT = 1e-4; this.failWhy = why; PLAYER.frozen = true; AUDIO.sfx('fail'); },
@@ -3033,7 +3041,7 @@ function tickOther(dt, real) {
 }
 function setupMenus() {
   const seg = (id, key, cast, after) => { const el = $(id), draw = () => { for (const b of el.children) b.classList.toggle('on', String(SET[key]) === b.dataset.v); }; for (const b of el.children) b.addEventListener('click', () => { SET[key] = cast(b.dataset.v); saveSet(); draw(); after && after(); }); draw(); };
-  seg('sQ', 'quality', String, applyQuality); seg('sFps', 'fps', Number, () => { if (!SET.fps) $('fps').textContent = ''; }); seg('sInv', 'inv', Number); seg('sAssist', 'assist', Number);
+  seg('sQ', 'quality', String, () => { SET.qUser = 1; saveSet(); applyQuality(); }); seg('sFps', 'fps', Number, () => { if (!SET.fps) $('fps').textContent = ''; }); seg('sInv', 'inv', Number); seg('sAssist', 'assist', Number);
   $('sSens').value = SET.sens; $('sSens').addEventListener('input', e => { SET.sens = +e.target.value; saveSet(); });
   $('sVol').value = SET.vol; $('sVol').addEventListener('input', e => { SET.vol = +e.target.value; saveSet(); AUDIO.setVol(); });
   const sub = (btn, scr) => $(btn).addEventListener('click', () => { GAME.back = GAME.state === 'pause' ? 'pause' : 'title'; showScreen(scr); });
@@ -3196,7 +3204,7 @@ function applyHome(S) {
   if (typeof S.sound === 'boolean' || typeof S.vol === 'number') { HUB.vol = S.sound === false ? 0 : clamp(typeof S.vol === 'number' ? S.vol : HUB.vol, 0, 1); AUDIO.setVol(); }
   if (typeof S.sens === 'number') HUB.sens = clamp(S.sens, 0.4, 2.2);
 }
-let last = performance.now(), fpsAcc = 0, fpsN = 0, RUN = true, navT = 0;
+let last = performance.now(), fpsAcc = 0, fpsN = 0, RUN = true, navT = 0, slowAcc = 0, slowN = 0, slowHits = 0;
 const _tq = new THREE.Quaternion(), _t0 = V3();
 function render() {
   if (QUAL.post && composer) composer.render();
@@ -3208,6 +3216,11 @@ function frame(now) {
   if (!RUN) return;
   fpsAcc += real; fpsN++; if (fpsAcc > 0.5) { if (SET.fps) $('fps').textContent = Math.round(fpsN / fpsAcc) + ' fps'; fpsAcc = 0; fpsN = 0; }
   tick(dt, real); render();
+  // 動きが重いときは、画質を自動で1段下げる（自分で画質を選んだあとは、さわらない）
+  if (GAME.state === 'play' && !SET.qUser && SET.quality !== 'low') {
+    slowAcc += real; slowN++;
+    if (slowAcc > 3) { slowHits = slowN / slowAcc < 24 ? slowHits + 1 : 0; slowAcc = 0; slowN = 0; if (slowHits >= 2) { slowHits = 0; SET.quality = SET.quality === 'high' ? 'std' : 'low'; saveSet(); applyQuality(); for (const b of $('sQ').children) b.classList.toggle('on', b.dataset.v === SET.quality); UI.hint('動きが重いので、画質を下げました（設定で変えられます）', 5); } }
+  }
 }
 function tick(dt, real = dt) {
   const G = GAME; G.t += dt;
@@ -3264,7 +3277,7 @@ async function boot() {
   }
   window.__ready = true;
 }
-window.__TZ = { loop: v => (RUN = v), step: (sec, d = 1 / 30) => { for (let t = 0; t < sec; t += d) tick(d); }, tick, render, THREE, scene, camera, renderer, vmScene, vmCam, GAME, PLAYER, ZOMBIES, ALLIES, STORY, CHAPTERS, DIR, PICK, UI, SAY, FX, VM, HELI, AUDIO, COL, NAV, PLACES, SPAWNS, LAMPS, IN, SET, QUAL, MAT, TEX, SKY, WEAPONS, GRENADES, setSky, applyQuality, groundH, showScreen, readSave, zplace };
+window.__TZ = { loop: v => (RUN = v), step: (sec, d = 1 / 30) => { for (let t = 0; t < sec; t += d) tick(d); }, tick, render, THREE, scene, camera, renderer, vmScene, vmCam, GAME, PLAYER, ZOMBIES, ALLIES, STORY, CHAPTERS, DIR, PICK, UI, SAY, FX, VM, HELI, AUDIO, COL, NAV, ROT, onResize, applyHome, PLACES, SPAWNS, LAMPS, IN, SET, QUAL, MAT, TEX, SKY, WEAPONS, GRENADES, setSky, applyQuality, groundH, showScreen, readSave, zplace };
 boot();
 </script>
 <script id="carsjson" type="application/json">{"models":{"NormalCar1":{"slots":["Black","Blue","Grey","Headlights","TailLights","Windows"],"kd":{"Black":[0.011,0.011,0.011],"Blue":[0.2783,0.4317,0.64],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"TailLights":[0.6393,0.0744,0.0594],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[0,779],"slot":[9348,779],"idx":[10128,3822]},"back":{"pos":[17772,576],"slot":[24684,576],"idx":[25260,2520]},"fl":{"pos":[30300,288],"slot":[33756,288],"idx":[34044,1260]},"fr":{"pos":[36564,288],"slot":[40020,288],"idx":[40308,1260]}}},"NormalCar2":{"slots":["Black","Grey","Headlights","LightBlue","Material.007","TailLights","Windows"],"kd":{"Black":[0.011,0.011,0.011],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"LightBlue":[0.4589,0.5479,0.64],"Material.007":[0.64,0.64,0.64],"TailLights":[0.6393,0.0744,0.0594],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[42828,909],"slot":[53736,909],"idx":[54648,4332]},"back":{"pos":[63312,576],"slot":[70224,576],"idx":[70800,2520]},"fl":{"pos":[75840,288],"slot":[79296,288],"idx":[79584,1260]},"fr":{"pos":[82104,288],"slot":[85560,288],"idx":[85848,1260]}}},"SUV":{"slots":["Black","Grey","Headlights","TailLights","White","Windows"],"kd":{"Black":[0.011,0.011,0.011],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"TailLights":[0.6393,0.0744,0.0594],"White":[0.5585,0.5585,0.5585],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[88368,998],"slot":[100344,998],"idx":[101344,4842]},"back":{"pos":[111028,576],"slot":[117940,576],"idx":[118516,2520]},"fl":{"pos":[123556,288],"slot":[127012,288],"idx":[127300,1260]},"fr":{"pos":[129820,288],"slot":[133276,288],"idx":[133564,1260]}}},"SportsCar":{"slots":["Black","DarkOrange","Grey","Headlights","Orange","TailLights","Windows"],"kd":{"Black":[0.011,0.011,0.011],"DarkOrange":[0.5585,0.2332,0.0756],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.4842,0.1386],"Orange":[0.6393,0.266,0.0856],"TailLights":[0.6393,0.0744,0.0594],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[136084,861],"slot":[146416,861],"idx":[147280,4194]},"back":{"pos":[155668,576],"slot":[162580,576],"idx":[163156,2520]},"fl":{"pos":[168196,288],"slot":[171652,288],"idx":[171940,1260]},"fr":{"pos":[174460,288],"slot":[177916,288],"idx":[178204,1260]}}},"SportsCar2":{"slots":["Black","Grey","Headlights","TailLights","White","Windows"],"kd":{"Black":[0.0107,0.0107,0.0107],"Grey":[0.1259,0.1259,0.1259],"Headlights":[0.64,0.2996,0.102],"TailLights":[0.64,0.0737,0.059],"White":[0.5488,0.5488,0.5488],"Windows":[0.0282,0.0282,0.0282]},"parts":{"body":{"pos":[180724,852],"slot":[190948,852],"idx":[191800,4404]},"back":{"pos":[200608,576],"slot":[207520,576],"idx":[208096,2520]},"fl":{"pos":[213136,288],"slot":[216592,288],"idx":[216880,1260]},"fr":{"pos":[219400,288],"slot":[222856,288],"idx":[223144,1260]}}},"Taxi":{"slots":["Black","Grey","Headlights","TailLights","Windows","Yellow"],"kd":{"Black":[0.011,0.011,0.011],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"TailLights":[0.6393,0.0744,0.0594],"Windows":[0.0285,0.0285,0.0285],"Yellow":[0.64,0.4651,0.0453]},"parts":{"body":{"pos":[225664,977],"slot":[237388,977],"idx":[238368,4794]},"back":{"pos":[247956,576],"slot":[254868,576],"idx":[255444,2520]},"fl":{"pos":[260484,288],"slot":[263940,288],"idx":[264228,1260]},"fr":{"pos":[266748,288],"slot":[270204,288],"idx":[270492,1260]}}},"Cop":{"slots":["Black","BlueLights","Grey","Headlights","TailLights","White","WhiteLights","Windows"],"kd":{"Black":[0.011,0.011,0.011],"BlueLights":[0.0418,0.1582,0.64],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"TailLights":[0.6393,0.0744,0.0594],"White":[0.5488,0.5488,0.5488],"WhiteLights":[0.64,0.64,0.64],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[273012,982],"slot":[284796,982],"idx":[285780,4656]},"back":{"pos":[295092,576],"slot":[302004,576],"idx":[302580,2520]},"fl":{"pos":[307620,288],"slot":[311076,288],"idx":[311364,1260]},"fr":{"pos":[313884,288],"slot":[317340,288],"idx":[317628,1260]}}}},"license":"CC0 1.0 (Quaternius, Cars Pack)"}</script>
