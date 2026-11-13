@@ -219,8 +219,9 @@ body:not(.playing) .hud, body:not(.playing) #tbtns, body:not(.playing) #bFireL, 
   <div class="how">
   <b>流れ</b>：輸送機からジャンプ → 空を落ちて、地面が近づくとグライダーが開く → 宝箱（金色の光）や落ちている武器を拾う → ストーム（むらさきの壁）の内側へ → 最後のひとりで優勝。<br>
   <b>スマホ</b>：左側をドラッグで移動、右側をドラッグで視点。下の持ち物のマスをタップで持ちかえ（左はしがツルハシ）。「建築」で建築モード（マスをタップで、かべ・ゆか・かいだん。材料は左上をタップ）。「撃つ」で撃つ・建てる・回復を使う。地図をタップで大きな地図。<br>
-  <b>PC</b>：WASDで移動、マウスで視点、左クリックで撃つ・建てる、右クリックで狙う、Rでリロード、1〜5かホイールで持ちかえ、Fでツルハシ、Qで建築モード（Gかホイールで種類、Rで材料）、Spaceでジャンプ、Eで宝箱・拾う・持ちかえ、MかTabで地図、EscかPで一時停止。<br>
-  <b>武器</b>：色がレア度（灰→緑→青→紫→金の順に強い）。頭に当てると大ダメージ。ツルハシで木・岩・鉄の箱をこわすと材料が手に入る。
+  <b>PC</b>：WASDで移動、マウスで視点、左クリックで撃つ・建てる、右クリックで狙う、Rでリロード、1〜5かホイールで持ちかえ、Fでツルハシ、Qで建築モード（1〜3かホイールで種類、Rで材料）、Spaceでジャンプ、Eで宝箱・拾う・持ちかえ、MかTabで地図、EscかPで一時停止。<br>
+  <b>武器</b>：色がレア度（灰→緑→青→紫→金の順に強い）。頭に当てると大ダメージ。ツルハシで木・岩・鉄の箱をこわすと材料が手に入る。<br>
+  <b>島</b>：土の道を行けば、山や峡谷の上まで歩いて登れる。がけは、かいだんを建てて登ろう。川や湖は泳いでわたれる。
   </div>
   <button class="mb" id="hBack" type="button">もどる</button>
 </div></div>
@@ -2021,7 +2022,13 @@ function buildWorld() {
   makeItemAssets(); buildTerrain(); buildStructures(); buildBatches(); buildHarvest();
   // ストームの壁・輸送機
   STORM.mesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 160, 96, 1, true), new THREE.MeshBasicMaterial({ color: 0x9a4cff, transparent: true, opacity: .36, side: THREE.DoubleSide, depthWrite: false, fog: false })); STORM.mesh.renderOrder = 6; scene.add(STORM.mesh);
-  PLANE = new THREE.Group(); { const b = new THREE.Mesh(new THREE.CapsuleGeometry(2.2, 12, 6, 12), std({ color: 0x3a6fd0, roughness: .5 })); b.rotation.x = Math.PI / 2; const w = new THREE.Mesh(new THREE.BoxGeometry(26, .4, 4), std({ color: 0xf2c030, roughness: .5 })); const t = new THREE.Mesh(new THREE.BoxGeometry(8, .3, 2.4), w.material); t.position.z = 7.5; const f = new THREE.Mesh(new THREE.BoxGeometry(.3, 3.4, 2.6), w.material); f.position.set(0, 2, 7.5); PLANE.add(b, w, t, f); } PLANE.visible = false; scene.add(PLANE);
+  PLANE = new THREE.Group(); {
+    const blue = [.16, .4, .86], yel = [.96, .76, .18], wht = [.93, .93, .9], g = new CB().cyl(blue, 2.1, 13, 0, 0, 0, 14, 1.1).ball(blue, 2.1, 0, 0, -6.5, 1, 1, 1.5).box(K.dark, 2.6, .9, 2.2, 0, 1.3, -5.6).box(wht, 4.24, .5, 9, 0, .2, -1)
+      .box(yel, 28, .36, 4.4, 0, 1.5, -1.4).box(yel, 9.5, .3, 2.6, 0, .7, 6.4).box(yel, .36, 3.8, 3, 0, 2.4, 6.2).box(blue, .4, 1, 3.2, 0, 4.4, 6.3);
+    for (const sx of [-6.2, 6.2]) g.cyl(wht, .85, 3.6, sx, .7, -2.4, 10, .6).ball(K.red, .5, sx, .7, -4.3, 1, 1, 1.3);
+    const body = new THREE.Mesh(g.build(), std({ vertexColors: true, roughness: .5, metalness: .1 })); body.castShadow = true; PLANE.add(body);
+    for (const sx of [-6.2, 6.2]) { const pr = new THREE.Mesh(new THREE.CircleGeometry(2, 18), new THREE.MeshBasicMaterial({ color: 0xdfe6f0, transparent: true, opacity: .28, side: THREE.DoubleSide, depthWrite: false })); pr.position.set(sx, .7, -4.7); PLANE.add(pr); }
+  } PLANE.visible = false; scene.add(PLANE);
 }
 
 // ---------- 建築（かべ・ゆか・かいだん）：4m のマスと 3m の段にそろえて建てる ----------
@@ -2061,7 +2068,7 @@ function tryBuild(f, kind, mat) { if (f.mats[mat] < 10) return false; const s = 
 // =========================================================================================
 //  ストームロワイヤル — 試合の中身：人（主人公とコンピューター）・撃ち合い・落ちている物と宝箱・コンピューターの考え方
 // =========================================================================================
-const GAME = { state: 'load', t: 0, diff: 1, cine: false, phase: '', mt: 0, fr: 0, planeT: 0, pausedAt: 0, back: 'title', over: false, rank: 0, route: null, chT: 0, wide: -1, gt: 0,
+const GAME = { state: 'load', t: 0, diff: 1, cine: false, phase: '', mt: 0, fr: 0, planeT: 0, pausedAt: 0, back: 'title', over: false, rank: 0, route: null, chT: 0, spT: 0, wide: -1, gt: 0,
   pause() { if (this.state !== 'play' || this.over) return; this.state = 'pause'; document.body.classList.remove('playing'); showScreen('pause'); $('pStat').textContent = `のこり ${ALIVE}人・${P.kills}キル`; AUDIO.duck(true); IN.fire = false; },
   resume() { this.state = 'play'; document.body.classList.add('playing'); showScreen(null); AUDIO.duck(false); lockPtr(); } };
 const PLAYER = { get pos() { return P ? P.pos : _zero; }, get yaw() { return P ? P.yaw : 0; }, get hp() { return P && GAME.state === 'play' && !GAME.over ? P.hp : 100; }, get ads() { return 0; } }, ZOMBIES = { list: [] }, _zero = V3();
@@ -2358,6 +2365,7 @@ function animFighter(f, dt, far) {
 // =========================================================================================
 const PIECEK = ['wall', 'floor', 'ramp'], PIECEN = { wall: 'かべ', floor: 'ゆか', ramp: 'かいだん' }, MATK = ['w', 's', 'm'], ICON = {};
 const FOG0 = new THREE.Color(), FOGS = new THREE.Color(0x7a48c8), FOGD = .0018, _pv = V3(), _zn = V3(0, 0, -1), _lp = { x: 0, z: 0 };
+const LEAF_OAK = [[3.9, 1.95], [3.3, 1.35]], LEAF_PINE = [[3.6, 1.45], [5.6, 1.05]];   // 木の葉のおおよその丸（高さ・半径）
 const UFONT = '"Chakra Petch", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif', DIRN = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
 
 // 持ち物の絵：本物の形（銃・ツルハシ・回復）を小さく描いて画像にする。建築の3つは線でかく
@@ -2429,6 +2437,13 @@ function playerUpdate(dt) {
     const side = lerp(.75, .55, IN.aimK); _o.set(p.x + cy * side, p.y + 1.62, p.z - sy * side); let dist = f.glide ? 7.5 : lerp(3.6, 2, IN.aimK);
     const hw = COL.ray(_o.x, _o.y, _o.z, -_d.x, -_d.y, -_d.z, dist + .3, false); if (hw) dist = Math.max(.4, hw.t - .3);
     const ht = terrainRay(_o.x, _o.y, _o.z, -_d.x, -_d.y, -_d.z, dist + .4); if (ht >= 0) dist = Math.max(.4, Math.min(dist, ht - .4));
+    {   // 木の葉の中にカメラが入ると何も見えないので、葉の手前まで寄せる
+      const ci = clamp(Math.floor((_o.x - COL.x0) / COL.cell), 0, COL.nx - 1), cj = clamp(Math.floor((_o.z - COL.z0) / COL.cell), 0, COL.nz - 1);
+      for (let j = Math.max(0, cj - 1); j <= Math.min(COL.nz - 1, cj + 1); j++) for (let i = Math.max(0, ci - 1); i <= Math.min(COL.nx - 1, ci + 1); i++) for (const b of COL.grid[j * COL.nx + i]) {
+        const o = b.hv; if (!o || o.hp <= 0 || (o.type !== 'oak' && o.type !== 'pine')) continue;
+        for (const [hy, hr] of o.type === 'oak' ? LEAF_OAK : LEAF_PINE) { const mx = o.x - _o.x, my = o.y + hy * o.s - _o.y, mz = o.z - _o.z, r = hr * o.s, tb = -(mx * _d.x + my * _d.y + mz * _d.z), c = mx * mx + my * my + mz * mz - r * r; if (c < 0) { dist = Math.min(dist, .5); continue; } if (tb < 0) continue; const disc = tb * tb - c; if (disc > 0) dist = Math.min(dist, Math.max(.5, tb - Math.sqrt(disc) - .25)); }
+      }
+    }
     P.camD = dist; camera.position.copy(_o).addScaledVector(_d, -dist); const cg = Math.max(terrainH(camera.position.x, camera.position.z), SEA) + .25; if (camera.position.y < cg) camera.position.y = cg;
   }
   camera.rotation.set(pt + rr(-sh, sh), f.yaw + rr(-sh, sh), 0); const fov = scoped ? 13 : lerp(baseFov(), baseFov() * .72, IN.aimK) + (f.dive ? 8 : 0); if (Math.abs(camera.fov - fov) > .01) { camera.fov = damp(camera.fov, fov, 12, dt); if (scoped || Math.abs(camera.fov - fov) < .05) camera.fov = fov; camera.updateProjectionMatrix(); } camera.updateMatrixWorld();
@@ -2562,13 +2577,13 @@ function startMatch() {
     f.h.root.visible = false; f.h.root.rotation.x = 0; f.gl.visible = false; f.h.mixer.stopAllAction(); f.h.cur = null; f.h.active = []; f.pos.set(Rt.ax, 107, Rt.az);
     if (f.bot) {   // コンピューター：降りる場所を決め、輸送機がその近くを通るときに飛びおりる
       let s = 250; for (let k = 0; k < 8; k++) { const q = Math.random() < .75 ? pick(POI) : null; landPoint(q ? q.x : 0, q ? q.z : 0, q ? q.r + 6 : 170, f.land); s = (f.land.x - Rt.ax) * dx + (f.land.z - Rt.az) * dz; if (Math.abs((f.land.x - Rt.ax) * dz - (f.land.z - Rt.az) * dx) < 100 && s > 30 && s < 470) break; }
-      f.dropT = clamp(s / (500 / 30) - 1 + rr(-1.2, 1.2), 1.6, 27); f.yaw = Rt.yaw; f.skip.clear(); f.matT = rr(2, 8);
+      f.dropT = clamp(s / (500 / 30) - 1 + rr(-1.2, 1.2), 1.6, 23); f.yaw = Rt.yaw; f.skip.clear(); f.matT = rr(2, 8);
       const w = rollWeapon(-.25); f.inv[0] = { w: w.k, r: w.r, mag: w.mag }; f.cur = 0; f.mats.w = 30; if (Math.random() < .5) f.inv[1] = { h: 'band', n: 3 };
     }
   });
   // 落ちている物：場所（町・小屋）のまわり
   for (const p of POI) { const n = p.r > 20 ? 12 : 6; for (let i = 0, k = 0; i < n && k < 80; k++) { const an = Math.random() * TAU, d = Math.sqrt(Math.random()) * (p.r + 3), x = p.x + Math.cos(an) * d, z = p.z + Math.sin(an) * d, h = terrainH(x, z); if (h < .6) continue; _lp.x = x; _lp.z = z; if (COL.move(_lp, .5, h, 1.2, .1)) continue; i++; const q = Math.random(), it = q < .5 ? rollWeapon() : q < .72 ? rollHeal() : { t: 'a', k: pick(['l', 'm', 'm', 's', 'h']), n: 0 }; if (it.t === 'a') it.n = AMMO[it.k][1]; dropLoot(it, x, z); } }
-  ALIVE = F.length; GAME.over = false; GAME.mt = 0; GAME.fr = 0; GAME.phase = 'plane'; GAME.planeT = 0; GAME.chT = 1; GAME.gt = 0;
+  ALIVE = F.length; GAME.over = false; GAME.mt = 0; GAME.fr = 0; GAME.phase = 'plane'; GAME.planeT = 0; GAME.chT = 1; GAME.gt = 0; GAME.warned = false;
   P.yaw = Rt.yaw; P.pitch = -.35; P.piece = 0; P.bmat = 'w'; P.recoil = 0; P.shake = 0; P.bob = 0; P.camD = 6; PLANE.visible = true; PLANE.position.set(Rt.ax, 110, Rt.az); PLANE.rotation.y = Rt.yaw;
   IN.aimToggle = false; IN.aimK = 0; $('bAim').classList.remove('on'); $('feed').innerHTML = ''; $('dmgnums').innerHTML = ''; $('toast').style.opacity = 0; $('hint').style.opacity = 0;
   Object.assign(UI, { dirty: true, hurtA: 0, near: null, nearL: null, fogK: 0, tapSlot: -2, tapMat: '', toastT: 0, hintT: 0 }); UI.last.out = undefined; UI.last.hd = -9; UI.mapOpen(false); scene.fog.color.copy(FOG0); scene.fog.density = FOGD;
@@ -2599,7 +2614,8 @@ function matchTick(dt) {
     const sens = SET.sens * HUB.sens; P.yaw -= IN.lookX * sens; P.pitch = clamp(P.pitch - IN.lookY * sens * (SET.inv ? -1 : 1), -1.3, .6); IN.lookX = IN.lookY = 0; P.pos.set(pp.x, pp.y - 3, pp.z);
     camera.position.set(pp.x + Math.sin(P.yaw) * 26, pp.y + 9, pp.z + Math.cos(P.yaw) * 26); camera.rotation.set(P.pitch * .6 - .22, P.yaw, 0); if (camera.fov !== baseFov()) { camera.fov = baseFov(); camera.updateProjectionMatrix(); } camera.updateMatrixWorld();
     if (IN.pressed.has('map')) UI.mapOpen(!UI.bigOn);
-    if ((IN.pressed.has('jump') || (IS_TOUCH && IN.pressed.has('fire')) || GAME.planeT > TP - 2.5) && GAME.planeT > 1.5) { GAME.phase = 'glide'; P.wait = false; P.glide = P.dive = true; P.vx = Rt.dx * 10; P.vz = Rt.dz * 10; P.h.root.visible = true; P.pitch = -.75; AUDIO.sfx('swing'); windTo(.55); UI.mapOpen(false); }
+    if (GAME.planeT > TP - 11.5 && !GAME.warned) { GAME.warned = true; UI.hint('まもなく、自動で飛びおります', 4); }
+    if ((IN.pressed.has('jump') || (IS_TOUCH && IN.pressed.has('fire')) || GAME.planeT > TP - 6.5) && GAME.planeT > 1.5) { GAME.phase = 'glide'; P.wait = false; P.glide = P.dive = true; P.vx = Rt.dx * 10; P.vz = Rt.dz * 10; P.h.root.visible = true; P.pitch = -.75; AUDIO.sfx('swing'); windTo(.55); UI.mapOpen(false); }
   } else if (!GAME.over || P.alive) playerUpdate(dt);
   if (GAME.phase === 'ground') GAME.gt += dt;
   if (GAME.phase !== 'plane') stormUpdate(dt);
@@ -2632,6 +2648,7 @@ function matchTick(dt) {
   for (const c of CHESTS) if (c.open && c.k < 1) { c.k = Math.min(1, c.k + dt * 3.2); c.hinge.rotation.x = -1.95 * (1 - (1 - c.k) ** 3); }
   for (let i = HVP.length - 1; i >= 0; i--) { const o = HVP[i]; o.pulse -= dt * 5; if (o.pulse <= 0 || o.hp <= 0) { if (o.hp > 0) setHv(o, 1); HVP.splice(i, 1); } else setHv(o, 1 - Math.sin(o.pulse * Math.PI) * .07); }
   if (WORLD.mill) WORLD.mill.rotation.z += dt * .5;
+  GAME.spT -= dt; if (GAME.spT <= 0) { GAME.spT = .22; for (const c of CHESTS) if (!c.open && c.type === 'chest' && (c.x - cx) ** 2 + (c.z - cz) ** 2 < 2000) FX.add.emit(c.x + rr(-.55, .55), c.y + rr(.3, 1), c.z + rr(-.4, .4), 0, rr(.5, 1.3), 0, rr(.5, .9), .08, .02, 3, 2.3, .7, 1, -.3, 0); }
   // 近くの宝箱は、きらきらした音がする
   GAME.chT -= dt; if (GAME.chT <= 0) { GAME.chT = 1.7; let bd = 18; for (const c of CHESTS) if (!c.open && c.type === 'chest') { const d = Math.hypot(c.x - P.pos.x, c.z - P.pos.z, c.y - P.pos.y); if (d < bd) bd = d; } if (bd < 18) [1568, 2093, 2637].forEach((fq, i) => AUDIO.o({ f: fq * rr(.99, 1.01), dur: .5, vol: .06 * (1 - bd / 18), t0: i * .09, atk: .02, rev: .5 })); }
   if (P.alive || !GAME.over) UI.update(dt);
@@ -2686,7 +2703,8 @@ async function boot() {
     loadModels(); buildWorld(); await nextFrame(); FX.init();
     {   // ストームの壁：たてにすじの入った、ゆれる幕
       const H = fbm(256, [4, 16, 64], [.5, .3, .2], rng(77)), t = tex(canvasOf(256, (i, o) => { const v = 70 + H[i] * 185; o[0] = o[1] = o[2] = v; }), false); t.repeat.set(36, 1.2);
-      const m = STORM.mesh.material; m.alphaMap = t; m.opacity = .6; m.needsUpdate = true;
+      const m = STORM.mesh.material; m.alphaMap = t; m.opacity = .62; m.fog = true;   // 遠くにあるときはうすく、近づくとはっきり見える
+      m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <fog_fragment>', 'gl_FragColor.a *= 1. - smoothstep(70., 260., vFogDepth) * .78;'); }; m.needsUpdate = true;
     }
     say('持ち物の絵をかいています…'); await nextFrame(); makeIcons(); UI.init();
     say('24人を集めています…'); await nextFrame();
