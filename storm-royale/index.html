@@ -2569,7 +2569,7 @@ const UI = { last: {}, dirty: true, hurtA: 0, hitT: 0, hintT: 0, toastT: 0, bigT
 function startMatch() {
   for (const L of LOOT.slice()) rmLoot(L); for (const p of [...PIECES.values()]) if (!p.fixed) { p.hp = 0; hurtPiece(p, 1); } for (const r of ROCKETS) scene.remove(r.m); ROCKETS.length = 0; HVP.length = 0;
   for (const c of CHESTS) { c.open = false; c.k = 0; c.hinge.rotation.x = 0; if (c.beam) c.beam.visible = true; } for (const o of HV) { o.hp = HVDEF[o.type].hp; o.col.off = false; o.pulse = 0; setHv(o, 1); }
-  Object.assign(STORM, { x: 0, z: 0, r: 300, nx: 0, nz: 0, nr: 300, i: 0, t: PHASES[0][0], shrink: false, dps: 1, tick: 0 }); pickNext();
+  Object.assign(STORM, { x: 0, z: 0, r: 300, nx: 0, nz: 0, nr: 300, i: 0, t: PHASES[0][0], shrink: false, dps: 1, tick: 0 }); pickNext(); STORM.mesh.position.set(0, 30, 0); STORM.mesh.scale.set(STORM.r, 1, STORM.r);
   // 輸送機の道すじ：島のまんなかの近くを通る
   const a = Math.random() * TAU, cx = rr(-40, 40), cz = rr(-40, 40), dx = Math.cos(a), dz = Math.sin(a), Rt = GAME.route = { ax: cx - dx * 250, az: cz - dz * 250, bx: cx + dx * 250, bz: cz + dz * 250, dx, dz, yaw: Math.atan2(-dx, -dz) };
   F.forEach(f => {
