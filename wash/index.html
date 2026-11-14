@@ -1420,7 +1420,7 @@ LEVELS.push({
       groundPlane(L, 'sand', 2.3, 2.3, x, z, 0.12).material = decoMat('sand');
       { const sb = new THREE.Mesh(new THREE.BoxGeometry(2.32, 0.12, 2.32), decoMat('sand')); sb.position.set(x, 0.06, z); sb.visible = false; L.obj(sb, { solid: true }); }
       for (const s of [-1, 1]) { L.col(x, z + s * 1.23, 2.62, 0.16, 0, 0.22); L.col(x + s * 1.23, z, 0.16, 2.3, 0, 0.22); }
-      const bk = new PB(); bk.cyl(0.11, 0.13, 0.16, 16, T(x - 0.5, 0.2, z + 0.3), { caps: 'b' }); bk.pipe([x - 0.62, 0.27, z + 0.3], [x - 0.38, 0.27, z + 0.3], 0.006, 6, new THREE.Matrix4());
+      const bk = new PB(); bk.lathe([[0, 0], [0.11, 0], [0.13, 0.16], [0.118, 0.163], [0.1, 0.012], [0, 0.012]], 18, T(x - 0.5, 0.12, z + 0.3)); bk.pipe([x - 0.62, 0.27, z + 0.3], [x - 0.38, 0.27, z + 0.3], 0.006, 6, new THREE.Matrix4());
       L.deco(bk, 'plasR', { solid: false }); }
     // 水飲み場
     { const x = -1.6, z = 5.1, pb = new PB();
