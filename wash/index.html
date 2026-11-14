@@ -1,0 +1,2227 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>ピカピカ洗浄屋</title>
+<style>
+/* 全画面3D + 隅にHUD。明るい昼の庭が舞台なので、HUDは白い文字に影、メニューは白い紙のパネル */
+:root {
+  --ink: #ffffff; --ink2: rgba(255,255,255,.75); --shade: rgba(8,26,44,.5); --line: rgba(255,255,255,.32);
+  --aqua: #22b8ec; --aqua2: #0b86c6; --yellow: #ffd23f; --green: #46c860; --red: #f0533f;
+  --paper: #f6fbff; --pink: #14324a; --sub: #5d7488; --pline: rgba(20,50,74,.13);
+  --f: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --sw: 1vw; --sh: 1vh;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #a9d6f2; color: var(--ink); font-family: var(--f);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+#rot { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; overflow: hidden; }
+#c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.hide { display: none !important; }
+button { font-family: var(--f); }
+
+/* ---------- HUD ---------- */
+.hud { position: absolute; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.25); }
+#hud { position: absolute; inset: 0; pointer-events: none; }
+#top { left: 50%; top: calc(8px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(420px, calc(56 * var(--sw))); text-align: center; }
+#jobName { font-size: 14px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { height: 10px; border-radius: 6px; background: rgba(0,20,40,.38); overflow: hidden; border: 1px solid rgba(255,255,255,.4); margin-top: 4px; }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #7cecff, #22b8ec); border-radius: 6px; transition: width .25s; }
+#totPct { font-size: 13px; font-weight: 800; margin-top: 2px; }
+#money { right: calc(14px + env(safe-area-inset-right, 0px)); top: calc(8px + env(safe-area-inset-top, 0px)); font-size: 22px; font-weight: 900; color: #fff7cf; letter-spacing: .02em; }
+#cross { left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px; border: 2px solid rgba(255,255,255,.92); border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.3), inset 0 0 0 1px rgba(0,0,0,.2); }
+#cross::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.3); }
+#aim { left: 50%; top: calc(50% + 24px); transform: translateX(-50%); width: 230px; text-align: center; opacity: 0; transition: opacity .2s; }
+#aimName { font-size: 14px; font-weight: 800; }
+#aimName small { font-size: 12px; opacity: .85; margin-left: 4px; }
+#aim .bar { height: 7px; }
+#aim.done .bar i { background: linear-gradient(90deg, #a8f7a3, #46c860); }
+#noz { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(8px + env(safe-area-inset-top, 0px)); display: flex; gap: 5px; align-items: center; pointer-events: none; }
+body.hub #noz { left: calc(56px + env(safe-area-inset-left, 0px)); }
+#noz .chip { width: 34px; height: 34px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(8,26,44,.45); border: 2px solid rgba(255,255,255,.25); font-size: 10px; font-weight: 800; line-height: 1; }
+#noz .chip b { width: 14px; height: 14px; border-radius: 50%; margin-bottom: 3px; box-shadow: 0 0 0 1.5px rgba(0,0,0,.35); }
+#noz .chip.on { border-color: #fff; background: rgba(34,184,236,.55); transform: scale(1.08); }
+#noz .chip.no { opacity: .3; }
+#noz .fan { margin-left: 4px; width: 34px; height: 34px; border-radius: 10px; background: rgba(8,26,44,.45); border: 2px solid rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; }
+#noz .fan i { display: block; width: 22px; height: 4px; border-radius: 2px; background: #fff; transition: transform .2s; }
+#noz .fan.v i { transform: rotate(90deg); }
+#toasts { right: calc(14px + env(safe-area-inset-right, 0px)); top: calc(92px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.toast { background: rgba(8,26,44,.62); border: 1px solid rgba(255,255,255,.35); border-radius: 12px; padding: 7px 12px; font-size: 14px; font-weight: 800; animation: tin .35s ease-out; transition: opacity .5s, transform .5s; }
+.toast em { font-style: normal; color: #fff3a8; margin-left: 6px; }
+.toast.out { opacity: 0; transform: translateX(30px); }
+@keyframes tin { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+#hint { left: 50%; top: calc(62px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: rgba(8,26,44,.55); border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; font-size: 13px; line-height: 1.6; text-align: center; width: max-content; max-width: calc(100% - 40px); transition: opacity .8s; opacity: 0; }
+#big { left: 0; right: 0; top: 30%; text-align: center; opacity: 0; transition: opacity .5s, transform .5s; transform: scale(.9); }
+#big.on { opacity: 1; transform: none; }
+#big h1 { margin: 0; font-size: min(60px, calc(10 * var(--sw))); font-weight: 900; color: #fff; letter-spacing: .06em; text-shadow: 0 3px 0 #0b86c6, 0 6px 18px rgba(0,40,80,.5); }
+#big p { margin: 6px 0 0; font-size: 18px; font-weight: 800; }
+.ib { position: absolute; pointer-events: auto; width: 40px; height: 40px; border-radius: 12px; border: 2px solid rgba(255,255,255,.5); background: rgba(8,26,44,.45); color: #fff; font-size: 18px; font-weight: 900; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; }
+#pauseB { right: calc(14px + env(safe-area-inset-right, 0px)); top: calc(44px + env(safe-area-inset-top, 0px)); }
+#listB { right: calc(60px + env(safe-area-inset-right, 0px)); top: calc(44px + env(safe-area-inset-top, 0px)); }
+#findB { right: calc(106px + env(safe-area-inset-right, 0px)); top: calc(44px + env(safe-area-inset-top, 0px)); font-size: 17px; }
+body.touch #findB { display: none; }
+
+/* パーツ一覧（遊びながら見られる） */
+#plist { position: absolute; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(52px + env(safe-area-inset-top, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: min(300px, calc(46 * var(--sw))); background: rgba(246,251,255,.94); color: var(--pink); border-radius: 16px; box-shadow: 0 6px 24px rgba(0,30,60,.3); display: flex; flex-direction: column; overflow: hidden; pointer-events: auto; touch-action: pan-y; }
+#plist h3 { margin: 0; padding: 11px 14px 9px; font-size: 15px; font-weight: 900; border-bottom: 1px solid var(--pline); display: flex; justify-content: space-between; align-items: center; }
+#plist h3 button { border: 0; background: #e6eef5; border-radius: 9px; padding: 5px 10px; font-size: 13px; font-weight: 800; color: var(--pink); cursor: pointer; }
+#plistIn { overflow-y: auto; padding: 4px 10px 12px; flex: 1; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+.pg { margin-top: 8px; font-size: 12px; font-weight: 900; color: var(--sub); letter-spacing: .04em; }
+.pr { display: flex; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 700; }
+.pr:active { background: #e3f2fb; }
+.pr .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr .pb { width: 64px; height: 7px; border-radius: 4px; background: #dbe5ee; overflow: hidden; flex: none; }
+.pr .pb i { display: block; height: 100%; background: #22b8ec; }
+.pr .pc { width: 38px; text-align: right; font-size: 12px; color: var(--sub); flex: none; font-variant-numeric: tabular-nums; }
+.pr.ok .nm { color: #2f9b48; }
+.pr.ok .pb i { background: #46c860; }
+
+/* ---------- タッチ操作 ---------- */
+#touch { position: absolute; inset: 0; pointer-events: none; }
+.joy { position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; border: 2px solid rgba(255,255,255,.55); background: rgba(8,26,44,.18); display: none; pointer-events: none; }
+.joy i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(255,255,255,.75); }
+.tb { position: absolute; pointer-events: auto; width: 62px; height: 62px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); background: rgba(8,26,44,.38);
+  color: #fff; font-size: 12px; font-weight: 900; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.15; text-shadow: 0 1px 2px rgba(0,0,0,.5); touch-action: none; }
+.tb.big { width: 86px; height: 86px; font-size: 15px; background: rgba(34,184,236,.5); }
+.tb.on { background: rgba(34,184,236,.85); border-color: #fff; }
+.tb.big.on { background: rgba(255,210,63,.85); color: #3a2a00; text-shadow: none; }
+#bSpray { right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); }
+#bNoz { right: calc(118px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+#bRot { right: calc(118px + env(safe-area-inset-right, 0px)); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+#bFind { right: calc(30px + env(safe-area-inset-right, 0px)); bottom: calc(126px + env(safe-area-inset-bottom, 0px)); font-size: 22px; }
+#bJump { right: calc(192px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+#bCrouch { right: calc(192px + env(safe-area-inset-right, 0px)); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+body.short .tb { width: 54px; height: 54px; font-size: 11px; }
+body.short .tb.big { width: 74px; height: 74px; }
+
+/* ---------- メニュー（白い紙のパネル） ---------- */
+.scr { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: calc(14px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px)); }
+.scr.dim { background: rgba(6,24,42,.42); }
+.panel { width: min(560px, 100%); max-height: 100%; overflow-y: auto; background: var(--paper); color: var(--pink); border-radius: 22px; box-shadow: 0 10px 40px rgba(0,30,60,.35); padding: 18px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+.panel h2 { margin: 0 0 4px; font-size: 22px; font-weight: 900; }
+.panel .sub { margin: 0 0 12px; font-size: 13px; color: var(--sub); line-height: 1.7; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 0; border-radius: 14px; padding: 13px 18px; font-size: 16px; font-weight: 900; cursor: pointer; background: #e4edf5; color: var(--pink); }
+.btn.go { background: linear-gradient(180deg, #3cc9f5, #119cd8); color: #fff; box-shadow: 0 3px 0 #0a77ad; }
+.btn.go:active { transform: translateY(2px); box-shadow: 0 1px 0 #0a77ad; }
+.btn.y { background: linear-gradient(180deg, #ffe066, #f6c21c); color: #4a3500; box-shadow: 0 3px 0 #c79300; }
+.btn.red { background: #fde3df; color: #b2321f; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.wide { width: 100%; }
+.mtop { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.mtop .money { font-size: 18px; font-weight: 900; color: #b07d00; white-space: nowrap; }
+.back { border: 0; background: #e4edf5; color: var(--pink); border-radius: 100px; padding: 8px 14px; font-size: 14px; font-weight: 800; cursor: pointer; }
+
+#title { flex-direction: column; justify-content: space-between; padding-top: calc(28px + env(safe-area-inset-top, 0px)); padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+#logo { text-align: center; }
+#logo h1 { margin: 0; font-size: min(64px, calc(11 * var(--sw)), calc(12 * var(--sh))); font-weight: 900; letter-spacing: .06em; color: #fff;
+  text-shadow: 0 4px 0 #0b86c6, 0 8px 0 rgba(0,60,110,.25), 0 10px 30px rgba(0,40,80,.35); }
+#logo h1 span { color: #fff6b0; }
+#logo p { margin: 10px 0 0; font-size: 15px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,40,80,.6); }
+#tmenu { width: min(380px, 100%); display: flex; flex-direction: column; gap: 9px; }
+#tmenu .btn { font-size: 18px; padding: 14px; }
+#tmoney { text-align: center; font-size: 15px; font-weight: 900; text-shadow: 0 1px 3px rgba(0,40,80,.6); margin-bottom: 4px; }
+body.short #logo h1 { font-size: min(44px, calc(9 * var(--sw))); }
+body.short #tmenu .btn { padding: 10px; font-size: 16px; }
+
+.job { display: flex; gap: 12px; padding: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--pline); margin-bottom: 10px; align-items: center; }
+.job .ic { width: 64px; height: 64px; flex: none; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 34px; background: #e2f3fc; }
+.job .tx { flex: 1; min-width: 0; }
+.job .tx b { display: block; font-size: 16px; font-weight: 900; }
+.job .tx span { display: block; font-size: 12px; color: var(--sub); line-height: 1.6; margin-top: 2px; }
+.job .tx .st { font-weight: 800; color: #0b86c6; }
+.job .tx .st.ok { color: #2f9b48; }
+.job .btn { padding: 11px 14px; font-size: 14px; flex: none; }
+.job.lock { opacity: .55; }
+.note { font-size: 12px; color: var(--sub); line-height: 1.7; margin: 6px 0 0; }
+
+.item { display: flex; gap: 12px; padding: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--pline); margin-bottom: 10px; align-items: center; }
+.item .ic { width: 52px; height: 52px; flex: none; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 26px; background: #fff3cf; }
+.item .tx { flex: 1; min-width: 0; }
+.item .tx b { display: block; font-size: 15px; font-weight: 900; }
+.item .tx span { display: block; font-size: 12px; color: var(--sub); line-height: 1.6; }
+.item .btn { padding: 10px 12px; font-size: 14px; flex: none; }
+
+.howto { font-size: 13px; line-height: 1.85; }
+.howto h3 { font-size: 15px; margin: 12px 0 4px; }
+.howto b { color: #0b86c6; }
+.nz { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+
+.set { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--pline); font-size: 14px; font-weight: 700; }
+.seg { display: flex; gap: 5px; }
+.seg button { border: 1px solid var(--pline); background: #fff; border-radius: 9px; padding: 7px 11px; font-size: 13px; font-weight: 800; color: var(--pink); cursor: pointer; }
+.seg button.on { background: #22b8ec; border-color: #22b8ec; color: #fff; }
+input[type=range] { width: 46%; accent-color: #22b8ec; }
+
+#result .panel { text-align: center; }
+#result h2 { font-size: 30px; color: #0b86c6; }
+.rline { display: flex; justify-content: space-between; padding: 8px 4px; border-top: 1px solid var(--pline); font-size: 15px; font-weight: 800; }
+.rline.tot { font-size: 19px; color: #b07d00; }
+#load { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: linear-gradient(180deg, #7cc7ef, #c9ecfb); color: #fff; font-size: 16px; font-weight: 900; text-shadow: 0 1px 3px rgba(0,40,80,.5); }
+#load .drop { width: 46px; height: 46px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #fff; animation: bob 1s ease-in-out infinite; box-shadow: 0 4px 14px rgba(0,60,110,.3); }
+@keyframes bob { 50% { transform: rotate(-45deg) translate(6px,-6px); } }
+</style>
+</head>
+<body>
+<div id="rot">
+  <canvas id="c"></canvas>
+
+  <div id="hud" class="hide">
+    <div class="hud" id="top"><div id="jobName"></div><div class="bar"><i id="totBar"></i></div><div id="totPct">0%</div></div>
+    <div class="hud" id="money">¥0</div>
+    <div class="hud" id="noz"></div>
+    <div class="hud" id="cross"></div>
+    <div class="hud" id="aim"><div id="aimName"></div><div class="bar"><i id="aimBar"></i></div></div>
+    <div class="hud" id="toasts"></div>
+    <div class="hud" id="hint"></div>
+    <div class="hud" id="big"><h1 id="bigT"></h1><p id="bigP"></p></div>
+    <button class="ib" id="pauseB" aria-label="一時停止">Ⅱ</button>
+    <button class="ib" id="listB" aria-label="パーツ一覧">≡</button>
+    <button class="ib" id="findB" aria-label="よごれ探し">🔍</button>
+  </div>
+  <div id="plist" class="hide"><h3><span id="plTitle">パーツ一覧</span><button id="plClose">とじる</button></h3><div id="plistIn"></div></div>
+
+  <div id="touch" class="hide">
+    <div class="joy" id="joy"><i></i></div>
+    <div class="tb big" id="bSpray">噴射</div>
+    <div class="tb" id="bNoz">ノズル</div>
+    <div class="tb" id="bRot">向き</div>
+    <div class="tb" id="bFind">🔍</div>
+    <div class="tb" id="bJump">ジャンプ</div>
+    <div class="tb" id="bCrouch">しゃがむ</div>
+  </div>
+
+  <div id="title" class="scr hide">
+    <div id="logo"><h1>ピカピカ<span>洗浄屋</span></h1><p>高圧洗浄機で、よごれを ぜんぶ落とそう！</p></div>
+    <div id="tmenu">
+      <div id="tmoney"></div>
+      <button class="btn go" id="tJobs">しごとを選ぶ</button>
+      <div class="row" style="flex-wrap:nowrap">
+        <button class="btn y" id="tShop" style="flex:1">お店</button>
+        <button class="btn" id="tHow" style="flex:1">あそびかた</button>
+        <button class="btn" id="tSet" style="flex:1">せってい</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="jobs" class="scr dim hide"><div class="panel">
+    <div class="mtop"><button class="back" data-back>‹ もどる</button><span class="money" id="jMoney"></span></div>
+    <h2>しごとの依頼</h2>
+    <p class="sub">よごれた物を高圧洗浄機でピカピカにすると、お金がもらえます。パーツをひとつ きれいにするごとに少しずつ、ぜんぶ終わると ボーナスが入ります。</p>
+    <div id="jobList"></div>
+    <p class="note">とちゅうでやめても、進み具合は保存されます（とちゅうの仕事は1つだけ。ほかの仕事を始めると、とちゅうの分は消えます）。</p>
+  </div></div>
+
+  <div id="shop" class="scr dim hide"><div class="panel">
+    <div class="mtop"><button class="back" data-back>‹ もどる</button><span class="money" id="sMoney"></span></div>
+    <h2>お店</h2>
+    <p class="sub">かせいだお金で、道具を強くしよう。強い洗浄機なら、こびりついた こけ・さび・どろも速く落ちます。</p>
+    <div id="shopList"></div>
+  </div></div>
+
+  <div id="how" class="scr dim hide"><div class="panel">
+    <div class="mtop"><button class="back" data-back>‹ もどる</button></div>
+    <h2>あそびかた</h2>
+    <div class="howto">
+      <p>水をあてると、よごれが少しずつ落ちていきます。真ん中の○を向けた先に水が飛びます。パーツをひとつ ぜんぶきれいにすると「ピカッ」と光って完了。すべてのパーツを完了させたら しごと完了です。</p>
+      <h3>ノズル（水の出かた）</h3>
+      <p><span class="nz" style="background:#e23b3b"></span><b>0°</b> 細くて いちばん強い。遠くまでとどく。こびりつきに。<br>
+      <span class="nz" style="background:#f5c518"></span><b>15°</b> 強めのせまい扇。<br>
+      <span class="nz" style="background:#3fbf5a"></span><b>25°</b> ふつう。<br>
+      <span class="nz" style="background:#f4f4f4"></span><b>40°</b> 広いけれど弱い。近くの広い面に。<br>
+      扇の向き（たて・よこ）を変えられます。茶色い「よごれ」はどのノズルでも落ちますが、緑の こけ・赤茶の さび・こい どろなどの「こびりつき」は、強いノズルで近くからでないと落ちません。</p>
+      <h3>パソコン</h3>
+      <p><b>WASD</b> 移動　<b>マウス</b> 見回す（画面をクリック）　<b>左クリック</b> 噴射<br>
+      <b>1〜4・ホイール</b> ノズル　<b>R・右クリック</b> 扇の向き　<b>F</b> よごれ探し<br>
+      <b>スペース</b> ジャンプ　<b>C</b> しゃがむ　<b>Shift</b> 走る　<b>Tab</b> パーツ一覧　<b>Esc</b> 一時停止</p>
+      <h3>スマホ・タブレット</h3>
+      <p>左側をなぞって移動、右側をなぞって見回す。「噴射」を押すと出しっぱなし、もう一度押すと止まります。🔍で残ったよごれがオレンジに光ります。≡のパーツ一覧で名前を押すと、そのパーツが光ります。</p>
+    </div>
+  </div></div>
+
+  <div id="sets" class="scr dim hide"><div class="panel">
+    <div class="mtop"><button class="back" data-back>‹ もどる</button></div>
+    <h2>せってい</h2>
+    <div class="set"><span>画質</span><span class="seg" id="sQ"><button data-q="low">軽い</button><button data-q="std">ふつう</button><button data-q="high">きれい</button></span></div>
+    <div class="set"><span>見回す速さ <b id="sSensV"></b></span><input type="range" id="sSens" min="40" max="200" step="10"></div>
+    <div class="set"><span>上下を反対に</span><input type="checkbox" id="sInv" style="width:22px;height:22px"></div>
+    <div class="set"><span>音</span><input type="checkbox" id="sSnd" style="width:22px;height:22px"></div>
+    <p class="note">3dgame の ⚙ の「横画面」「音」「視点の感度」も使えます。</p>
+  </div></div>
+
+  <div id="pause" class="scr dim hide"><div class="panel">
+    <h2>一時停止</h2>
+    <p class="sub" id="pInfo"></p>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <button class="btn go wide" id="pRes">つづける</button>
+      <button class="btn wide" id="pList">パーツ一覧</button>
+      <button class="btn wide" id="pSet">せってい</button>
+      <button class="btn wide" id="pQuit">やめてタイトルへ（保存されます）</button>
+      <button class="btn red wide" id="pReset">この仕事を最初からやり直す</button>
+    </div>
+  </div></div>
+
+  <div id="result" class="scr dim hide"><div class="panel">
+    <h2>しごと完了！</h2>
+    <p class="sub" id="rJob"></p>
+    <div id="rLines"></div>
+    <div class="row" style="margin-top:14px;justify-content:center">
+      <button class="btn" id="rStay">ピカピカを ながめる</button>
+      <button class="btn go" id="rNext">しごとえらびへ</button>
+    </div>
+  </div></div>
+
+  <div id="load"><div class="drop"></div><div id="loadMsg">じゅんびちゅう…</div></div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+// =========================================================================================
+//  ピカピカ洗浄屋 — 高圧洗浄機でよごれを落とす、オリジナルのお掃除ゲーム（three.js r170）
+//  よごれのしくみ：
+//   ・洗えるパーツは、どれも自分だけの「よごれマップ」（テクスチャ）を持つ。形の面をぜんぶ
+//     重ならないように並べた（アトラス）UVで貼ってあり、R=ふつうのよごれ、G=こびりつき、B=見た目のむら
+//   ・水が当たった所を、世界の座標のカプセル（線分＋半径）で表し、GPUでマップから引き算する
+//   ・同じ計算を、パーツの表面にばらまいた「見本の点」でもCPUでして、何%きれいかを数える
+// =========================================================================================
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const TAU = Math.PI * 2, DEG = Math.PI / 180;
+const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const sm = t => t * t * (3 - 2 * t);
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+const V3 = THREE.Vector3;
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+if (IS_TOUCH) document.body.classList.add('touch');
+const DEBUG = /[?&]debug/.test(location.search);
+const yen = v => '¥' + Math.round(v).toLocaleString('ja-JP');
+
+// ---------- CPUとGPUで同じ答えになる3Dノイズ（整数ハッシュの値ノイズ） ----------
+function hval(x, y, z) {
+  let h = (Math.imul((x + 4096) | 0, 0x8da6b343) ^ Math.imul((y + 4096) | 0, 0xd8163841) ^ Math.imul((z + 4096) | 0, 0xcb1ab31f)) >>> 0;
+  h = (h ^ (h >>> 13)) >>> 0; h = Math.imul(h, 0x5bd1e995) >>> 0; h = (h ^ (h >>> 15)) >>> 0;
+  return (h & 0xffff) / 65535;
+}
+function vnoise(x, y, z) {
+  const fx = Math.floor(x), fy = Math.floor(y), fz = Math.floor(z);
+  const tx = sm(x - fx), ty = sm(y - fy), tz = sm(z - fz);
+  const a = lerp(lerp(hval(fx, fy, fz), hval(fx + 1, fy, fz), tx), lerp(hval(fx, fy + 1, fz), hval(fx + 1, fy + 1, fz), tx), ty);
+  const b = lerp(lerp(hval(fx, fy, fz + 1), hval(fx + 1, fy, fz + 1), tx), lerp(hval(fx, fy + 1, fz + 1), hval(fx + 1, fy + 1, fz + 1), tx), ty);
+  return lerp(a, b, tz);
+}
+const fbm3 = (x, y, z) => vnoise(x, y, z) * 0.55 + vnoise(x * 2.03 + 17.1, y * 2.03 + 17.1, z * 2.03 + 17.1) * 0.3 + vnoise(x * 4.1 + 31.7, y * 4.1 + 31.7, z * 4.1 + 31.7) * 0.15;
+const GLSL_NOISE = `
+float hval(vec3 c) {
+  uvec3 u = uvec3(ivec3(c) + 4096);
+  uint h = (u.x * 0x8da6b343u) ^ (u.y * 0xd8163841u) ^ (u.z * 0xcb1ab31fu);
+  h ^= h >> 13u; h *= 0x5bd1e995u; h ^= h >> 15u;
+  return float(h & 0xffffu) / 65535.0;
+}
+float vnoise(vec3 x) {
+  vec3 f = floor(x); vec3 t = x - f; t = t * t * (3.0 - 2.0 * t);
+  float a = mix(mix(hval(f), hval(f + vec3(1,0,0)), t.x), mix(hval(f + vec3(0,1,0)), hval(f + vec3(1,1,0)), t.x), t.y);
+  float b = mix(mix(hval(f + vec3(0,0,1)), hval(f + vec3(1,0,1)), t.x), mix(hval(f + vec3(0,1,1)), hval(f + vec3(1,1,1)), t.x), t.y);
+  return mix(a, b, t.z);
+}
+float fbm3(vec3 p) { return vnoise(p) * 0.55 + vnoise(p * 2.03 + 17.1) * 0.3 + vnoise(p * 4.1 + 31.7) * 0.15; }
+`;
+
+// ---------- 3dgame のホーム（⚙ の横画面・音・感度） ----------
+const HUB = { embedded: window.parent !== window, vol: 1, sound: true, sens: 1 };
+if (HUB.embedded) document.body.classList.add('hub');
+const ROT = { on: false };
+const VW = () => (ROT.on ? innerHeight : innerWidth), VH = () => (ROT.on ? innerWidth : innerHeight);
+const toStage = (cx, cy) => (ROT.on ? { x: cy, y: innerWidth - cx } : { x: cx, y: cy });
+
+// ---------- このゲームの設定とセーブ ----------
+const SET = Object.assign({ quality: IS_TOUCH ? 'std' : 'high', sens: 1, inv: false, sound: true },
+  (() => { try { return JSON.parse(localStorage.getItem('wash-settings')) || {}; } catch (e) { return {}; } })());
+const saveSet = () => { try { localStorage.setItem('wash-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
+const SAVE = Object.assign({ v: 1, money: 0, wash: 0, zero: false, ext: false, noz: 2, vert: false, jobs: {}, cur: null },
+  (() => { try { return JSON.parse(localStorage.getItem('wash-save')) || {}; } catch (e) { return {}; } })());
+const writeSave = () => { try { localStorage.setItem('wash-save', JSON.stringify(SAVE)); } catch (e) { /* 保存できない */ } };
+
+// ---------- レンダラー ----------
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;     // 物は動かないので、影は作り直すときだけ描く
+renderer.autoClear = false;
+const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+// よごれマップは半精度の浮動小数で（少しずつ引いても丸められて止まらないように）
+const HALF = renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float');
+const SHADOW = { dirty: true };
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 600);
+camera.rotation.order = 'YXZ';
+scene.add(camera);
+const vmScene = new THREE.Scene();         // 手に持った洗浄ガン（いつも一番手前に描く）
+const TIME_U = { value: 0 };
+
+const SUN_DIR = new V3(0.55, 0.78, 0.32).normalize();
+const sun = new THREE.DirectionalLight(0xfff2dc, 2.6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.025; sun.shadow.radius = 2.5;
+scene.add(sun, sun.target);
+const hemi = new THREE.HemisphereLight(0xe8eef2, 0x968b6c, 1.0);
+scene.add(hemi);
+{ const vs = new THREE.DirectionalLight(0xfff2dc, 2.2); vs.position.copy(SUN_DIR); vmScene.add(vs, new THREE.HemisphereLight(0xd6ecff, 0x8a8264, 0.8)); }
+
+// ---------- 空（グラデーション・太陽・雲） ----------
+const SKY = { top: new THREE.Color(0x2f7fd6), hor: new THREE.Color(0xcfe7f6), gnd: new THREE.Color(0x8d9470) };
+const skyMat = new THREE.ShaderMaterial({
+  uniforms: { uTop: { value: SKY.top }, uHor: { value: SKY.hor }, uGnd: { value: SKY.gnd }, uSun: { value: SUN_DIR }, uTime: TIME_U, uNoise: { value: null }, uClouds: { value: 1 } },
+  vertexShader: `varying vec3 vD; void main(){ vD = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`,
+  fragmentShader: `uniform vec3 uTop, uHor, uGnd, uSun; uniform float uTime, uClouds; uniform sampler2D uNoise; varying vec3 vD;
+    void main(){ vec3 d = normalize(vD); float h = d.y;
+      vec3 c = mix(uHor, uTop, pow(clamp(h, 0.0, 1.0), 0.6));
+      c = mix(c, uGnd, smoothstep(0.0, -0.12, h));
+      float sd = max(dot(d, uSun), 0.0);
+      c += vec3(1.0, 0.9, 0.7) * (pow(sd, 1200.0) * 8.0 + pow(sd, 14.0) * 0.22);
+      if (h > 0.0 && uClouds > 0.5) {
+        vec2 q = d.xz / (h + 0.12) * 0.22 + vec2(uTime * 0.004, uTime * 0.0015);
+        float n = texture2D(uNoise, q).r * 0.65 + texture2D(uNoise, q * 2.7 + 0.3).r * 0.35;
+        float cl = smoothstep(0.52, 0.78, n) * smoothstep(0.02, 0.25, h);
+        c = mix(c, vec3(1.0, 1.0, 1.0) * (0.92 + 0.12 * sd), cl * 0.85);
+      }
+      gl_FragColor = vec4(c, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  side: THREE.BackSide, depthWrite: false, fog: false,
+});
+const sky = new THREE.Mesh(new THREE.SphereGeometry(450, 32, 16), skyMat);
+sky.frustumCulled = false; sky.renderOrder = -10;
+scene.add(sky);
+
+// ---------- 手続きで作るテクスチャ ----------
+function fbm2(S, oct, r) {
+  const H = new Float32Array(S * S);
+  for (const [px, py, a] of oct) {
+    const L = new Float32Array(px * py); for (let i = 0; i < L.length; i++) L[i] = r();
+    for (let y = 0; y < S; y++) {
+      const fy = y * py / S, y0 = Math.floor(fy), ty = sm(fy - y0), y1 = (y0 + 1) % py;
+      for (let x = 0; x < S; x++) {
+        const fx = x * px / S, x0 = Math.floor(fx), tx = sm(fx - x0), x1 = (x0 + 1) % px;
+        H[y * S + x] += a * ((L[y0 * px + x0] * (1 - tx) + L[y0 * px + x1] * tx) * (1 - ty) + (L[y1 * px + x0] * (1 - tx) + L[y1 * px + x1] * tx) * ty);
+      }
+    }
+  }
+  let mn = 1e9, mx = -1e9; for (const v of H) { if (v < mn) mn = v; if (v > mx) mx = v; }
+  for (let i = 0; i < H.length; i++) H[i] = (H[i] - mn) / (mx - mn || 1);
+  return H;
+}
+const iso = (S, ps, amps, r) => fbm2(S, ps.map((p, i) => [p, p, amps[i]]), r);
+function canvasOf(S, fn) {
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'), img = g.createImageData(S, S);
+  for (let i = 0; i < S * S; i++) { const p = fn(i); img.data[i * 4] = p[0]; img.data[i * 4 + 1] = p[1]; img.data[i * 4 + 2] = p[2]; img.data[i * 4 + 3] = p.length > 3 ? p[3] : 255; }
+  g.putImageData(img, 0, 0); return c;
+}
+function normalCanvas(H, S, k) {
+  return canvasOf(S, i => {
+    const x = i % S, y = (i / S) | 0, h = (xx, yy) => H[((yy + S) % S) * S + ((xx + S) % S)];
+    let nx = (h(x - 1, y) - h(x + 1, y)) * k, ny = (h(x, y + 1) - h(x, y - 1)) * k; const l = Math.hypot(nx, ny, 1);
+    return [(nx / l * .5 + .5) * 255, (ny / l * .5 + .5) * 255, (1 / l * .5 + .5) * 255];
+  });
+}
+function mkTex(cv, srgb, meters, ch = 1) {
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = ANISO; t.channel = ch;
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.repeat.set(1 / meters, 1 / meters);
+  return t;
+}
+const TX = {};
+function makeTextures() {
+  // 木：木目は s（横）の向き
+  { const S = 512, r = rng(5), G = fbm2(S, [[1, 12, .5], [2, 40, .3], [4, 90, .2]], r), K = iso(S, [8, 32, 128], [.5, .3, .2], r), H = new Float32Array(S * S);
+    const col = canvasOf(S, i => { const ring = .5 + .5 * Math.sin(G[i] * 46), k = K[i]; const v = .8 + .14 * ring + .14 * (k - .5); H[i] = ring * .5 + k * .5; return [205 * v, 160 * v, 112 * v]; });
+    TX.wood = mkTex(col, true, 1.2); TX.woodN = mkTex(normalCanvas(H, S, 2.2), false, 1.2); }
+  // れんが（ランニングボンド）
+  { const S = 512, r = rng(7), N = iso(S, [16, 64, 128], [.5, .3, .2], r), H = new Float32Array(S * S), tone = [];
+    for (let i = 0; i < 400; i++) tone.push([[158, 76, 50], [172, 92, 60], [140, 68, 48], [184, 104, 70], [150, 84, 62]][(r() * 5) | 0].map(v => v * (.86 + r() * .22)));
+    const bw = 64, bh = 32;
+    const col = canvasOf(S, i => {
+      const x = i % S, y = (i / S) | 0, row = (y / bh) | 0, off = row % 2 ? bw / 2 : 0, cx = (((x + off) % S) / bw) | 0, gx = (x + off) % bw, gy = y % bh;
+      const e = Math.min(gx, bw - gx, gy, bh - gy), j = e < 2.6;
+      H[i] = j ? 0 : .45 + .4 * sstep(0, 6, e) + N[i] * .25;
+      if (j) { const m = 150 + 30 * N[i]; return [m, m * .95, m * .88]; }
+      const t = tone[(row * 13 + cx) % 400], k = .88 + .24 * N[i]; return [t[0] * k, t[1] * k, t[2] * k];
+    });
+    TX.brick = mkTex(col, true, 1.6); TX.brickN = mkTex(normalCanvas(H, S, 5), false, 1.6); }
+  // 御影石（灯籠・バードバス・飛び石）
+  { const S = 256, r = rng(9), N = iso(S, [4, 16, 64, 128], [.4, .3, .2, .1], r), H = new Float32Array(S * S);
+    const col = canvasOf(S, i => { const sp = r(), k = .82 + .2 * N[i] + (sp < .06 ? -.28 : sp > .95 ? .14 : 0); H[i] = N[i] * .6 + sp * .4; return [196 * k, 194 * k, 186 * k]; });
+    TX.granite = mkTex(col, true, 0.9); TX.graniteN = mkTex(normalCanvas(H, S, 1.6), false, 0.9); }
+  // 石だたみ（参道）：高さのちがう段に、幅のちがう石。目地はノイズで少しゆがめる
+  { const S = 512, r = rng(11), N = iso(S, [8, 32, 128], [.5, .3, .2], r), W = iso(S, [6, 12], [.6, .4], r), H = new Float32Array(S * S);
+    const rows = []; let acc = 0; while (acc < S) { const h = 90 + r() * 40; rows.push(h); acc += h; } const k0 = S / acc; let yy = 0;
+    const R = rows.map(h => { const hh = h * k0, ws = []; let a = 0; while (a < S) { const w = 95 + r() * 90; ws.push(w); a += w; } const kw = S / a; let xx = 0; const cut = ws.map(w => { xx += w * kw; return xx; }); const o = { y0: yy, y1: yy + hh, cut, off: r() * S, tone: ws.map(() => .8 + r() * .3) }; yy += hh; return o; });
+    const col = canvasOf(S, i => {
+      const x0 = i % S, y0 = (i / S) | 0, wx = (W[i] - .5) * 10, x = x0 + wx, y = y0 + (W[(i + 97) % (S * S)] - .5) * 10;
+      const yw = ((y % S) + S) % S; let ri = 0; while (ri < R.length - 1 && yw >= R[ri].y1) ri++;
+      const ro = R[ri], xr = (((x + ro.off) % S) + S) % S; let ci = 0; while (ci < ro.cut.length - 1 && xr >= ro.cut[ci]) ci++;
+      const left = ci ? ro.cut[ci - 1] : 0, e = Math.min(xr - left, ro.cut[ci] - xr, yw - ro.y0, ro.y1 - yw);
+      const j = e < 3.2; H[i] = j ? 0 : .4 + .45 * sstep(0, 9, e) + N[i] * .25;
+      if (j) { const m = 92 + 30 * N[i]; return [m, m * .98, m * .92]; }
+      const t = ro.tone[ci] * (.86 + .24 * N[i]); return [176 * t, 172 * t, 160 * t];
+    });
+    TX.flag = mkTex(col, true, 2.4); TX.flagN = mkTex(normalCanvas(H, S, 6), false, 2.4); }
+  // 素焼き（植木鉢）
+  { const S = 128, r = rng(13), N = iso(S, [4, 16, 64], [.5, .3, .2], r);
+    TX.terra = mkTex(canvasOf(S, i => { const k = .86 + .22 * N[i] + (r() - .5) * .05; return [196 * k, 104 * k, 66 * k]; }), true, 0.5); }
+  // 板ばりの外壁（家）
+  { const S = 256, r = rng(15), N = iso(S, [4, 32, 128], [.4, .4, .2], r), H = new Float32Array(S * S);
+    const col = canvasOf(S, i => { const y = (i / S) | 0, b = y % 32, sh = b < 3 ? .72 : b > 28 ? .9 : 1; H[i] = b < 3 ? 0 : b / 32; const k = sh * (.93 + .1 * N[i]); return [232 * k, 222 * k, 200 * k]; });
+    TX.siding = mkTex(col, true, 1.44); TX.sidingN = mkTex(normalCanvas(H, S, 3), false, 1.44); }
+  // コンクリート
+  { const S = 256, r = rng(17), N = iso(S, [4, 16, 64, 128], [.4, .3, .2, .1], r);
+    TX.concrete = mkTex(canvasOf(S, i => { const k = .82 + .2 * N[i] + (r() < .02 ? -.2 : 0); return [182 * k, 180 * k, 174 * k]; }), true, 2); }
+  // 地面：芝生・じゃり・砂・玉砂利
+  { const S = 256, r = rng(19), N = iso(S, [4, 8, 32, 128], [.35, .3, .2, .15], r);
+    const c = canvasOf(S, i => { const k = .78 + .3 * N[i] + (r() - .5) * .16; return [92 * k, 142 * k, 58 * k]; });
+    const g = c.getContext('2d'); for (let n = 0; n < 2600; n++) { const x = r() * S, y = r() * S, l = 2 + r() * 4; g.strokeStyle = `rgba(${r() < .5 ? '150,190,90' : '50,95,35'},.55)`; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - .5) * 2, y - l); g.stroke(); }
+    TX.grass = mkTex(c, true, 3, 0); }
+  const pebbles = (S, seed, base, n, rmin, rmax, cols) => {
+    const r = rng(seed), H = new Float32Array(S * S), C = new Float32Array(S * S * 3);
+    for (let i = 0; i < S * S; i++) { C[i * 3] = base[0]; C[i * 3 + 1] = base[1]; C[i * 3 + 2] = base[2]; }
+    for (let k = 0; k < n; k++) {
+      const cx = r() * S, cy = r() * S, rad = rmin + r() * (rmax - rmin), c = cols[(r() * cols.length) | 0], t = .8 + r() * .35;
+      for (let y = -Math.ceil(rad); y <= rad; y++) for (let x = -Math.ceil(rad); x <= rad; x++) {
+        const d = Math.hypot(x, y) / rad; if (d > 1) continue; const h = Math.sqrt(1 - d * d), i = (((Math.floor(cy) + y + S) % S) * S + ((Math.floor(cx) + x + S) % S));
+        if (h < H[i]) continue; H[i] = h; const sh = (.75 + .35 * h - .12 * (x + y) / rad) * t; C[i * 3] = c[0] * sh; C[i * 3 + 1] = c[1] * sh; C[i * 3 + 2] = c[2] * sh;
+      }
+    }
+    return { col: canvasOf(S, i => [C[i * 3], C[i * 3 + 1], C[i * 3 + 2]]), H };
+  };
+  { const p = pebbles(256, 21, [112, 106, 98], 700, 2.5, 6.5, [[146, 140, 130], [134, 127, 117], [156, 149, 138], [126, 119, 110], [150, 136, 118]]); TX.gravel = mkTex(p.col, true, 1.3, 0); }
+  { const p = pebbles(256, 23, [172, 168, 158], 1100, 2, 4.6, [[206, 203, 194], [194, 191, 183], [214, 211, 203], [186, 182, 174]]); TX.pebW = mkTex(p.col, true, 1.0, 0); }
+  { const S = 256, r = rng(25), N = iso(S, [8, 32, 128], [.4, .35, .25], r);
+    TX.sand = mkTex(canvasOf(S, i => { const k = .85 + .2 * N[i] + (r() - .5) * .12; return [188 * k, 164 * k, 124 * k]; }), true, 2, 0); }
+  // シャッター（車庫）・屋根
+  { const S = 128, r = rng(27), N = iso(S, [4, 32], [.6, .4], r);
+    TX.shutter = mkTex(canvasOf(S, i => { const y = (i / S) | 0, b = y % 16, k = (b < 2 ? .7 : b < 5 ? 1.06 : .95) * (.95 + .08 * N[i]); return [206 * k, 210 * k, 212 * k]; }), true, 0.8); }
+  { const S = 256, r = rng(29), N = iso(S, [8, 64], [.6, .4], r);
+    TX.roof = mkTex(canvasOf(S, i => { const x = i % S, y = (i / S) | 0, row = (y / 32) | 0, b = y % 32, cx = ((x + (row % 2) * 16) % 32), k = (b > 27 ? .55 : .85 + .18 * (b / 32)) * (cx < 2 ? .8 : 1) * (.92 + .12 * N[i]); return [120 * k, 126 * k, 134 * k]; }), true, 2); }
+  // 団地の壁（窓とベランダ。横 6m × たて 5.6m で2階ぶん）
+  { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+    g.fillStyle = '#e9e4d8'; g.fillRect(0, 0, 256, 256);
+    for (let f = 0; f < 2; f++) { const y0 = f * 128;
+      for (let u = 0; u < 2; u++) { const x0 = u * 128;
+        g.fillStyle = '#5d6f80'; g.fillRect(x0 + 14, y0 + 30, 62, 74); g.fillStyle = '#7f93a5'; g.fillRect(x0 + 16, y0 + 32, 28, 70); g.fillStyle = '#6a7e90'; g.fillRect(x0 + 46, y0 + 32, 28, 70);
+        g.fillStyle = '#5d6f80'; g.fillRect(x0 + 90, y0 + 40, 26, 30); g.fillStyle = '#cfd6dc'; g.fillRect(x0 + 6, y0 + 82, 116, 4); g.fillStyle = '#bdb6a8'; g.fillRect(x0 + 6, y0 + 86, 116, 26);
+        g.fillStyle = 'rgba(0,0,0,.12)'; for (let k = 0; k < 14; k++) g.fillRect(x0 + 8 + k * 8.3, y0 + 86, 2, 26); }
+      g.fillStyle = '#d6d0c2'; g.fillRect(0, y0 + 112, 256, 16); }
+    TX.apt = mkTex(c, true, 1); TX.apt.repeat.set(1 / 6, 1 / 5.6); }
+  // よごれ：r・g・b は色むら、a は厚み（まだらと縦の筋）
+  { const S = 256, r = rng(31), A = iso(S, [4, 8, 16, 64], [.35, .3, .2, .15], r), B = iso(S, [6, 24, 96], [.5, .3, .2], r), C = iso(S, [8, 32, 128], [.4, .35, .25], r);
+    const T = fbm2(S, [[3, 3, .4], [24, 4, .25], [64, 8, .15], [128, 128, .2]], r);
+    TX.dirt = mkTex(canvasOf(S, i => [A[i] * 255, B[i] * 255, C[i] * 255, clamp(T[i] * 1.15 - .05 + (r() - .5) * .1, 0, 1) * 255]), false, 1, 1);
+    TX.dirt.repeat.set(1, 1); TX.dirt.premultiplyAlpha = false; }
+  // 水しぶき・雲に使うノイズ
+  { const S = 128, r = rng(33), N = iso(S, [4, 8, 16, 32], [.4, .3, .2, .1], r);
+    TX.noise = mkTex(canvasOf(S, i => { const v = N[i] * 255; return [v, v, v]; }), false, 1, 0); TX.noise.repeat.set(1, 1); }
+  skyMat.uniforms.uNoise.value = TX.noise;
+}
+
+// ---------- 材質 ----------
+// 洗えるパーツは「きれいなときの見た目」に、よごれマップの色を重ねる（MeshStandardMaterial の中に差しこむ）
+const MD = {
+  plasW: { color: 0xf3f2ec, roughness: 0.36 }, plasG: { color: 0x3c9a4c, roughness: 0.4 }, plasY: { color: 0xf5c624, roughness: 0.38 },
+  plasR: { color: 0xd8392e, roughness: 0.4 }, plasB: { color: 0x2d72d6, roughness: 0.4 }, plasP: { color: 0xf0a4bf, roughness: 0.42 },
+  wood: { map: 'wood', normalMap: 'woodN', color: 0xe2c49e, roughness: 0.78 }, woodGray: { map: 'wood', normalMap: 'woodN', color: 0xc3b5a1, roughness: 0.84 },
+  woodDark: { map: 'wood', normalMap: 'woodN', color: 0x8a5b3a, roughness: 0.66 }, woodRed: { map: 'wood', normalMap: 'woodN', color: 0xb46a45, roughness: 0.7 },
+  brick: { map: 'brick', normalMap: 'brickN', roughness: 0.92 }, stone: { map: 'granite', normalMap: 'graniteN', color: 0xe2e0d8, roughness: 0.88 },
+  stoneD: { map: 'granite', normalMap: 'graniteN', color: 0xb8b6ae, roughness: 0.9 }, flag: { map: 'flag', normalMap: 'flagN', roughness: 0.92 },
+  terra: { map: 'terra', roughness: 0.86 }, concrete: { map: 'concrete', roughness: 0.94 },
+  carW: { color: 0xf1f2f1, roughness: 0.24, metalness: 0.05 }, glass: { color: 0x22323d, roughness: 0.04, metalness: 0.55 },
+  chrome: { color: 0xe4e6e8, roughness: 0.14, metalness: 1 }, tire: { color: 0x1d1d1f, roughness: 0.9 }, steelW: { color: 0xc9cdd0, roughness: 0.32, metalness: 0.8 },
+  blackP: { color: 0x2a2c2f, roughness: 0.55 }, grayP: { color: 0x6e7378, roughness: 0.5 }, lens: { color: 0xf3f5f7, roughness: 0.06, metalness: 0.3, emissive: 0x30302a },
+  lensR: { color: 0xc81c1c, roughness: 0.12, emissive: 0x2a0000 }, lensO: { color: 0xf28a1c, roughness: 0.18, emissive: 0x201000 },
+  ironG: { color: 0x2f4a3b, roughness: 0.42, metalness: 0.6 }, pipeB: { color: 0x2a64c8, roughness: 0.32, metalness: 0.45 }, pipeR: { color: 0xd23a2c, roughness: 0.34, metalness: 0.45 },
+  steel: { color: 0xd9dcdf, roughness: 0.2, metalness: 0.9 }, rubber: { color: 0x2b2b2e, roughness: 0.85 }, shu: { color: 0xd8462a, roughness: 0.5 },
+  black: { color: 0x1e1e20, roughness: 0.55 }, gold: { color: 0xd9b45a, roughness: 0.3, metalness: 1 },
+  // ここから下は飾り（洗えない）
+  grass: { map: 'grass', roughness: 0.96 }, gravel: { map: 'gravel', roughness: 0.95 }, sand: { map: 'sand', roughness: 0.97 }, pebW: { map: 'pebW', roughness: 0.95 },
+  siding: { map: 'siding', normalMap: 'sidingN', roughness: 0.82 }, wallW: { color: 0xf1ede2, roughness: 0.9 }, shutter: { map: 'shutter', roughness: 0.5, metalness: 0.4 },
+  roof: { map: 'roof', roughness: 0.75 }, roofG: { map: 'roof', color: 0x8fc3ad, roughness: 0.6, metalness: 0.3 }, frame: { color: 0x3d4146, roughness: 0.5, metalness: 0.4 },
+  leaf: { color: 0x4d8a3a, roughness: 0.9 }, leafD: { color: 0x2f5e33, roughness: 0.9 }, trunk: { color: 0x6b4e36, roughness: 0.95 }, hedge: { color: 0x3e7a35, roughness: 0.95 },
+  soil: { color: 0x4a3626, roughness: 1 }, water: { color: 0x5aa6c4, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.55, depthWrite: false },
+  straw: { color: 0xd8c38c, roughness: 0.9 }, apt: { map: 'apt', roughness: 0.9 }, paper: { color: 0xfafafa, roughness: 0.8 }, hill: { color: 0x7fa060, roughness: 1 },
+};
+function matParams(key) {
+  const d = Object.assign({}, MD[key] || MD.plasW);
+  for (const k of ['map', 'normalMap']) if (typeof d[k] === 'string') d[k] = TX[d[k]];
+  if (d.normalMap) d.normalScale = new THREE.Vector2(0.6, 0.6);
+  return d;
+}
+const DECO = {};
+const decoMat = key => DECO[key] || (DECO[key] = new THREE.MeshStandardMaterial(matParams(key)));
+function dirtMat(key, U) {
+  const m = new THREE.MeshStandardMaterial(matParams(key));
+  m.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec2 uvm;\nvarying vec2 vMaskUv;\nvarying vec2 vUvm;\nvarying vec3 vWP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvMaskUv = uv; vUvm = uvm; vWP = (modelMatrix * vec4(position, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+uniform sampler2D uMask; uniform sampler2D uDirtTex; uniform vec3 uDA; uniform vec3 uDB; uniform float uReveal; uniform float uFlash; uniform float uTime; uniform float uDS;
+varying vec2 vMaskUv; varying vec2 vUvm; varying vec3 vWP;
+float gDirt = 0.0; float gDirtE = 0.0;`)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+{
+  vec4 mk = texture2D(uMask, vMaskUv);
+  float r = clamp(mk.r, 0.0, 1.0), g = clamp(mk.g, 0.0, 1.0);
+  vec4 dt = texture2D(uDirtTex, vUvm * uDS);
+  float th = dt.a * 0.75 + mk.b * 0.55;
+  float aR = smoothstep(0.03, 0.25, r * (0.45 + th));
+  float aG = smoothstep(0.03, 0.22, g * (0.45 + dt.g * 0.9));
+  vec3 cR = uDA * (0.62 + 0.62 * dt.r) * (0.8 + 0.4 * mk.b);
+  vec3 cG = uDB * (0.68 + 0.6 * dt.b);
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * mix(vec3(1.0), uDA * 2.2, 0.55), clamp(r * 3.0, 0.0, 1.0) * 0.7);
+  diffuseColor.rgb = mix(diffuseColor.rgb, cR, aR * (0.64 + 0.34 * dt.a));
+  diffuseColor.rgb = mix(diffuseColor.rgb, cG, aG);
+  gDirt = max(aR * 0.9, aG); gDirtE = max(aR * 0.75 + r * 0.25, aG);
+}`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.96, gDirt);')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor *= 1.0 - gDirt;')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+totalEmissiveRadiance += uReveal * gDirtE * vec3(1.0, 0.42, 0.04) * 1.8;
+totalEmissiveRadiance += uFlash * vec3(0.55, 0.85, 1.0) * (0.25 + 0.75 * smoothstep(0.55, 1.0, sin(vWP.y * 5.0 + vWP.x * 1.7 + vWP.z * 1.3 - uTime * 13.0)));`);
+  };
+  m.customProgramCacheKey = () => 'wash-dirt-1';
+  return m;
+}
+
+// =========================================================================================
+//  形を作る道具（PB）：面ごとに「チャート」（メートル単位の長方形）を作り、あとで1枚のアトラスに並べる
+// =========================================================================================
+const LIM = 2.0;                                  // 1つのチャートの最大の長さ（m）
+const _nm = new THREE.Matrix3();
+const nmOf = M => new THREE.Matrix3().getNormalMatrix(M);
+function shelf(rects, size) {
+  const o = rects.slice().sort((a, b) => b.h - a.h);
+  let x = 0, y = 0, rh = 0;
+  for (const r of o) {
+    if (r.w > size) return false;
+    if (x + r.w > size) { x = 0; y += rh; rh = 0; }
+    if (y + r.h > size) return false;
+    r.x = x; r.y = y; x += r.w; rh = Math.max(rh, r.h);
+  }
+  return true;
+}
+class PB {
+  constructor() { this.ch = []; }
+  _c(w, h, o) { const c = { w: Math.max(w, 0.004), h: Math.max(h, 0.004), mat: o.mat | 0, ns: !!o.ns, P: [], N: [], L: [], T: [], I: [] }; this.ch.push(c); return c; }
+  _v(c, p, n, sl, tl, su, tv) { c.P.push(p.x, p.y, p.z); c.N.push(n.x, n.y, n.z); c.L.push(sl, tl); c.T.push(su, tv); return c.P.length / 3 - 1; }
+  // 長方形の面：o から ux 方向へ w、uy 方向へ h（法線は ux×uy）。大きい面はタイルに分ける
+  quad(M, o, ux, uy, w, h, opt = {}) {
+    const NM = nmOf(M), n = new V3().crossVectors(ux, uy).normalize().applyMatrix3(NM).normalize();
+    const nx = Math.max(1, Math.ceil(w / LIM)), ny = Math.max(1, Math.ceil(h / LIM)), to = opt.to || [0, 0], sw = !!opt.swap;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const s0 = w * i / nx, s1 = w * (i + 1) / nx, t0 = h * j / ny, t1 = h * (j + 1) / ny;
+      const c = this._c(sw ? t1 - t0 : s1 - s0, sw ? s1 - s0 : t1 - t0, opt);
+      const vid = (s, t) => {
+        const p = new V3().copy(o).addScaledVector(ux, s).addScaledVector(uy, t).applyMatrix4(M);
+        return sw ? this._v(c, p, n, t - t0, s - s0, t + to[0], s + to[1]) : this._v(c, p, n, s - s0, t - t0, s + to[0], t + to[1]);
+      };
+      const a = vid(s0, t0), b = vid(s1, t0), d = vid(s1, t1), e = vid(s0, t1);
+      c.I.push(a, b, d, a, d, e);
+    }
+    return this;
+  }
+  // 箱（中心が原点）。skip: 'r'(+x) 'l'(-x) 't'(+y) 'b'(-y) 'f'(+z) 'k'(-z)。grain: 木目を長い辺へ
+  box(w, h, d, M, opt = {}) {
+    const sk = opt.skip || '', hw = w / 2, hh = h / 2, hd = d / 2;
+    const F = (key, o, ux, uy, a, b) => { if (!sk.includes(key)) this.quad(M, o, ux, uy, a, b, Object.assign({}, opt, { swap: opt.grain ? b > a : false })); };
+    F('r', new V3(hw, -hh, hd), new V3(0, 0, -1), new V3(0, 1, 0), d, h);
+    F('l', new V3(-hw, -hh, -hd), new V3(0, 0, 1), new V3(0, 1, 0), d, h);
+    F('f', new V3(-hw, -hh, hd), new V3(1, 0, 0), new V3(0, 1, 0), w, h);
+    F('k', new V3(hw, -hh, -hd), new V3(-1, 0, 0), new V3(0, 1, 0), w, h);
+    F('t', new V3(-hw, hh, hd), new V3(1, 0, 0), new V3(0, 0, -1), w, d);
+    F('b', new V3(-hw, -hh, -hd), new V3(1, 0, 0), new V3(0, 0, 1), w, d);
+    return this;
+  }
+  // 格子の面（円柱・回転体・押し出しの側面）。sA: 列ごとの s（m）、tA: 行ごとの t（m）、f(i,j,p,n) で位置と法線
+  grid(M, sA, tA, f, opt = {}, ub = null) {
+    const NM = nmOf(M), cr = [], rr = [];
+    const split = (A, brk, out) => {
+      let st = 0;
+      for (let i = 1; i < A.length; i++) {
+        if (brk && brk.has(i)) { if (i - 1 > st) out.push([st, i - 1]); st = i; continue; }
+        if (A[i] - A[st] > LIM && i - 1 > st) { out.push([st, i - 1]); st = i - 1; }
+      }
+      if (A.length - 1 > st) out.push([st, A.length - 1]);
+    };
+    split(sA, ub, cr); split(tA, null, rr);
+    const p = new V3(), n = new V3();
+    for (const [i0, i1] of cr) for (const [j0, j1] of rr) {
+      const c = this._c(sA[i1] - sA[i0], tA[j1] - tA[j0], opt), base = c.P.length / 3, W = i1 - i0 + 1;
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        f(i, j, p, n); p.applyMatrix4(M); n.applyMatrix3(NM).normalize();
+        this._v(c, p, n, sA[i] - sA[i0], tA[j] - tA[j0], sA[i] + (opt.to ? opt.to[0] : 0), tA[j] + (opt.to ? opt.to[1] : 0));
+      }
+      for (let j = 0; j < j1 - j0; j++) for (let i = 0; i < i1 - i0; i++) {
+        const a = base + j * W + i, b = a + 1, d = a + W + 1, e = a + W;
+        c.I.push(a, b, d, a, d, e);
+      }
+    }
+    return this;
+  }
+  // 平らな多角形（o を原点に ux, uy の平面。法線 ux×uy の側から見て反時計回りに直す）
+  poly(M, pts, o, ux, uy, opt = {}) {
+    const NM = nmOf(M), n = new V3().crossVectors(ux, uy).normalize().applyMatrix3(NM).normalize();
+    const v2 = pts.map(q => new THREE.Vector2(q[0], q[1]));
+    if (THREE.ShapeUtils.isClockWise(v2)) v2.reverse();
+    let a0 = 1e9, b0 = 1e9, a1 = -1e9, b1 = -1e9; for (const q of v2) { a0 = Math.min(a0, q.x); b0 = Math.min(b0, q.y); a1 = Math.max(a1, q.x); b1 = Math.max(b1, q.y); }
+    const c = this._c(a1 - a0, b1 - b0, opt), to = opt.to || [0, 0];
+    const ids = v2.map(q => this._v(c, new V3().copy(o).addScaledVector(ux, q.x).addScaledVector(uy, q.y).applyMatrix4(M), n, q.x - a0, q.y - b0, q.x + to[0], q.y + to[1]));
+    for (const t of THREE.ShapeUtils.triangulateShape(v2, [])) c.I.push(ids[t[0]], ids[t[1]], ids[t[2]]);
+    return this;
+  }
+  // 円柱（y方向、中心が原点）。rb: 下の半径、rt: 上の半径
+  cyl(rb, rt, h, seg, M, opt = {}) {
+    const R = Math.max(rb, rt, 0.005), sl = Math.hypot(h, rb - rt), V = Math.max(1, Math.ceil(sl / 1.5)), sA = [], tA = [], k = (rb - rt) / h;
+    for (let i = 0; i <= seg; i++) sA.push(i / seg * TAU * R);
+    for (let j = 0; j <= V; j++) tA.push(j / V * sl);
+    this.grid(M, sA, tA, (i, j, p, n) => { const a = i / seg * TAU + (opt.rot || 0), r = lerp(rb, rt, j / V); p.set(r * Math.sin(a), -h / 2 + h * j / V, r * Math.cos(a)); n.set(Math.sin(a), k, Math.cos(a)).normalize(); }, opt);
+    const caps = opt.caps ?? 'tb', circ = r => { const a = []; for (let i = 0; i < seg; i++) { const t = i / seg * TAU + (opt.rot || 0); a.push([r * Math.sin(t), -r * Math.cos(t)]); } return a; };
+    if (caps.includes('t') && rt > 0) this.poly(M, circ(rt), new V3(0, h / 2, 0), new V3(1, 0, 0), new V3(0, 0, -1), opt);
+    if (caps.includes('b') && rb > 0) this.poly(M, circ(rb).map(q => [q[0], -q[1]]), new V3(0, -h / 2, 0), new V3(1, 0, 0), new V3(0, 0, 1), opt);
+    return this;
+  }
+  // 2点の間の管
+  pipe(a, b, r, seg, M, opt = {}) {
+    const A = new V3(...a), B = new V3(...b), d = new V3().subVectors(B, A), L = d.length();
+    const q = new THREE.Quaternion().setFromUnitVectors(new V3(0, 1, 0), d.normalize());
+    const T = new THREE.Matrix4().compose(A.clone().add(B).multiplyScalar(0.5), q, new V3(1, 1, 1));
+    return this.cyl(r, r, L, seg, M.clone().multiply(T), opt);
+  }
+  // 回転体（y軸まわり）。pts: [[r, y], ...] を下から上へ（外側の面）。角のするどい所で分ける
+  lathe(pts, seg, M, opt = {}) {
+    const cre = Math.cos((opt.crease ?? 40) * DEG), sn = [];
+    for (let k = 0; k < pts.length - 1; k++) { const dr = pts[k + 1][0] - pts[k][0], dy = pts[k + 1][1] - pts[k][1], L = Math.hypot(dr, dy) || 1; sn.push([dy / L, -dr / L, L]); }
+    const runs = []; let st = 0;
+    for (let k = 1; k < pts.length - 1; k++) if (sn[k - 1][0] * sn[k][0] + sn[k - 1][1] * sn[k][1] < cre) { runs.push([st, k]); st = k; }
+    runs.push([st, pts.length - 1]);
+    for (const [k0, k1] of runs) {
+      let R = 0.005; for (let k = k0; k <= k1; k++) R = Math.max(R, pts[k][0]);
+      const sA = [], tA = [0], nr = [];
+      for (let i = 0; i <= seg; i++) sA.push(i / seg * TAU * R);
+      for (let k = k0 + 1; k <= k1; k++) tA.push(tA[tA.length - 1] + sn[k - 1][2]);
+      for (let k = k0; k <= k1; k++) {
+        const a = k > k0 ? sn[k - 1] : null, b = k < k1 ? sn[k] : null;
+        let x = (a ? a[0] : 0) + (b ? b[0] : 0), y = (a ? a[1] : 0) + (b ? b[1] : 0); const l = Math.hypot(x, y) || 1; nr.push([x / l, y / l]);
+      }
+      this.grid(M, sA, tA, (i, j, p, n) => { const a = i / seg * TAU + (opt.rot || 0), [r, y] = pts[k0 + j], [qr, qy] = nr[j]; p.set(r * Math.sin(a), y, r * Math.cos(a)); n.set(qr * Math.sin(a), qy, qr * Math.cos(a)); }, opt);
+    }
+    return this;
+  }
+  sphere(r, ws, hs, M, opt = {}) {
+    const pts = []; for (let i = 0; i <= hs; i++) { const a = -Math.PI / 2 + Math.PI * i / hs; pts.push([Math.max(0, Math.cos(a) * r), Math.sin(a) * r]); }
+    pts[0][0] = 0; pts[hs][0] = 0;
+    return this.lathe(pts, ws, M, Object.assign({ crease: 80 }, opt));
+  }
+  // 押し出し：XYの多角形を z 方向へ depth（中心が原点）。bev: 角の丸み（m）
+  prism(shape, depth, M, opt = {}) {
+    let S2 = shape.map(q => new THREE.Vector2(q[0], q[1])); if (THREE.ShapeUtils.isClockWise(S2)) S2.reverse();
+    const P = []; for (let k = 0; k < S2.length; k++) { const a = S2[k], b = S2[(k + 1) % S2.length], m = Math.max(1, Math.ceil(a.distanceTo(b) / 1.0)); for (let q = 0; q < m; q++) P.push(a.clone().lerp(b, q / m)); }
+    const n = P.length, NE = [];
+    for (let k = 0; k < n; k++) { const a = P[k], b = P[(k + 1) % n], dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1; NE.push(new THREE.Vector2(dy / L, -dx / L)); }
+    const cre = Math.cos((opt.crease ?? 35) * DEG), b = opt.bev || 0, bs = b > 0 ? (opt.bs || 2) : 0, hd = depth / 2;
+    const MI = [], sharp = [];
+    for (let k = 0; k < n; k++) {
+      const a = NE[(k - 1 + n) % n], c = NE[k], m = a.clone().add(c); if (m.lengthSq() < 1e-8) m.copy(c); m.normalize();
+      MI.push(m.clone().multiplyScalar(1 / Math.max(0.35, m.dot(c)))); sharp.push(a.dot(c) < cre);
+    }
+    // 行（奥の面の縁 → 角の丸み → 側面 → 角の丸み → 手前の面の縁）
+    const rows = [];
+    if (b > 0) {
+      for (let k = 0; k <= bs; k++) { const f = k / bs * Math.PI / 2; rows.push({ off: b * (1 - Math.sin(f)), z: -hd + b - b * Math.cos(f), wx: Math.sin(f), wz: -Math.cos(f) }); }
+      for (let k = 0; k <= bs; k++) { const f = Math.PI / 2 - k / bs * Math.PI / 2; rows.push({ off: b * (1 - Math.sin(f)), z: hd - b + b * Math.cos(f), wx: Math.sin(f), wz: Math.cos(f) }); }
+    } else rows.push({ off: 0, z: -hd, wx: 1, wz: 0 }, { off: 0, z: hd, wx: 1, wz: 0 });
+    const tA = [0]; for (let j = 1; j < rows.length; j++) tA.push(tA[j - 1] + Math.hypot(rows[j].z - rows[j - 1].z, rows[j].off - rows[j - 1].off));
+    // 列（するどい角は2本にして、そのあいだは面を作らない）
+    const cols = [], ub = new Set(), sA = []; let acc = 0;
+    for (let k = 0; k <= n; k++) {
+      const kk = k % n;
+      if (k > 0) acc += P[k - 1].distanceTo(P[kk]);
+      if (sharp[kk]) {
+        if (k > 0) { cols.push({ k: kk, n: NE[(kk - 1 + n) % n] }); sA.push(acc); }
+        if (k < n) { if (k > 0) ub.add(cols.length); cols.push({ k: kk, n: NE[kk] }); sA.push(acc); }
+      } else { const m = NE[(kk - 1 + n) % n].clone().add(NE[kk]).normalize(); cols.push({ k: kk, n: m }); sA.push(acc); }
+    }
+    this.grid(M, sA, tA, (i, j, p, nn) => {
+      const c = cols[i], r = rows[j], q = P[c.k], m = MI[c.k];
+      p.set(q.x - m.x * r.off, q.y - m.y * r.off, r.z); nn.set(c.n.x * r.wx, c.n.y * r.wx, r.wz).normalize();
+    }, opt, ub);
+    if ((opt.caps ?? 'fk').length) {
+      const inset = P.map((q, k) => [q.x - MI[k].x * b, q.y - MI[k].y * b]);
+      if ((opt.caps ?? 'fk').includes('f')) this.poly(M, inset, new V3(0, 0, hd), new V3(1, 0, 0), new V3(0, 1, 0), opt);
+      if ((opt.caps ?? 'fk').includes('k')) this.poly(M, inset.map(q => [-q[0], q[1]]), new V3(0, 0, -hd), new V3(-1, 0, 0), new V3(0, 1, 0), opt);
+    }
+    return this;
+  }
+  // 全部のチャートをアトラスに並べて、1つの形（BufferGeometry）にする。D: 1mあたりの画素数
+  build(D0 = 80, MAXT = 1024) {
+    const ch = this.ch.slice().sort((a, b) => a.mat - b.mat);
+    let D = D0, size = 16, rects = null;
+    for (let tries = 0; tries < 40; tries++) {
+      rects = ch.map(c => ({ c, w: Math.ceil(c.w * D) + 4, h: Math.ceil(c.h * D) + 4 }));
+      let area = 0, mw = 0; for (const r of rects) { area += r.w * r.h; mw = Math.max(mw, r.w, r.h); }
+      size = 16; while (size * size < area * 1.08 || size < mw) size *= 2;
+      let ok = false; while (size <= MAXT) { if (shelf(rects, size)) { ok = true; break; } size *= 2; }
+      if (ok) break;
+      D *= 0.86;
+    }
+    const pos = [], nor = [], uv = [], uvt = [], idx = [], charts = [];
+    let vb = 0;
+    for (const r of rects) {
+      const c = r.c, nv = c.P.length / 3, box = new THREE.Box3();
+      for (let i = 0; i < nv; i++) {
+        pos.push(c.P[i * 3], c.P[i * 3 + 1], c.P[i * 3 + 2]); nor.push(c.N[i * 3], c.N[i * 3 + 1], c.N[i * 3 + 2]);
+        uv.push((r.x + 2 + c.L[i * 2] * D) / size, (r.y + 2 + c.L[i * 2 + 1] * D) / size); uvt.push(c.T[i * 2], c.T[i * 2 + 1]);
+        box.expandByPoint(new V3(c.P[i * 3], c.P[i * 3 + 1], c.P[i * 3 + 2]));
+      }
+      charts.push({ start: idx.length, count: c.I.length, ns: c.ns, mat: c.mat, box });
+      for (const i of c.I) idx.push(i + vb);
+      vb += nv;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    const t = new THREE.Float32BufferAttribute(uvt, 2); g.setAttribute('uv1', t); g.setAttribute('uvm', t);
+    g.setIndex(idx);
+    let gs = 0; for (let i = 1; i <= charts.length; i++) if (i === charts.length || charts[i].mat !== charts[gs].mat) { const a = charts[gs], z = charts[i - 1]; g.addGroup(a.start, z.start + z.count - a.start, a.mat); gs = i; }
+    g.computeBoundingSphere(); g.computeBoundingBox();
+    g.userData = { size, D, charts };
+    return g;
+  }
+}
+// 位置・回転（Y→X→Zの順、度）をまとめた行列
+function T(x = 0, y = 0, z = 0, ry = 0, rx = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+  return new THREE.Matrix4().compose(new V3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx * DEG, ry * DEG, rz * DEG, 'YXZ')), new V3(sx, sy, sz));
+}
+const TT = (P, ...a) => P.clone().multiply(T(...a));
+// 3本の軸から行列を作る（斜めの板など）
+function basis(o, xa, ya, za) { const m = new THREE.Matrix4().makeBasis(xa, ya, za); m.setPosition(o); return m; }
+
+// =========================================================================================
+//  よごれマップ（GPU）：パーツの形をUVの位置に広げて描き、水の当たった所を引き算する
+// =========================================================================================
+const MAXS = 48;
+const PAINT = { cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), scene: new THREE.Scene() };
+const UV_VS = `varying vec3 vP; varying vec3 vN; void main(){ vP = position; vN = normal; gl_Position = vec4(uv * 2.0 - 1.0, 0.0, 1.0); }`;
+PAINT.init = new THREE.ShaderMaterial({
+  uniforms: { uStub: { value: new THREE.Vector4() }, uUp: { value: 0 }, uHas: { value: 0 } },
+  vertexShader: UV_VS,
+  fragmentShader: GLSL_NOISE + `uniform vec4 uStub; uniform float uUp; uniform float uHas; varying vec3 vP; varying vec3 vN;
+    void main(){ vec3 n = normalize(vN); float g = 0.0;
+      if (uHas > 0.5) g = smoothstep(uStub.y, uStub.y + 0.1, fbm3(vP * uStub.x) + uStub.z * (uStub.w - vP.y) + uUp * n.y);
+      gl_FragColor = vec4(1.0, g, fbm3(vP * 1.9 + vec3(5.3, 1.7, 9.1)), 1.0); }`,
+  side: THREE.DoubleSide, depthTest: false, depthWrite: false, blending: THREE.NoBlending,
+});
+const mkArr = () => Array.from({ length: MAXS }, () => new THREE.Vector4());
+PAINT.mat = new THREE.ShaderMaterial({
+  uniforms: { uA: { value: mkArr() }, uB: { value: mkArr() }, uC: { value: mkArr() }, uCount: { value: 0 } },
+  vertexShader: UV_VS,
+  fragmentShader: `#define MAXS ${MAXS}
+    uniform vec4 uA[MAXS]; uniform vec4 uB[MAXS]; uniform vec4 uC[MAXS]; uniform int uCount; varying vec3 vP; varying vec3 vN;
+    void main(){ vec3 n = normalize(vN); float rr = 0.0, rg = 0.0;
+      for (int i = 0; i < MAXS; i++) {
+        if (i >= uCount) break;
+        vec3 a = uA[i].xyz, ab = uB[i].xyz - a;
+        float t = clamp(dot(vP - a, ab) / max(dot(ab, ab), 1e-8), 0.0, 1.0);
+        float d = length(vP - (a + ab * t)) / uA[i].w;
+        if (d >= 1.0) continue;
+        float k = (1.0 - smoothstep(0.45, 1.0, d)) * smoothstep(-0.05, 0.3, -dot(n, uC[i].xyz));
+        rr += uB[i].w * k; rg += uC[i].w * k;
+      }
+      ${HALF ? '' : 'if (rr > 0.0) rr = max(rr, 1.6 / 255.0); if (rg > 0.0) rg = max(rg, 1.6 / 255.0);'}
+      gl_FragColor = vec4(rr, rg, 0.0, 0.0); }`,
+  side: THREE.DoubleSide, depthTest: false, depthWrite: false,
+  blending: THREE.CustomBlending, blendEquation: THREE.ReverseSubtractEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
+});
+PAINT.mesh = new THREE.Mesh(new THREE.BufferGeometry(), PAINT.mat);
+PAINT.mesh.frustumCulled = false;
+PAINT.scene.add(PAINT.mesh);
+const makeRT = size => new THREE.WebGLRenderTarget(size, size, { type: HALF ? THREE.HalfFloatType : THREE.UnsignedByteType, depthBuffer: false, stencilBuffer: false,
+  minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false });
+function initMask(P) {
+  P.rt = makeRT(P.geo.userData.size); P.U.uMask.value = P.rt.texture;
+  const u = PAINT.init.uniforms, s = P.dirt.s;
+  u.uHas.value = s ? 1 : 0; if (s) u.uStub.value.set(s[0], s[1], s[2], s[3]); u.uUp.value = P.dirt.up || 0;
+  PAINT.init.uniformsNeedUpdate = true;
+  PAINT.mesh.geometry = P.geo; PAINT.mesh.material = PAINT.init;
+  renderer.setRenderTarget(P.rt); renderer.setClearColor(0x000000, 0); renderer.clear(true, false, false);
+  renderer.render(PAINT.scene, PAINT.cam);
+  renderer.setRenderTarget(null);
+}
+function clearMask(P) { if (!P.rt) return; renderer.setRenderTarget(P.rt); renderer.setClearColor(0x000000, 0); renderer.clear(true, false, false); renderer.setRenderTarget(null); }
+const _bb = new THREE.Box3(), _sb = new THREE.Box3();
+// 水の当たり（カプセルの列）をパーツのよごれマップへ。近くのチャートだけ描く
+function gpuPaint(P, list) {
+  const U = PAINT.mat.uniforms, ch = P.geo.userData.charts;
+  PAINT.mesh.geometry = P.geo; PAINT.mesh.material = PAINT.mat;
+  renderer.setRenderTarget(P.rt);
+  for (let b0 = 0; b0 < list.length; b0 += MAXS) {
+    const n = Math.min(MAXS, list.length - b0); _bb.makeEmpty();
+    for (let i = 0; i < n; i++) {
+      const s = list[b0 + i];
+      U.uA.value[i].set(s.ax, s.ay, s.az, s.r); U.uB.value[i].set(s.bx, s.by, s.bz, s.kr); U.uC.value[i].set(s.dx, s.dy, s.dz, s.kg);
+      _sb.min.set(Math.min(s.ax, s.bx) - s.r, Math.min(s.ay, s.by) - s.r, Math.min(s.az, s.bz) - s.r);
+      _sb.max.set(Math.max(s.ax, s.bx) + s.r, Math.max(s.ay, s.by) + s.r, Math.max(s.az, s.bz) + s.r); _bb.union(_sb);
+    }
+    U.uCount.value = n; PAINT.mat.uniformsNeedUpdate = true;
+    let rs = -1, re = -1;
+    const flush = () => { if (rs < 0) return; P.geo.setDrawRange(rs, re - rs); PAINT.mat.uniformsNeedUpdate = true; renderer.render(PAINT.scene, PAINT.cam); rs = -1; };
+    for (const c of ch) {
+      if (!c.box.intersectsBox(_bb)) continue;
+      if (rs >= 0 && c.start === re) re = c.start + c.count; else { flush(); rs = c.start; re = c.start + c.count; }
+    }
+    flush();
+  }
+  P.geo.setDrawRange(0, Infinity);
+  renderer.setRenderTarget(null);
+}
+// 同じ計算を見本の点で（CPU）。きれいになった点の数を返す
+const TH = 0.08, GC = 0.35;
+const gkey = (x, y, z) => ((x + 1024) * 2048 + (y + 1024)) * 2048 + (z + 1024);
+function cpuApply(P, list) {
+  let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
+  for (const s of list) {
+    x0 = Math.min(x0, s.ax - s.r, s.bx - s.r); y0 = Math.min(y0, s.ay - s.r, s.by - s.r); z0 = Math.min(z0, s.az - s.r, s.bz - s.r);
+    x1 = Math.max(x1, s.ax + s.r, s.bx + s.r); y1 = Math.max(y1, s.ay + s.r, s.by + s.r); z1 = Math.max(z1, s.az + s.r, s.bz + s.r);
+  }
+  const sp = P.sp, R = P.r, G = P.g; let got = 0;
+  for (let ix = Math.floor(x0 / GC); ix <= Math.floor(x1 / GC); ix++) for (let iy = Math.floor(y0 / GC); iy <= Math.floor(y1 / GC); iy++) for (let iz = Math.floor(z0 / GC); iz <= Math.floor(z1 / GC); iz++) {
+    const cell = P.grid.get(gkey(ix, iy, iz)); if (!cell) continue;
+    for (const i of cell) {
+      if (R[i] <= TH && G[i] <= TH) continue;
+      const o = i * 6, px = sp[o], py = sp[o + 1], pz = sp[o + 2], nx = sp[o + 3], ny = sp[o + 4], nz = sp[o + 5];
+      let rr = 0, rg = 0;
+      for (const s of list) {
+        const abx = s.bx - s.ax, aby = s.by - s.ay, abz = s.bz - s.az, ab2 = abx * abx + aby * aby + abz * abz;
+        let t = ((px - s.ax) * abx + (py - s.ay) * aby + (pz - s.az) * abz) / Math.max(ab2, 1e-8); t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const qx = px - (s.ax + abx * t), qy = py - (s.ay + aby * t), qz = pz - (s.az + abz * t), d = Math.sqrt(qx * qx + qy * qy + qz * qz) / s.r;
+        if (d >= 1) continue;
+        const k = (1 - sstep(0.45, 1, d)) * sstep(-0.05, 0.3, -(nx * s.dx + ny * s.dy + nz * s.dz));
+        rr += s.kr * k; rg += s.kg * k;
+      }
+      if (rr > 0 || rg > 0) { R[i] -= rr; G[i] -= rg; if (R[i] <= TH && G[i] <= TH) { P.dirty--; got++; } }
+    }
+  }
+  return got;
+}
+const stubAt = (D, x, y, z, ny) => {
+  if (!D.s) return 0; const [sc, thr, low, h0] = D.s;
+  return sstep(thr, thr + 0.1, fbm3(x * sc, y * sc, z * sc) + low * (h0 - y) + (D.up || 0) * ny);
+};
+
+// =========================================================================================
+//  ステージ（仕事の場所）：洗えるパーツ・飾り・ぶつかる箱
+// =========================================================================================
+class Level {
+  constructor(def) {
+    this.def = def; this.root = new THREE.Group(); this.root.visible = false; scene.add(this.root);
+    this.parts = []; this.cols = []; this.solids = []; this.rayT = []; this.topY = def.topY ?? 2.3;
+  }
+  deco(pb, mats, o = {}) {
+    const geo = pb.build(6, 256), ms = [].concat(mats).map(decoMat);
+    const m = new THREE.Mesh(geo, ms.length > 1 ? ms : ms[0]);
+    m.castShadow = o.cast !== false; m.receiveShadow = true;
+    this.root.add(m);
+    if (o.ray !== false) this.rayT.push(m);
+    if (o.solid !== false) this.solids.push(m);
+    return m;
+  }
+  obj(m, o = {}) { this.root.add(m); if (o.ray) this.rayT.push(m); if (o.solid) this.solids.push(m); return m; }
+  part(name, group, pb, mats, dirt, o = {}) {
+    const geo = pb.build(o.D || 80, 1024);
+    const U = { uMask: { value: null }, uDirtTex: { value: TX.dirt }, uDA: { value: new THREE.Color(dirt.a) }, uDB: { value: new THREE.Color(dirt.b ?? 0x333333) },
+      uReveal: { value: 0 }, uFlash: { value: 0 }, uTime: TIME_U, uDS: { value: 1 / (dirt.ds || 0.9) } };
+    const ms = [].concat(mats).map(k => dirtMat(k, U));
+    const mesh = new THREE.Mesh(geo, ms.length > 1 ? ms : ms[0]);
+    mesh.castShadow = o.cast !== false; mesh.receiveShadow = true;
+    const P = { id: this.parts.length, name, group, geo, mesh, U, dirt, o, done: false, flash: 0, reveal: 0, sl: [] };
+    mesh.userData.part = P;
+    this.root.add(mesh); this.rayT.push(mesh); this.solids.push(mesh); this.parts.push(P);
+    return P;
+  }
+  // ぶつかる箱：中心 (x,z)、幅 w・奥行 d、高さ y0〜y1、Y回転 ry（度）
+  col(x, z, w, d, y0, y1, ry = 0) { this.cols.push({ x, z, hx: w / 2, hz: d / 2, y0, y1, c: Math.cos(ry * DEG), s: Math.sin(ry * DEG) }); }
+  dispose() {
+    scene.remove(this.root);
+    const keep = new Set(Object.values(DECO));
+    this.root.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) for (const m of [].concat(o.material)) if (!keep.has(m)) m.dispose(); });
+    for (const P of this.parts) if (P.rt) P.rt.dispose();
+  }
+}
+function seedOf(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619); return h >>> 0; }
+// 見本の点：面積に比例してばらまき、届かない所（地面や物の下・高すぎる上の面・物に埋まった所）を外す
+function makeSamples(P, L, sol, rc) {
+  const g = P.geo, pos = g.attributes.position.array, nor = g.attributes.normal.array, ix = g.index.array;
+  const tri = [], cum = []; let tot = 0;
+  const A = new V3(), B = new V3(), C = new V3(), e1 = new V3(), e2 = new V3();
+  for (const c of g.userData.charts) if (!c.ns) for (let k = c.start; k < c.start + c.count; k += 3) {
+    A.fromArray(pos, ix[k] * 3); B.fromArray(pos, ix[k + 1] * 3); C.fromArray(pos, ix[k + 2] * 3);
+    const a = e1.subVectors(B, A).cross(e2.subVectors(C, A)).length() * 0.5;
+    if (a > 1e-9) { tot += a; tri.push(k); cum.push(tot); }
+  }
+  const rnd = rng(seedOf(L.def.id + '/' + P.id + '/' + P.name)), want = clamp(Math.round(tot * 230), 24, 4000);
+  const out = [], p = new V3(), n = new V3(), q = new V3(), fn = new V3(), list = [], suv = [];
+  const under = P.o.under ?? L.def.under ?? 0.95;
+  for (let s = 0; s < want && tot > 0; s++) {
+    const u = rnd() * tot; let lo = 0, hi = cum.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < u) lo = m + 1; else hi = m; }
+    const k = tri[lo]; let r1 = rnd(), r2 = rnd(); if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; }
+    const ia = ix[k] * 3, ib = ix[k + 1] * 3, ic = ix[k + 2] * 3, r0 = 1 - r1 - r2;
+    p.set(pos[ia] * r0 + pos[ib] * r1 + pos[ic] * r2, pos[ia + 1] * r0 + pos[ib + 1] * r1 + pos[ic + 1] * r2, pos[ia + 2] * r0 + pos[ib + 2] * r1 + pos[ic + 2] * r2);
+    n.set(nor[ia] * r0 + nor[ib] * r1 + nor[ic] * r2, nor[ia + 1] * r0 + nor[ib + 1] * r1 + nor[ic + 1] * r2, nor[ia + 2] * r0 + nor[ib + 2] * r1 + nor[ic + 2] * r2).normalize();
+    if (n.y < -0.55 && p.y < under) continue;
+    if (n.y > 0.45 && p.y > L.topY) continue;
+    if (P.o.keep && !P.o.keep(p, n)) continue;
+    q.copy(p).addScaledVector(n, 0.003);
+    list.length = 0;
+    for (const o of sol) { const b = o.box; if (q.x > b.min.x - 0.45 && q.x < b.max.x + 0.45 && q.y > b.min.y - 0.45 && q.y < b.max.y + 0.45 && q.z > b.min.z - 0.45 && q.z < b.max.z + 0.45) list.push(o.m); }
+    rc.set(q, n); rc.near = 0; rc.far = 0.45;
+    const h = list.length ? rc.intersectObjects(list, false)[0] : null;
+    if (h) {
+      if (h.distance < 0.02) continue;
+      fn.copy(h.face.normal).transformDirection(h.object.matrixWorld);
+      if (fn.dot(n) > 0.05) continue;       // 物の中に埋まっている
+    }
+    out.push(p.x, p.y, p.z, n.x, n.y, n.z);
+    if (DEBUG) { const uv = g.attributes.uv.array; suv.push(uv[ix[k] * 2] * r0 + uv[ix[k + 1] * 2] * r1 + uv[ix[k + 2] * 2] * r2, uv[ix[k] * 2 + 1] * r0 + uv[ix[k + 1] * 2 + 1] * r1 + uv[ix[k + 2] * 2 + 1] * r2); }
+  }
+  if (DEBUG) P.suv = suv;
+  P.n = out.length / 6; P.sp = new Float32Array(out); P.r = new Float32Array(P.n).fill(1); P.g = new Float32Array(P.n);
+  for (let i = 0; i < P.n; i++) P.g[i] = stubAt(P.dirt, P.sp[i * 6], P.sp[i * 6 + 1], P.sp[i * 6 + 2], P.sp[i * 6 + 4]);
+  P.dirty = P.n; P.allow = Math.floor(P.n * 0.012); P.spc = Math.sqrt(tot / Math.max(1, want));
+  P.grid = new Map();
+  for (let i = 0; i < P.n; i++) { const key = gkey(Math.floor(P.sp[i * 6] / GC), Math.floor(P.sp[i * 6 + 1] / GC), Math.floor(P.sp[i * 6 + 2] / GC)); let c = P.grid.get(key); if (!c) P.grid.set(key, c = []); c.push(i); }
+  if (!P.n) P.done = true;
+}
+async function prepLevel(L, say) {
+  const sol = L.solids.map(m => { m.updateMatrixWorld(true); return { m, box: new THREE.Box3().setFromObject(m) }; });
+  const sides = new Map(); for (const m of L.solids) for (const mt of [].concat(m.material)) if (!sides.has(mt)) { sides.set(mt, mt.side); mt.side = THREE.DoubleSide; }
+  const rc = new THREE.Raycaster(); let t0 = performance.now();
+  for (const P of L.parts) {
+    makeSamples(P, L, sol, rc);
+    if (performance.now() - t0 > 50) { say('よごれを しらべています… ' + Math.round(100 * (P.id + 1) / L.parts.length) + '%'); await nextFrame(); t0 = performance.now(); }
+  }
+  for (const [mt, s] of sides) mt.side = s;
+  for (const P of L.parts) initMask(P);
+  L.N = L.parts.reduce((a, P) => a + P.n, 0);
+  for (const P of L.parts) P.pay = Math.max(10, Math.round(L.def.reward * 0.5 * (0.6 * P.n / Math.max(1, L.N) + 0.4 / L.parts.length) / 10) * 10);
+}
+
+// ---------- どのステージでも使う飾り ----------
+function groundPlane(L, key, w, d, x = 0, z = 0, y = 0, o = {}) {
+  const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2);
+  const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w + (x - w / 2), uv.getY(i) * d - (z + d / 2));
+  const m = new THREE.Mesh(g, decoMat(key)); m.position.set(x, y, z); m.receiveShadow = true;
+  if (o.poly) { m.material = decoMat(key).clone(); m.material.polygonOffset = true; m.material.polygonOffsetFactor = -1; m.material.polygonOffsetUnits = -2; }
+  return L.obj(m, { ray: true, solid: o.solid !== false });
+}
+function hills(L, list) {
+  for (const [x, z, r, h, c] of list) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, TAU, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: c || 0x7fa060, roughness: 1 }));
+    m.scale.set(r, h, r * 0.8); m.position.set(x, -0.5, z); L.obj(m);
+  }
+}
+// 木：丸い木（広葉樹）と、とがった木（杉）。インスタンスでまとめて描く
+function trees(L, list) {
+  const round = list.filter(t => t[3] !== 'cedar'), cedar = list.filter(t => t[3] === 'cedar');
+  const trunkG = new THREE.CylinderGeometry(0.12, 0.2, 1, 7); trunkG.translate(0, 0.5, 0);
+  const all = list.length, trunk = new THREE.InstancedMesh(trunkG, decoMat('trunk'), all);
+  const blobG = new THREE.IcosahedronGeometry(1, 1), leafM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, flatShading: true });
+  const blobs = new THREE.InstancedMesh(blobG, leafM, round.length * 4 + 1);
+  const coneG = new THREE.ConeGeometry(1, 1, 8); coneG.translate(0, 0.5, 0);
+  const cones = new THREE.InstancedMesh(coneG, leafM, cedar.length * 4 + 1);
+  const m = new THREE.Matrix4(), r = rng(77), col = new THREE.Color(); let ti = 0, bi = 0, ci = 0;
+  for (const [x, z, s] of round) {
+    const h = 2.2 * s; m.compose(new V3(x, 0, z), new THREE.Quaternion(), new V3(s, h, s)); trunk.setMatrixAt(ti++, m);
+    for (let k = 0; k < 4; k++) {
+      const a = r() * TAU, rr = (k ? 0.9 : 0) * s, sz = (k ? 1.2 : 1.6) * s * (0.85 + r() * 0.3);
+      m.compose(new V3(x + Math.cos(a) * rr, h + (k ? 0.2 : 0.9) * s + r() * 0.5 * s, z + Math.sin(a) * rr), new THREE.Quaternion().setFromEuler(new THREE.Euler(r(), r() * 3, r())), new V3(sz, sz * 0.85, sz));
+      blobs.setMatrixAt(bi, m); blobs.setColorAt(bi++, col.setHSL(0.24 + r() * 0.06, 0.45, 0.28 + r() * 0.1));
+    }
+  }
+  for (const [x, z, s] of cedar) {
+    m.compose(new V3(x, 0, z), new THREE.Quaternion(), new V3(s * 0.9, 3 * s, s * 0.9)); trunk.setMatrixAt(ti++, m);
+    for (let k = 0; k < 4; k++) {
+      const w = (1.45 - k * 0.3) * s, hh = (3.0 - k * 0.35) * s;
+      m.compose(new V3(x, (1.8 + k * 1.9) * s, z), new THREE.Quaternion().setFromAxisAngle(new V3(0, 1, 0), r() * 3), new V3(w, hh, w));
+      cones.setMatrixAt(ci, m); cones.setColorAt(ci++, col.setHSL(0.3 + r() * 0.04, 0.4, 0.18 + r() * 0.06));
+    }
+  }
+  trunk.count = ti; blobs.count = bi; cones.count = ci;
+  for (const o of [trunk, blobs, cones]) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; if (o.count) L.obj(o); }
+}
+// 木の板べい（柱と横板）
+function fence(L, x0, z0, x1, z1, h = 1.5) {
+  const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz), ry = Math.atan2(-dz, dx) / DEG, pb = new PB(), M = T((x0 + x1) / 2, 0, (z0 + z1) / 2, ry);
+  const np = Math.max(1, Math.round(len / 2));
+  for (let i = 0; i <= np; i++) pb.box(0.09, h + 0.05, 0.09, TT(M, -len / 2 + len * i / np, (h + 0.05) / 2, 0), { grain: 1 });
+  for (let k = 0; k < Math.round(h / 0.16); k++) pb.box(len, 0.13, 0.022, TT(M, 0, 0.12 + k * 0.16, 0.06), { grain: 1, to: [k * 0.37, k * 0.21] });
+  L.deco(pb, 'woodGray');
+  L.col((x0 + x1) / 2, (z0 + z1) / 2, len, 0.25, 0, h + 1, ry);
+}
+function hedge(L, x, z, w, d, h = 1.2) {
+  const pb = new PB(); pb.box(w, h, d, T(x, h / 2, z), { skip: 'b' });
+  const m = L.deco(pb, 'hedge'); L.col(x, z, w, d, 0, h);
+  return m;
+}
+// =========================================================================================
+//  仕事（ステージ）
+// =========================================================================================
+// 物の向き (x,z,ry) の中での位置 (lx,lz) → 世界の位置
+const loc = (x, z, ry, lx, lz) => { const c = Math.cos(ry * DEG), s = Math.sin(ry * DEG); return [x + lx * c + lz * s, z - lx * s + lz * c]; };
+const colL = (L, x, z, ry, lx, lz, w, d, y0, y1) => { const [wx, wz] = loc(x, z, ry, lx, lz); L.col(wx, wz, w, d, y0, y1, ry); };
+const ngon = (n, r, rot = 0) => Array.from({ length: n }, (_, k) => [Math.cos(rot + k / n * TAU) * r, Math.sin(rot + k / n * TAU) * r]);
+// 窓（枠とガラス）。正面は +z 向き
+function windowDeco(L, x, y, z, w, h, ry = 0) {
+  const M = T(x, y, z, ry), f = new PB(), t = 0.07;
+  f.box(w, t, 0.08, TT(M, 0, h / 2, 0)); f.box(w, t, 0.08, TT(M, 0, -h / 2, 0)); f.box(t, h, 0.08, TT(M, -w / 2, 0, 0)); f.box(t, h, 0.08, TT(M, w / 2, 0, 0));
+  if (w > 1.2) f.box(0.05, h, 0.06, TT(M, 0, 0, 0.01));
+  L.deco(f, 'frame');
+  const g = new PB(); g.box(w - t, h - t, 0.02, TT(M, 0, 0, -0.01)); L.deco(g, 'glass', { cast: false });
+}
+// 高圧洗浄機（自分の道具。ホースの巻いたもの付き）
+function washerDeco(L, x, z, ry) {
+  const M = T(x, 0, z, ry), pb = new PB();
+  pb.prism([[-0.27, 0.16], [0.27, 0.16], [0.27, 0.58], [-0.27, 0.58]], 0.38, TT(M, 0, 0, 0), { bev: 0.04 });
+  pb.cyl(0.12, 0.12, 0.3, 16, TT(M, 0.04, 0.68, 0, 0, 0, 90), { mat: 1 });
+  pb.box(0.2, 0.08, 0.26, TT(M, -0.12, 0.62, 0), { mat: 1 });
+  for (const s of [-1, 1]) {
+    pb.cyl(0.11, 0.11, 0.06, 16, TT(M, -0.18, 0.11, s * 0.22, 0, 90), { mat: 2 });
+    pb.pipe([-0.26, 0.5, s * 0.15], [-0.4, 1.0, s * 0.15], 0.014, 8, M, { mat: 3 });
+  }
+  pb.pipe([-0.4, 1.0, -0.17], [-0.4, 1.0, 0.17], 0.018, 8, M, { mat: 1 });
+  pb.pipe([0.2, 0.0, 0], [0.24, 0.16, 0], 0.03, 8, M, { mat: 1 });
+  L.deco(pb, ['plasY', 'blackP', 'tire', 'steel']);
+  const hose = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.022, 8, 40), new THREE.MeshStandardMaterial({ color: 0x2d6fd0, roughness: 0.45 }));
+  for (let k = 0; k < 3; k++) { const h = hose.clone(); h.rotation.x = Math.PI / 2; const [wx, wz] = loc(x, z, ry, 0.55, 0.05); h.position.set(wx + k * 0.01, 0.025 + k * 0.045, wz); h.castShadow = true; L.obj(h); }
+  L.col(...loc(x, z, ry, -0.05, 0), 0.75, 0.55, 0, 0.7, ry);
+}
+function gardenChair(L, x, y, z, ry, tag, mat, dirt) {
+  const M = T(x, y, z, ry);
+  const seat = new PB(); seat.prism([[-0.23, -0.02], [0.23, -0.02], [0.23, 0.02], [-0.23, 0.02]], 0.44, TT(M, 0, 0.45, 0.02), { bev: 0.015 });
+  const back = new PB(); back.prism([[-0.23, -0.23], [0.23, -0.23], [0.24, 0.2], [0.2, 0.24], [-0.2, 0.24], [-0.24, 0.2]], 0.032, TT(M, 0, 0.74, -0.205, 0, -10), { bev: 0.01 });
+  for (const s of [-1, 1]) back.pipe([s * 0.21, 0.455, -0.19], [s * 0.21, 0.95, -0.25], 0.017, 8, M);
+  const legs = new PB();
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) legs.pipe([sx * 0.215, 0, sz * 0.2 + (sz > 0 ? 0.02 : -0.02)], [sx * 0.2, 0.44, sz * 0.18], 0.02, 10, M);
+  L.part(`いす${tag}の座面`, `いす${tag}`, seat, mat, dirt);
+  L.part(`いす${tag}の背もたれ`, `いす${tag}`, back, mat, dirt);
+  L.part(`いす${tag}の脚`, `いす${tag}`, legs, mat, dirt);
+  L.col(x, z, 0.52, 0.52, 0, y + 0.47, ry);
+}
+function bench(L, x, z, ry, tag, dW, dI, wood = 'wood') {
+  const M = T(x, 0, z, ry);
+  const seat = new PB(); for (let k = 0; k < 4; k++) seat.prism([[-0.05, -0.017], [0.05, -0.017], [0.05, 0.017], [-0.05, 0.017]], 1.62, TT(M, 0, 0.45, -0.17 + k * 0.115, 90), { bev: 0.008, to: [k * 0.31, k * 0.17] });
+  const back = new PB(); for (let k = 0; k < 3; k++) back.prism([[-0.015, -0.045], [0.015, -0.045], [0.015, 0.045], [-0.015, 0.045]], 1.62, TT(M, 0, 0.6 + k * 0.12, -0.265 - k * 0.026, 90, 0, -12), { bev: 0.007, to: [k * 0.23, k * 0.41] });
+  const legs = new PB();
+  for (const s of [-1, 1]) {
+    legs.box(0.05, 0.44, 0.055, TT(M, s * 0.7, 0.22, 0.17));
+    legs.box(0.05, 0.98, 0.055, TT(M, s * 0.7, 0.47, -0.265, 0, -8));
+    legs.box(0.05, 0.05, 0.48, TT(M, s * 0.7, 0.405, -0.03));
+    legs.box(0.05, 0.035, 0.5, TT(M, s * 0.7, 0.67, -0.03));
+    legs.box(0.04, 0.24, 0.04, TT(M, s * 0.7, 0.55, 0.19));
+  }
+  L.part(`ベンチ${tag}の座板`, `ベンチ${tag}`, seat, wood, dW);
+  L.part(`ベンチ${tag}の背板`, `ベンチ${tag}`, back, wood, dW);
+  L.part(`ベンチ${tag}の脚`, `ベンチ${tag}`, legs, 'ironG', dI);
+  colL(L, x, z, ry, 0, -0.02, 1.5, 0.48, 0, 0.47);
+  colL(L, x, z, ry, 0, -0.3, 1.5, 0.12, 0, 0.98);
+}
+
+const LEVELS = [];
+// ---------------------------------------------------------------- 1. 裏庭
+LEVELS.push({
+  id: 'yard', name: '裏庭のガーデンセット', icon: '🪴', reward: 3000,
+  desc: 'ひと冬ほうっておかれた裏庭。テーブルといす、ベンチ、れんがのテラス、植木鉢、バードバス、飛び石をきれいに。',
+  bounds: [-6.55, 6.55, -5.72, 6.55], spawn: [0.8, 4.4, 0.4, -2], view: { x: 0, z: -1.2, r: 7.2, h: 3.4, y: 0.6 }, shadow: { x: 0, z: 0, r: 10 }, topY: 2.3,
+  build(L) {
+    const G = { a: 0x5c4b36, ds: 0.85 };
+    groundPlane(L, 'grass', 260, 260);
+    hills(L, [[-60, -120, 70, 22], [50, -140, 80, 26, 0x86a868], [140, 30, 60, 18], [-150, 40, 70, 20, 0x759a58], [20, 150, 90, 24]]);
+    // 家
+    { const w = new PB(); w.box(18, 5.0, 0.4, T(0, 2.95, -6.2), { skip: 'b' }); L.deco(w, 'siding');
+      const f = new PB(); f.box(18.04, 0.45, 0.46, T(0, 0.225, -6.2), { skip: 'b' }); L.deco(f, 'concrete');
+      const r = new PB(); r.box(18.6, 0.22, 1.3, T(0, 5.5, -5.85)); r.box(18.6, 0.16, 0.12, T(0, 5.38, -5.22), { mat: 1 }); L.deco(r, ['roof', 'frame']);
+      windowDeco(L, -1.2, 1.5, -5.98, 2.1, 2.05); windowDeco(L, 3.7, 1.75, -5.98, 1.6, 1.1); windowDeco(L, -3.2, 3.9, -5.98, 1.4, 1.0); windowDeco(L, 2.8, 3.9, -5.98, 1.4, 1.0);
+      const s = new PB(); s.box(2.4, 0.18, 0.6, T(-1.2, 0.36, -5.72)); L.deco(s, 'concrete');
+      const ac = new PB(); ac.prism([[-0.4, 0], [0.4, 0], [0.4, 0.58], [-0.4, 0.58]], 0.3, T(5.9, 0, -5.78), { bev: 0.02 }); ac.cyl(0.2, 0.2, 0.02, 24, T(5.75, 0.3, -5.62, 0, 90), { mat: 1 }); L.deco(ac, ['plasW', 'frame']);
+      const dp = new PB(); dp.pipe([8.6, 0, -5.95], [8.6, 5.4, -5.95], 0.045, 10, new THREE.Matrix4()); L.deco(dp, 'grayP');
+      L.col(0, -6.2, 18, 0.4, 0, 6); L.col(5.9, -5.78, 0.8, 0.3, 0, 0.58); }
+    fence(L, -6.9, -6.0, -6.9, 6.9); fence(L, 6.9, -6.0, 6.9, 6.9); fence(L, -6.9, 6.9, 6.9, 6.9);
+    trees(L, [[-11, 4, 1.4], [-12, -3, 1.6], [10.5, 3, 1.5], [11.5, -2, 1.3], [-4, 11, 1.6], [3, 12, 1.4], [9, 10, 1.7], [-10, 10, 1.3], [14, 8, 1.2], [-15, 0, 1.5]]);
+    washerDeco(L, 3.3, 5.6, 200);
+    // テラス
+    { const pb = new PB(); pb.box(6, 0.06, 4, T(0, 0.03, -3.9), { skip: 'b' });
+      L.part('テラスのれんが', 'テラス', pb, 'brick', { a: 0x584734, b: 0x4a6420, s: [1.7, 0.6, 0, 0], up: 0, ds: 1.0 }, { D: 64 }); L.col(0, -3.9, 6, 4, 0, 0.06); }
+    // テーブル
+    { const x = 0.25, z = -3.7, y = 0.06;
+      const top = new PB(); top.cyl(0.6, 0.6, 0.04, 44, T(x, y + 0.7, z)); top.cyl(0.6, 0.585, 0.05, 44, T(x, y + 0.655, z), { caps: '' });
+      L.part('テーブルの天板', 'ガーデンテーブル', top, 'plasW', G);
+      const leg = new PB(); leg.cyl(0.035, 0.035, 0.63, 14, T(x, y + 0.365, z)); leg.cyl(0.07, 0.05, 0.05, 16, T(x, y + 0.655, z));
+      for (const a of [45, 135]) leg.prism([[-0.45, 0], [0.45, 0], [0.42, 0.05], [-0.42, 0.05]], 0.06, T(x, y, z, a), { bev: 0.01 });
+      L.part('テーブルの脚', 'ガーデンテーブル', leg, 'plasW', G);
+      L.col(x, z, 1.0, 1.0, 0, y + 0.72); }
+    gardenChair(L, -0.62, 0.06, -3.7, 90, '（左）', 'plasG', G);
+    gardenChair(L, 1.12, 0.06, -3.7, -90, '（右）', 'plasG', G);
+    gardenChair(L, 0.25, 0.06, -2.65, 180, '（手前）', 'plasG', G);
+    bench(L, -5.1, 1.6, 90, '', { a: 0x584734, b: 0x4b6a21, s: [2.6, 0.82, 0, 0], up: 0.25 }, { a: 0x5b4a37, b: 0x8a4a22, s: [5, 0.66, 0, 0] });
+    // バードバス
+    { const x = 3.9, z = 2.4, Dm = { a: 0x56503f, b: 0x47671d, s: [3.2, 0.75, 0, 0], up: 0.28, ds: 0.8 };
+      const ped = new PB(); ped.lathe([[0, 0], [0.3, 0], [0.3, 0.07], [0.22, 0.11], [0.12, 0.17], [0.095, 0.25], [0.085, 0.55], [0.1, 0.62], [0.14, 0.66], [0, 0.66]], 30, T(x, 0, z));
+      L.part('バードバスの台', 'バードバス', ped, 'stone', Dm);
+      const bowl = new PB(); bowl.lathe([[0, 0.64], [0.13, 0.64], [0.2, 0.66], [0.34, 0.74], [0.44, 0.83], [0.46, 0.87], [0.43, 0.885], [0.36, 0.83], [0.2, 0.77], [0, 0.76]], 36, T(x, 0, z));
+      L.part('バードバスの水盤', 'バードバス', bowl, 'stone', Dm);
+      const wm = new THREE.Mesh(new THREE.CircleGeometry(0.345, 36), decoMat('water')); wm.rotation.x = -Math.PI / 2; wm.position.set(x, 0.82, z); L.obj(wm);
+      L.col(x, z, 0.75, 0.75, 0, 0.9); }
+    // 植木鉢
+    [[-5.6, -5.25, 1, '植木鉢（左）'], [4.9, -5.3, 1.15, '植木鉢（右）'], [5.85, -4.5, 0.85, '植木鉢（右の小）']].forEach(([x, z, s, nm], i) => {
+      const pb = new PB(); pb.lathe([[0, 0], [0.16, 0], [0.18, 0.03], [0.215, 0.4], [0.25, 0.41], [0.255, 0.47], [0.225, 0.472], [0.207, 0.43]].map(([r, y]) => [r * s, y * s]), 30, T(x, 0, z));
+      L.part(nm, '植木鉢', pb, 'terra', { a: 0x5a4a38, b: 0x58702c, s: [4, 0.56, 0.9, 0.18 * s], up: 0, ds: 0.6 });
+      const soil = new THREE.Mesh(new THREE.CircleGeometry(0.207 * s, 24), decoMat('soil')); soil.rotation.x = -Math.PI / 2; soil.position.set(x, 0.43 * s, z); L.obj(soil, { solid: true });
+      const r = rng(50 + i);
+      for (let k = 0; k < 7; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11 * s, 0), decoMat(k % 2 ? 'leaf' : 'leafD')); b.position.set(x + (r() - .5) * 0.25 * s, (0.5 + r() * 0.35) * s, z + (r() - .5) * 0.25 * s); b.scale.set(1, 1.4, 1); b.rotation.set(r(), r() * 3, r()); b.castShadow = true; L.obj(b); }
+      L.col(x, z, 0.5 * s, 0.5 * s, 0, 0.47 * s);
+    });
+    // 飛び石
+    { const pb = new PB(), r = rng(3);
+      for (const [x, z] of [[1.0, -1.25], [1.45, -0.3], [1.65, 0.7], [2.25, 1.55], [2.45, 2.6], [2.15, 3.6]]) {
+        const sh = []; for (let k = 0; k < 10; k++) { const a = k / 10 * TAU, rr = 0.27 + (r() - 0.5) * 0.09; sh.push([Math.cos(a) * rr * 1.1, Math.sin(a) * rr]); }
+        pb.prism(sh, 0.07, T(x, 0.02, z, r() * 180, -90), { bev: 0.018 });
+      }
+      L.part('飛び石', '飛び石', pb, 'stoneD', { a: 0x524a3a, b: 0x46661c, s: [3, 0.85, 0, 0], up: 0.3, ds: 0.8 }); }
+  },
+});
+// ---------------------------------------------------------------- 2. 軽トラック
+function keiTruck(L) {
+  const DB = { a: 0x6b5a43, b: 0x5b4127, s: [3.0, 0.6, 1.1, 0.6], up: 0, ds: 0.8 };      // ほこりと、下のほうのどろはね
+  const DR = { a: 0x6b5a43, b: 0x8c4a22, s: [4.5, 0.78, 0, 0], up: 0.2, ds: 0.8 };       // 荷台のさび
+  const DG = { a: 0x8a7a62, b: 0x2c2218, s: [9, 0.8, 0, 0], up: 0, ds: 0.55 };            // ガラス：ほこりと虫のあと
+  const DW = { a: 0x5c4832, b: 0x4c3822, s: [3.2, 0.42, 0.8, 0.45], up: 0, ds: 0.6 };    // タイヤ：こいどろ
+  const W = 0.72;
+  // キャビン（横から見た形を押し出し。前輪のところはタイヤハウスのへこみ）
+  const prof = [[0.30, 0.40], [0.70, 0.40]];
+  for (let k = 0; k <= 8; k++) { const a = (158 - k * 17) * DEG; prof.push([1.02 + 0.335 * Math.cos(a), 0.28 + 0.335 * Math.sin(a)]); }
+  prof.push([1.62, 0.40], [1.70, 0.47], [1.715, 0.98], [1.665, 1.06], [1.53, 1.69], [1.45, 1.78], [0.40, 1.78], [0.31, 1.71]);
+  { const pb = new PB(); pb.prism(prof, W * 2, T(), { bev: 0.07, bs: 2 });
+    L.part('キャビン', 'キャビン', pb, 'carW', DB, { keep: (p, n) => !(p.y < 0.66 && Math.abs(p.x - 1.02) < 0.37 && Math.abs(p.z) < 0.69) && !(n.x < -0.7 && p.y < 0.72) }); }
+  // ドア（窓ガラスは別のパーツ）
+  for (const s of [1, -1]) {
+    const side = s > 0 ? '右' : '左', z0 = s * (W + 0.012);
+    const d = new PB(); d.prism([[0.62, 0.66], [1.6, 0.66], [1.6, 0.98], [1.47, 1.62], [0.64, 1.62]], 0.03, T(0, 0, z0), { bev: 0.012, bs: 1 });
+    d.box(0.15, 0.035, 0.03, T(0.79, 1.0, s * (W + 0.03)), { mat: 1 });
+    d.box(0.3, 0.012, 0.012, T(1.0, 0.7, s * (W + 0.028)), { mat: 1 });
+    L.part(`${side}のドア`, 'キャビン', d, ['carW', 'chrome'], DB);
+    const g = new PB(); g.prism([[0.7, 1.08], [1.5, 1.08], [1.43, 1.56], [0.71, 1.56]], 0.008, T(0, 0, s * (W + 0.0295)), { bev: 0.003, bs: 1 });
+    L.part(`${side}の窓`, 'ガラス', g, 'glass', DG);
+    const m = new PB(); m.pipe([1.5, 1.1, s * 0.74], [1.57, 1.18, s * 0.86], 0.012, 8, new THREE.Matrix4());
+    m.prism([[-0.04, -0.075], [0.04, -0.075], [0.04, 0.075], [-0.04, 0.075]], 0.12, T(1.57, 1.24, s * 0.9), { bev: 0.015 });
+    L.part(`${side}のミラー`, 'キャビン', m, 'blackP', DB);
+  }
+  // フロントガラス（傾いた板）とワイパー
+  { const A = new V3(1.665, 1.06, 0), B = new V3(1.53, 1.69, 0), e = B.clone().sub(A).normalize(), n = new V3(e.y, -e.x, 0), o = A.clone().add(B).multiplyScalar(0.5).addScaledVector(n, 0.004);
+    const Mw = basis(o, e, n, new V3(0, 0, -1));
+    const g = new PB(); g.box(0.53, 0.01, 1.26, Mw); L.part('フロントガラス', 'ガラス', g, 'glass', DG);
+    const wp = new PB(); for (const zz of [-0.32, 0.25]) wp.box(0.46, 0.012, 0.022, TT(Mw, -0.08, 0.012, zz, -62)); L.deco(wp, 'black', { solid: false }); }
+  { const g = new PB(); g.box(0.01, 0.36, 0.9, T(0.298, 1.42, 0)); L.part('うしろの窓', 'ガラス', g, 'glass', DG); }
+  // 前：ライト・グリル・バンパー
+  { const h = new PB();
+    for (const s of [1, -1]) { h.cyl(0.088, 0.088, 0.03, 24, T(1.727, 0.82, s * 0.5, 0, 0, -90)); h.cyl(0.07, 0.072, 0.014, 24, T(1.746, 0.82, s * 0.5, 0, 0, -90), { mat: 1 }); h.box(0.025, 0.06, 0.13, T(1.722, 0.66, s * 0.52), { mat: 2 }); }
+    L.part('ヘッドライト', 'まえ', h, ['chrome', 'lens', 'lensO'], DB);
+    const gr = new PB(); gr.box(0.02, 0.14, 0.62, T(1.722, 0.82, 0)); for (let k = 0; k < 4; k++) gr.box(0.02, 0.012, 0.6, T(1.735, 0.77 + k * 0.033, 0), { mat: 1 });
+    L.part('フロントグリル', 'まえ', gr, ['blackP', 'chrome'], DB);
+    const bp = new PB(); bp.prism([[-0.07, -0.08], [0.07, -0.08], [0.07, 0.08], [-0.07, 0.08]], 1.48, T(1.75, 0.47, 0), { bev: 0.03 });
+    L.part('フロントバンパー', 'まえ', bp, 'grayP', DB); }
+  // 荷台
+  { const f = new PB(); f.box(1.94, 0.04, 1.44, T(-0.75, 0.66, 0)); for (let k = -3; k <= 3; k++) f.box(1.9, 0.012, 0.03, T(-0.75, 0.686, k * 0.19));
+    L.part('荷台の床', '荷台', f, 'carW', DR);
+    for (const s of [1, -1]) {
+      const g = new PB(); g.box(1.94, 0.3, 0.035, T(-0.75, 0.83, s * 0.7025)); g.box(1.9, 0.025, 0.012, T(-0.75, 0.77, s * 0.726)); g.box(1.9, 0.025, 0.012, T(-0.75, 0.89, s * 0.726));
+      L.part(`あおり（${s > 0 ? '右' : '左'}）`, '荷台', g, 'carW', DR);
+    }
+    const t = new PB(); t.box(0.035, 0.3, 1.37, T(-1.7025, 0.83, 0)); t.box(0.012, 0.025, 1.3, T(-1.726, 0.77, 0)); t.box(0.012, 0.025, 1.3, T(-1.726, 0.89, 0));
+    L.part('あおり（うしろ）', '荷台', t, 'carW', DR);
+    const g = new PB();
+    for (const s of [1, -1]) g.box(0.045, 1.22, 0.045, T(0.22, 1.29, s * 0.7));
+    g.box(0.05, 0.05, 1.45, T(0.22, 1.885, 0)); g.box(0.04, 0.04, 1.4, T(0.22, 1.3, 0));
+    for (let k = -2; k <= 2; k++) g.box(0.025, 1.18, 0.025, T(0.22, 1.28, k * 0.24));
+    L.part('鳥居（荷台の柵）', '荷台', g, 'grayP', DB); }
+  // うしろ
+  { const r = new PB(); for (const s of [1, -1]) r.box(0.03, 0.12, 0.17, T(-1.737, 0.55, s * 0.6));
+    r.box(0.08, 0.1, 1.38, T(-1.75, 0.42, 0), { mat: 1 });
+    L.part('テールランプとバンパー', 'うしろ', r, ['lensR', 'blackP'], DB); }
+  // タイヤ
+  for (const [x, s, nm] of [[1.02, 1, '右前'], [1.02, -1, '左前'], [-1.02, 1, '右うしろ'], [-1.02, -1, '左うしろ']]) {
+    const M = T(x, 0.28, s * 0.6, 0, s > 0 ? 90 : -90), pb = new PB();
+    pb.lathe([[0.165, -0.075], [0.24, -0.08], [0.27, -0.07]], 36, M, { ns: true });
+    pb.lathe([[0.27, -0.07], [0.282, -0.045], [0.284, 0], [0.282, 0.045], [0.27, 0.07], [0.24, 0.08], [0.168, 0.074]], 36, M);
+    pb.lathe([[0.168, 0.072], [0.15, 0.056], [0.11, 0.05], [0.09, 0.06], [0.06, 0.062], [0.045, 0.08], [0, 0.08]], 28, M, { mat: 1 });
+    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.4; pb.cyl(0.011, 0.009, 0.02, 6, TT(M, Math.cos(a) * 0.05, 0.068, Math.sin(a) * 0.05), { mat: 1 }); }
+    L.part(`タイヤ（${nm}）`, 'タイヤ', pb, ['tire', 'steelW'], DW, { keep: p => p.y > 0.04 });
+  }
+  // 見えにくい下まわり（飾り）
+  { const u = new PB(); u.box(2.6, 0.2, 0.8, T(-0.3, 0.43, 0), { skip: 'b' }); u.box(0.06, 0.2, 1.3, T(-1.69, 0.52, 0)); u.pipe([-1.02, 0.28, -0.55], [-1.02, 0.28, 0.55], 0.04, 8, new THREE.Matrix4());
+    u.pipe([1.02, 0.28, -0.55], [1.02, 0.28, 0.55], 0.04, 8, new THREE.Matrix4()); for (const s of [1, -1]) u.box(0.5, 0.03, 0.2, T(-1.02, 0.6, s * 0.6));
+    L.deco(u, 'frame');
+    const pl = new PB(); pl.box(0.012, 0.13, 0.26, T(-1.775, 0.42, 0.25)); L.deco(pl, 'paper'); }
+  L.col(1.02, 0, 1.46, 1.48, 0, 1.8); L.col(-0.75, 0, 1.96, 1.48, 0, 0.68);
+  for (const s of [1, -1]) L.col(-0.75, s * 0.71, 1.96, 0.07, 0, 0.98);
+  L.col(-1.7, 0, 0.07, 1.48, 0, 0.98); L.col(0.22, 0, 0.08, 1.48, 0, 1.92); L.col(1.76, 0, 0.12, 1.48, 0, 0.56); L.col(-1.76, 0, 0.1, 1.4, 0, 0.47);
+}
+LEVELS.push({
+  id: 'truck', name: '畑の軽トラック', icon: '🛻', reward: 6000,
+  desc: '畑で毎日はたらいた白い軽トラック。どろだらけのタイヤ、ほこりのキャビン、さびの出た荷台をピカピカに。荷台にはジャンプで乗れます。',
+  bounds: [-6.1, 6.0, -6.15, 6.1], spawn: [3.4, 3.9, 0.4, 0], view: { x: 0, z: 0, r: 6.5, h: 3.2, y: 0.8 }, shadow: { x: 0, z: -1, r: 10 }, topY: 2.3,
+  build(L) {
+    groundPlane(L, 'grass', 260, 260);
+    groundPlane(L, 'gravel', 10, 13.5, 0.2, -0.4, 0.004, { poly: true });
+    hills(L, [[-70, -110, 80, 24], [60, -130, 70, 28, 0x86a868], [150, 20, 70, 20], [-140, 60, 80, 22, 0x759a58], [10, 160, 90, 26]]);
+    // 車庫
+    { const b = new PB(); b.box(6.4, 3.2, 5.0, T(-0.6, 1.6, -9.0), { skip: 'b' }); L.deco(b, 'wallW');
+      const s = new PB(); s.box(4.2, 2.5, 0.06, T(-0.6, 1.25, -6.47)); s.box(4.5, 0.3, 0.12, T(-0.6, 2.62, -6.46), { mat: 1 }); L.deco(s, ['shutter', 'frame']);
+      const r = new PB(); r.box(7.0, 0.2, 5.6, T(-0.6, 3.3, -8.9)); L.deco(r, 'roof');
+      L.col(-0.6, -9.0, 6.4, 5.0, 0, 3.4); }
+    // 家
+    { const h = new PB(); h.box(8, 5.4, 7, T(9.8, 2.7, -4.5), { skip: 'b' }); L.deco(h, 'siding');
+      const r = new PB(); r.prism([[-4.4, 0], [4.4, 0], [0, 1.8]], 8.6, T(9.8, 5.4, -4.5), { caps: 'fk' }); L.deco(r, 'roof');
+      windowDeco(L, 5.78, 1.6, -3.2, 1.6, 1.2, -90); windowDeco(L, 5.78, 4.0, -5.4, 1.4, 1.0, -90);
+      L.col(9.8, -4.5, 8, 7, 0, 6); }
+    hedge(L, -6.75, -0.5, 0.8, 11.5, 1.35);
+    { const w = new PB(); w.box(4.0, 1.2, 0.15, T(-4.7, 0.6, 6.6), { skip: 'b' }); w.box(3.6, 1.2, 0.15, T(4.9, 0.6, 6.6), { skip: 'b' }); L.deco(w, 'concrete'); L.col(-4.7, 6.6, 4.0, 0.2, 0, 1.2); L.col(4.9, 6.6, 3.6, 0.2, 0, 1.2); }
+    { const p = new PB(); p.cyl(0.16, 0.13, 9, 14, T(6.2, 4.5, 7.6)); p.box(1.4, 0.12, 0.12, T(6.2, 8.4, 7.6), { mat: 1 }); L.deco(p, ['concrete', 'frame']); }
+    trees(L, [[-11, 5, 1.5], [-12, -4, 1.7], [-9, 11, 1.4], [3, 13, 1.6], [-3, 14, 1.3], [12, 9, 1.5], [15, 3, 1.3], [-16, 1, 1.6], [7, -14, 1.5], [-8, -14, 1.4]]);
+    washerDeco(L, 4.6, 5.2, 210);
+    { const c = new PB(); c.box(0.52, 0.42, 0.5, T(-2.35, 0.21, 1.05, 15), { grain: 1 }); L.deco(c, 'woodGray'); L.col(-2.35, 1.05, 0.52, 0.5, 0, 0.42, 15); }
+    keiTruck(L);
+  },
+});
+// ---------------------------------------------------------------- 3. 公園
+LEVELS.push({
+  id: 'park', name: '団地の公園', icon: '🛝', reward: 9000,
+  desc: 'すべり台、ブランコ、パンダの遊具、ベンチ、砂場、水飲み場。鳥のフンやさび、こけもいっぱい。すべり台の上にも登れます。',
+  bounds: [-7.6, 7.6, -6.8, 6.8], spawn: [0.2, 6.0, 0, 0], view: { x: 0, z: -0.5, r: 9.5, h: 4.2, y: 0.9 }, shadow: { x: 0, z: 0, r: 12 }, topY: 2.0,
+  build(L) {
+    groundPlane(L, 'grass', 260, 260);
+    groundPlane(L, 'sand', 15.2, 13.6, 0, 0, 0.004, { poly: true });
+    hills(L, [[-80, -120, 90, 30], [70, -110, 70, 24, 0x86a868], [140, 50, 60, 20], [-130, 70, 80, 26, 0x759a58]]);
+    // 団地（遠くの建物）
+    for (const [x, z, w, h, ry] of [[-6, -18, 24, 14, 0], [20, -10, 18, 16.8, 90], [-22, 4, 18, 14, 90]]) { const b = new PB(); b.box(w, h, 9, T(x, h / 2, z, ry), { skip: 'bt' }); L.deco(b, 'apt'); const r = new PB(); r.box(w + 0.3, 0.4, 9.3, T(x, h + 0.2, z, ry)); L.deco(r, 'concrete'); }
+    // まわりの低いさく
+    { const pb = new PB(), M = new THREE.Matrix4(), X = 7.9, Z = 7.1;
+      for (const [a, b] of [[[-X, -Z], [X, -Z]], [[X, -Z], [X, Z]], [[X, Z], [1.2, Z]], [[-1.2, Z], [-X, Z]], [[-X, Z], [-X, -Z]]]) {
+        pb.pipe([a[0], 0.62, a[1]], [b[0], 0.62, b[1]], 0.03, 8, M); pb.pipe([a[0], 0.3, a[1]], [b[0], 0.3, b[1]], 0.025, 8, M);
+        const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2); for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); pb.pipe([x, 0, z], [x, 0.66, z], 0.035, 8, M); }
+      }
+      L.deco(pb, 'ironG'); L.col(0, -Z, 2 * X, 0.2, 0, 1); L.col(X, 0, 0.2, 2 * Z, 0, 1); L.col(-X, 0, 0.2, 2 * Z, 0, 1); L.col(-4.6, Z, 6.8, 0.2, 0, 1); L.col(4.6, Z, 6.8, 0.2, 0, 1); }
+    trees(L, [[-10, -9, 1.6], [-11, 0, 1.5], [-10, 8, 1.4], [10.5, -8, 1.5], [11, 1, 1.7], [10, 9, 1.4], [-4, 11, 1.5], [5, 11.5, 1.6], [0, -11, 1.4], [6, -11, 1.3]]);
+    washerDeco(L, 2.0, 6.2, 190);
+    { const lp = new PB(); lp.cyl(0.06, 0.05, 3.6, 10, T(6.8, 1.8, -6.4)); lp.box(0.4, 0.12, 0.25, T(6.62, 3.62, -6.4), { mat: 1 }); L.deco(lp, ['ironG', 'lens']); }
+    const BIRD = { a: 0x5e5546, b: 0xefece1, s: [7, 0.89, 0, 0], up: 0.25, ds: 0.85 };
+    const RUST = { a: 0x5e5546, b: 0x8e4b22, s: [5, 0.6, 0, 0], up: 0.1, ds: 0.85 };
+    const MOSS = { a: 0x56503f, b: 0x47671d, s: [2.6, 0.82, 0, 0], up: 0.25, ds: 0.85 };
+    // すべり台
+    { const x = -3.4, z = -2.6, M = T(x, 0, z);
+      const posts = new PB(); for (const sx of [-1, 1]) for (const sz of [-1, 1]) posts.pipe([sx * 0.56, 0, sz * 0.56], [sx * 0.56, 2.3, sz * 0.56], 0.045, 12, M);
+      for (const sx of [-1, 1]) posts.pipe([sx * 0.27, 0, 3.75], [sx * 0.27, 0.3, 3.75], 0.035, 10, M);
+      for (const sx of [-1, 1]) posts.sphere(0.06, 12, 6, TT(M, sx * 0.56, 2.32, 0.56)), posts.sphere(0.06, 12, 6, TT(M, sx * 0.56, 2.32, -0.56));
+      L.part('すべり台の柱', 'すべり台', posts, 'pipeB', RUST);
+      const deck = new PB(); deck.prism([[-0.6, -0.035], [0.6, -0.035], [0.6, 0.035], [-0.6, 0.035]], 1.2, TT(M, 0, 1.5, 0), { bev: 0.015 });
+      L.part('すべり台の台', 'すべり台', deck, 'plasG', BIRD);
+      const rail = new PB(); for (const sx of [-1, 1]) { rail.pipe([sx * 0.56, 2.2, -0.56], [sx * 0.56, 2.2, 0.56], 0.03, 10, M); rail.pipe([sx * 0.56, 1.85, -0.56], [sx * 0.56, 1.85, 0.56], 0.025, 10, M); }
+      rail.pipe([-0.56, 2.2, -0.56], [0.56, 2.2, -0.56], 0.028, 10, M);
+      for (const sx of [-1, 1]) rail.pipe([sx * 0.35, 0.18, -2.25], [sx * 0.35, 1.9, -0.58], 0.03, 10, M);
+      L.part('すべり台の手すり', 'すべり台', rail, 'pipeR', RUST);
+      const st = new PB(); for (let k = 1; k <= 5; k++) { st.box(0.66, 0.045, 0.27, TT(M, 0, 0.25 * k - 0.0225, -0.6 - (6 - k) * 0.3 + 0.15), { grain: 1 }); }
+      for (const sx of [-1, 1]) st.pipe([sx * 0.35, 0, -2.25], [sx * 0.35, 1.5, -0.58], 0.035, 10, M);
+      L.part('すべり台の階段', 'すべり台', st, 'plasY', BIRD);
+      const U = [[-0.3, 0], [0.3, 0], [0.3, 0.2], [0.265, 0.2], [0.265, 0.035], [-0.265, 0.035], [-0.265, 0.2], [-0.3, 0.2]];
+      const ch = new PB(), A = new V3(0, 1.5, 0.6), B = new V3(0, 0.33, 3.3), zz = B.clone().sub(A), L1 = zz.length(); zz.normalize();
+      const yy = new V3().crossVectors(zz, new V3(1, 0, 0));
+      ch.prism(U, L1, M.clone().multiply(basis(A.clone().add(B).multiplyScalar(0.5), new V3(1, 0, 0), yy, zz)), { bev: 0.012, bs: 1 });
+      ch.prism(U, 0.62, TT(M, 0, 0.3, 3.61), { bev: 0.012, bs: 1 });
+      L.part('すべり台のすべる所', 'すべり台', ch, 'steel', BIRD, { under: 1.6 });
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) L.col(x + sx * 0.56, z + sz * 0.56, 0.12, 0.12, 0, 2.3);
+      L.col(x, z, 1.2, 1.2, 1.46, 1.535);
+      for (let k = 1; k <= 5; k++) L.col(x, z - 0.6 - (6 - k) * 0.3 + 0.15, 0.7, 0.3, 0.25 * k - 0.05, 0.25 * k);
+      for (let k = 0; k < 6; k++) { const zc = 0.6 + (k + 0.5) * 0.45, h = lerp(1.5, 0.33, (k + 0.5) / 6); L.col(x, z + zc, 0.6, 0.45, 0, h + 0.035); }
+      L.col(x, z + 3.61, 0.6, 0.62, 0, 0.335); }
+    // ブランコ
+    { const x = 3.6, z = -3.0, M = T(x, 0, z);
+      const fr = new PB(); fr.pipe([-1.6, 2.3, 0], [1.6, 2.3, 0], 0.055, 14, M);
+      for (const sx of [-1, 1]) { for (const sz of [-1, 1]) fr.pipe([sx * 1.5, 2.33, 0], [sx * 1.66, 0, sz * 0.78], 0.05, 12, M); fr.pipe([sx * 1.6, 0.6, -0.57], [sx * 1.6, 0.6, 0.57], 0.035, 10, M); }
+      L.part('ブランコの柱', 'ブランコ', fr, 'pipeR', RUST);
+      for (const [sx, nm] of [[-0.75, '左'], [0.75, '右']]) {
+        const s = new PB(); s.prism([[-0.24, -0.022], [0.24, -0.022], [0.24, 0.022], [-0.24, 0.022]], 0.2, TT(M, sx, 0.5, 0), { bev: 0.012 });
+        L.part(`ブランコの座面（${nm}）`, 'ブランコ', s, 'rubber', { a: 0x6a6252, b: 0xefece1, s: [8, 0.86, 0, 0], up: 0.2, ds: 0.6 });
+        const c = new PB(); for (const dx of [-0.22, 0.22]) c.pipe([sx + dx, 0.52, 0], [sx + dx, 2.26, 0], 0.008, 6, M); L.deco(c, 'steel', { solid: false, ray: false });
+        L.col(x + sx, z, 0.5, 0.22, 0.44, 0.53);
+      }
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) L.col(x + sx * 1.6, z + sz * 0.7, 0.18, 0.18, 0, 2.3); }
+    // パンダの遊具
+    { const x = 0.8, z = 2.2, M = T(x, 0, z, 30);
+      const sp = new PB(); sp.cyl(0.32, 0.34, 0.08, 24, TT(M, 0, 0.04, 0)); L.deco(sp, 'concrete');
+      for (let k = 0; k < 6; k++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.017, 6, 20), decoMat('steel')); t.rotation.x = Math.PI / 2; const [wx, wz] = loc(x, z, 30, 0, 0); t.position.set(wx, 0.1 + k * 0.05, wz); t.castShadow = true; L.obj(t); }
+      const b = new PB();
+      b.sphere(0.32, 28, 14, TT(M, 0, 0.62, 0, 0, 0, 0, 1.0, 0.72, 0.62));
+      b.sphere(0.22, 26, 14, TT(M, 0.33, 0.93, 0));
+      for (const s of [-1, 1]) { b.sphere(0.075, 14, 8, TT(M, 0.3, 1.13, s * 0.14), { mat: 1 }); b.sphere(0.06, 14, 8, TT(M, 0.515, 0.96, s * 0.085, 0, 0, 0, 0.6, 1, 0.8), { mat: 1 }); }
+      b.sphere(0.03, 10, 6, TT(M, 0.55, 0.88, 0), { mat: 1 });
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.cyl(0.07, 0.075, 0.2, 14, TT(M, sx * 0.17, 0.44, sz * 0.13), { mat: 1 });
+      b.sphere(0.06, 12, 8, TT(M, -0.33, 0.66, 0));
+      b.prism([[-0.13, -0.025], [0.13, -0.025], [0.13, 0.025], [-0.13, 0.025]], 0.26, TT(M, -0.04, 0.86, 0), { bev: 0.02, mat: 2 });
+      L.part('パンダの体', 'パンダの遊具', b, ['plasW', 'black', 'plasR'], { a: 0x5e5546, b: 0x5a4229, s: [4, 0.58, 1.0, 0.62], up: 0, ds: 0.6 });
+      const hd = new PB(); hd.pipe([0.24, 1.02, -0.27], [0.24, 1.02, 0.27], 0.018, 10, M); for (const s of [-1, 1]) { hd.sphere(0.03, 10, 6, TT(M, 0.24, 1.02, s * 0.28)); hd.pipe([0.1, 0.56, s * 0.2], [0.1, 0.56, s * 0.36], 0.016, 8, M); }
+      L.part('パンダの取っ手', 'パンダの遊具', hd, 'plasY', BIRD);
+      L.col(x, z, 0.95, 0.6, 0, 1.15, 30); }
+    bench(L, -6.9, 0.8, 90, '（左）', MOSS, RUST, 'woodRed');
+    bench(L, -6.9, 3.6, 90, '（右）', MOSS, RUST, 'woodRed');
+    // 砂場
+    { const x = 4.4, z = 3.1, pb = new PB();
+      for (const s of [-1, 1]) { pb.box(2.62, 0.22, 0.16, T(x, 0.11, z + s * 1.23), { grain: 1, to: [s, 0] }); pb.box(0.16, 0.22, 2.3, T(x + s * 1.23, 0.11, z), { grain: 1, to: [0, s] }); }
+      L.part('砂場のわく', '砂場', pb, 'wood', MOSS);
+      groundPlane(L, 'sand', 2.3, 2.3, x, z, 0.12).material = decoMat('sand');
+      for (const s of [-1, 1]) { L.col(x, z + s * 1.23, 2.62, 0.16, 0, 0.22); L.col(x + s * 1.23, z, 0.16, 2.3, 0, 0.22); }
+      const bk = new PB(); bk.cyl(0.11, 0.13, 0.16, 16, T(x - 0.5, 0.2, z + 0.3), { caps: 'b' }); bk.pipe([x - 0.62, 0.27, z + 0.3], [x - 0.38, 0.27, z + 0.3], 0.006, 6, new THREE.Matrix4());
+      L.deco(bk, 'plasR', { solid: false }); }
+    // 水飲み場
+    { const x = -1.6, z = 5.1, pb = new PB();
+      pb.box(0.32, 0.74, 0.32, T(x, 0.37, z), { skip: 'b' });
+      pb.prism([[-0.27, 0], [0.27, 0], [0.27, 0.1], [0.23, 0.1], [0.2, 0.04], [-0.2, 0.04], [-0.23, 0.1], [-0.27, 0.1]], 0.46, T(x, 0.74, z), { bev: 0.015, bs: 1 });
+      L.part('水飲み場', '水飲み場', pb, 'concrete', { a: 0x4f4a3c, b: 0x34452a, s: [3.5, 0.64, 0.3, 0.6], up: 0.2, ds: 0.7 });
+      const f = new PB(); f.pipe([x, 0.78, z], [x, 0.9, z], 0.016, 8, new THREE.Matrix4()); f.pipe([x, 0.9, z], [x + 0.05, 0.92, z], 0.012, 8, new THREE.Matrix4()); L.deco(f, 'chrome', { solid: false });
+      L.col(x, z, 0.55, 0.48, 0, 0.84); }
+  },
+});
+// ---------------------------------------------------------------- 4. 神社
+function lantern(L, x, z, tag, D) {
+  const M = T(x, 0, z), b = new PB();
+  b.prism(ngon(6, 0.42, Math.PI / 6), 0.24, TT(M, 0, 0.12, 0, 0, -90), { bev: 0.025 });
+  b.prism(ngon(6, 0.32, Math.PI / 6), 0.08, TT(M, 0, 0.28, 0, 0, -90), { bev: 0.02 });
+  b.cyl(0.14, 0.12, 0.82, 18, TT(M, 0, 0.73, 0));
+  b.prism(ngon(6, 0.36, Math.PI / 6), 0.17, TT(M, 0, 1.225, 0, 0, -90), { bev: 0.025 });
+  L.part(`石灯籠の台（${tag}）`, `石灯籠（${tag}）`, b, 'stone', D);
+  const t = new PB();
+  t.prism(ngon(6, 0.24, Math.PI / 6), 0.36, TT(M, 0, 1.49, 0, 0, -90), { bev: 0.015 });
+  t.lathe([[0, 0], [0.58, 0], [0.59, 0.05], [0.53, 0.075], [0.22, 0.27], [0.11, 0.31], [0, 0.31]], 6, TT(M, 0, 1.67, 0), { crease: 25, rot: Math.PI / 6 });
+  t.lathe([[0, 0], [0.07, 0], [0.09, 0.06], [0.07, 0.13], [0.03, 0.19], [0, 0.205]], 12, TT(M, 0, 1.97, 0));
+  L.part(`石灯籠の火袋と笠（${tag}）`, `石灯籠（${tag}）`, t, 'stone', D);
+  const w = new PB(); for (const a of [90, 270]) w.box(0.2, 0.18, 0.012, TT(M, 0, 1.49, 0, a).multiply(T(0, 0, 0.212))); L.deco(w, 'black');
+  L.col(x, z, 0.82, 0.82, 0, 2.2);
+}
+LEVELS.push({
+  id: 'shrine', name: '森の神社の参道', icon: '⛩️', reward: 14000,
+  desc: '森の中の小さな神社。こけだらけの石だたみ、朱色の鳥居、石灯籠、手水鉢、石段、さい銭箱。高い所は遠くまで届く強いノズルで。',
+  bounds: [-5.6, 5.6, -7.6, 8.4], spawn: [0.6, 8.0, 0, 4], view: { x: 0, z: 0.5, r: 10.5, h: 4.4, y: 1.4 }, shadow: { x: 0, z: 0, r: 13 }, topY: 2.3,
+  build(L) {
+    groundPlane(L, 'grass', 260, 260);
+    groundPlane(L, 'pebW', 13, 19, 0, -0.2, 0.004, { poly: true });
+    hills(L, [[-70, -120, 90, 36, 0x55784a], [60, -120, 80, 32, 0x4f7346], [140, 30, 70, 26, 0x5d8050], [-130, 50, 80, 30, 0x55784a], [0, 150, 80, 24, 0x6a8a58]]);
+    const T_ = []; const r = rng(8);
+    for (let i = 0; i < 46; i++) { const a = i / 46 * TAU, d = 11 + r() * 9; const x = Math.cos(a) * d * 0.9, z = Math.sin(a) * d * 1.1 - 1; if (z > 7 && Math.abs(x) < 4) continue; T_.push([x, z, 1.4 + r() * 0.8, 'cedar']); }
+    trees(L, T_);
+    washerDeco(L, 2.4, 7.4, 160);
+    const MOSS = { a: 0x4d4838, b: 0x44621c, s: [2.4, 0.62, 0, 0], up: 0.15, ds: 0.9 };
+    // 参道
+    { const a = new PB(); a.box(2.4, 0.08, 6.5, T(0, 0.04, 3.95), { skip: 'b' }); L.part('参道の石だたみ（手前）', '参道', a, 'flag', { a: 0x4f4a3a, b: 0x46651d, s: [1.8, 0.58, 0, 0], up: 0, ds: 1 }, { D: 64 });
+      const b = new PB(); b.box(2.4, 0.08, 6.5, T(0, 0.04, -2.55), { skip: 'b' }); L.part('参道の石だたみ（奥）', '参道', b, 'flag', { a: 0x4f4a3a, b: 0x46651d, s: [1.8, 0.56, 0, 0], up: 0, ds: 1 }, { D: 64 }); }
+    // 鳥居
+    { const z = 4.4, TD = { a: 0x4d4032, b: 0x26261f, s: [3.4, 0.6, 0.25, 1.4], up: 0, ds: 0.9 };
+      for (const [s, nm] of [[-1, '左'], [1, '右']]) {
+        const p = new PB(); p.cyl(0.17, 0.155, 3.45, 28, T(s * 1.75, 1.725, z)); p.cyl(0.205, 0.2, 0.32, 28, T(s * 1.75, 0.16, z), { mat: 1 });
+        L.part(`鳥居の柱（${nm}）`, '鳥居', p, ['shu', 'black'], TD);
+        L.col(s * 1.75, z, 0.42, 0.42, 0, 4);
+      }
+      const n = new PB(); n.box(4.7, 0.2, 0.13, T(0, 2.75, z)); L.part('貫（ぬき）', '鳥居', n, 'shu', TD);
+      const g = new PB(); g.box(0.16, 0.54, 0.12, T(0, 3.12, z)); L.part('額束（がくづか）', '鳥居', g, 'shu', TD);
+      const k = new PB(); k.box(5.0, 0.2, 0.26, T(0, 3.47, z));
+      k.prism([[-2.85, 3.72], [-2.6, 3.6], [-1.5, 3.57], [1.5, 3.57], [2.6, 3.6], [2.85, 3.72], [2.85, 3.86], [2.6, 3.76], [1.5, 3.73], [-1.5, 3.73], [-2.6, 3.76], [-2.85, 3.86]], 0.34, T(0, 0, z), { bev: 0.02, bs: 1, crease: 25 });
+      k.prism([[-2.85, 3.86], [-2.6, 3.76], [-1.5, 3.73], [1.5, 3.73], [2.6, 3.76], [2.85, 3.86], [2.87, 3.93], [2.6, 3.83], [1.5, 3.8], [-1.5, 3.8], [-2.6, 3.83], [-2.87, 3.93]], 0.36, T(0, 0, z), { bev: 0.015, bs: 1, crease: 25, mat: 1 });
+      L.part('島木と笠木', '鳥居', k, ['shu', 'black'], TD);
+      const pl = new PB(); pl.box(0.46, 0.66, 0.05, T(0, 3.12, z + 0.09)); pl.box(0.36, 0.54, 0.02, T(0, 3.12, z + 0.12), { mat: 1 }); L.deco(pl, ['black', 'gold']); }
+    lantern(L, -2.6, -1.0, '左', MOSS); lantern(L, 2.6, -1.0, '右', MOSS);
+    // 手水舎
+    { const x = 3.9, z = 1.9, M = T(x, 0, z, 90), D = { a: 0x4d4838, b: 0x3e5a1c, s: [3.2, 0.66, 0.35, 0.5], up: 0.2, ds: 0.8 };
+      const b = new PB(); b.box(1.3, 0.35, 0.7, TT(M, 0, 0.175, 0), { skip: 'b' });
+      for (const s of [-1, 1]) { b.box(1.3, 0.2, 0.1, TT(M, 0, 0.45, s * 0.3)); b.box(0.1, 0.2, 0.5, TT(M, s * 0.6, 0.45, 0)); }
+      L.part('手水鉢', '手水舎', b, 'stone', D);
+      const wm = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.5), decoMat('water')); wm.rotation.x = -Math.PI / 2; wm.rotation.z = Math.PI / 2; wm.position.set(x, 0.5, z); L.obj(wm);
+      const pv = new PB(); for (const sx of [-1, 1]) for (const sz of [-1, 1]) pv.box(0.14, 2.4, 0.14, TT(M, sx * 0.95, 1.2, sz * 0.7), { grain: 1 });
+      pv.box(2.2, 0.12, 0.14, TT(M, 0, 2.35, 0.7)); pv.box(2.2, 0.12, 0.14, TT(M, 0, 2.35, -0.7)); L.deco(pv, 'woodDark');
+      const rf = new PB(); rf.prism([[-1.25, 0], [1.25, 0], [0, 0.75]], 2.7, TT(M, 0, 2.42, 0, 90), {}); L.deco(rf, 'roofG');
+      const hk = new PB(); hk.pipe([0.1, 0.56, 0.32], [0.45, 0.56, 0.32], 0.012, 6, M); hk.cyl(0.045, 0.045, 0.07, 10, TT(M, 0.47, 0.6, 0.32)); hk.pipe([-0.62, 0.9, 0], [-0.3, 0.75, 0], 0.03, 8, M); L.deco(hk, 'straw', { solid: false });
+      L.col(x, z, 0.7, 1.3, 0, 0.55); for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const [wx, wz] = loc(x, z, 90, sx * 0.95, sz * 0.7); L.col(wx, wz, 0.16, 0.16, 0, 2.4); } }
+    // 石段と拝殿
+    { const s = new PB(); for (let k = 0; k < 3; k++) s.box(5.2, 0.18 * (k + 1), 0.42, T(0, 0.09 * (k + 1), -6.0 - 0.42 * k - 0.21), { skip: 'b' });
+      L.part('石段', '拝殿', s, 'stoneD', MOSS);
+      for (let k = 0; k < 3; k++) L.col(0, -6.21 - 0.42 * k, 5.2, 0.42, 0, 0.18 * (k + 1));
+      const pf = new PB(); pf.box(9, 0.54, 4.6, T(0, 0.27, -9.56), { skip: 'b' }); L.deco(pf, 'stoneD'); L.col(0, -9.56, 9, 4.6, 0, 0.54);
+      const h = new PB(); h.box(7.2, 3.0, 3.4, T(0, 2.04, -10.2), { skip: 'b' }); L.deco(h, 'wallW'); L.col(0, -10.2, 7.2, 3.4, 0.54, 4);
+      const w = new PB(); for (let i = -3; i <= 3; i++) w.box(0.2, 3.0, 0.2, T(i * 1.2, 2.04, -8.48));
+      w.box(7.4, 0.24, 0.24, T(0, 3.4, -8.48)); w.box(7.4, 0.14, 0.22, T(0, 1.0, -8.46));
+      for (let i = -2; i <= 1; i++) for (let k = 0; k < 6; k++) w.box(0.03, 2.2, 0.03, T(i * 1.2 + 0.6 + (k - 2.5) * 0.17, 2.2, -8.44));
+      L.deco(w, 'woodDark');
+      const rf = new PB(); rf.prism([[-3.0, 0], [3.0, 0], [0, 1.9]], 9.2, T(0, 3.52, -10.2, 90), {}); L.deco(rf, 'roofG');
+      const sn = new PB(); sn.pipe([-2.6, 3.15, -8.3], [2.6, 3.15, -8.3], 0.1, 12, new THREE.Matrix4()); L.deco(sn, 'straw');
+      const sd = new PB(); for (const xx of [-1.6, -0.5, 0.5, 1.6]) for (let k = 0; k < 4; k++) sd.box(0.08, 0.07, 0.01, T(xx + (k % 2) * 0.04, 2.95 - k * 0.075, -8.25)); L.deco(sd, 'paper', { solid: false });
+      const sb = new PB(), x = 0, z = -7.95; sb.box(1.3, 0.55, 0.56, T(x, 0.54 + 0.275, z), { skip: 'b', grain: 1 });
+      for (let k = 0; k < 6; k++) sb.box(1.24, 0.03, 0.06, T(x, 1.1, z - 0.22 + k * 0.088, 0, 35), { grain: 1 });
+      sb.box(1.34, 0.05, 0.6, T(x, 1.12, z), { grain: 1, skip: 't' });
+      L.part('さい銭箱', '拝殿', sb, 'woodDark', { a: 0x4a4232, b: 0x3e5a1c, s: [3, 0.82, 0, 0], up: 0.3, ds: 0.7 });
+      L.col(x, z, 1.3, 0.56, 0.54, 1.12); }
+    // 道の両はしの低い石の柱
+    { const p = new PB(); for (let z = -4.5; z <= 7; z += 2.3) for (const s of [-1, 1]) if (Math.abs(z - 4.4) > 1) p.box(0.2, 0.55, 0.2, T(s * 1.55, 0.275, z), { skip: 'b' }); L.deco(p, 'stoneD');
+      for (let z = -4.5; z <= 7; z += 2.3) for (const s of [-1, 1]) if (Math.abs(z - 4.4) > 1) L.col(s * 1.55, z, 0.22, 0.22, 0, 0.55); }
+  },
+});
+// =========================================================================================
+//  ノズル・洗浄機
+// =========================================================================================
+const NOZ = [
+  { name: '0°', col: '#e23b3b', hex: 0xe23b3b, ang: 0, rays: 1, pow: 3.0, thick: 0.032, reach: 1.6 },
+  { name: '15°', col: '#f5c518', hex: 0xf5c518, ang: 15, rays: 5, pow: 1.6, thick: 0.042, reach: 1.25 },
+  { name: '25°', col: '#3fbf5a', hex: 0x3fbf5a, ang: 25, rays: 7, pow: 1.0, thick: 0.05, reach: 1.0 },
+  { name: '40°', col: '#f4f4f4', hex: 0xf4f4f4, ang: 40, rays: 9, pow: 0.62, thick: 0.06, reach: 0.78 },
+];
+const WASHERS = [{ name: 'スタンダード', mul: 1.0, price: 0, col: 0xf5c624 }, { name: 'プロ', mul: 1.4, price: 5000, col: 0x2d72d6 }, { name: 'ターボ', mul: 1.9, price: 12000, col: 0xd8392e }];
+const hasNoz = i => i !== 0 || SAVE.zero;
+if (!hasNoz(SAVE.noz)) SAVE.noz = 2;
+
+// =========================================================================================
+//  入力（キーボード・マウス・タッチ）
+// =========================================================================================
+const IN = { mx: 0, my: 0, lookX: 0, lookY: 0, spray: false, sprayT: false, keys: {}, pressed: new Set(), locked: false, drag: false };
+const KEYMAP = { Digit1: 'n0', Digit2: 'n1', Digit3: 'n2', Digit4: 'n3', KeyR: 'rot', KeyF: 'find', KeyQ: 'find', Space: 'jump', KeyC: 'crouch', ControlLeft: 'crouch', Tab: 'list', KeyL: 'list', Escape: 'pause', KeyP: 'pause' };
+addEventListener('keydown', e => {
+  IN.keys[e.code] = true;
+  if (!e.repeat && KEYMAP[e.code]) IN.pressed.add(KEYMAP[e.code]);
+  if (e.code === 'Space' || e.code === 'Tab' || e.code.startsWith('Arrow')) e.preventDefault();
+  AU.resume();
+});
+addEventListener('keyup', e => { IN.keys[e.code] = false; });
+addEventListener('blur', () => { IN.keys = {}; IN.spray = false; IN.drag = false; });
+function keyAxes() {
+  const k = IN.keys; let x = 0, y = 0;
+  if (k.KeyW || k.ArrowUp) y += 1; if (k.KeyS || k.ArrowDown) y -= 1; if (k.KeyA || k.ArrowLeft) x -= 1; if (k.KeyD || k.ArrowRight) x += 1;
+  return { x, y };
+}
+const joyEl = $('joy'), knob = joyEl.querySelector('i');
+let joy = null, look = null;
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('pointerdown', e => {
+  AU.resume();
+  if (GAME.state !== 'play') return;
+  if (e.pointerType === 'mouse') {
+    if (!IN.locked && !IS_TOUCH) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (er) { /* 固定できなくてもドラッグで見回せる */ } }
+    if (e.button === 0) IN.spray = true; else if (e.button === 2) IN.pressed.add('rot');
+    IN.drag = true; return;
+  }
+  const p = toStage(e.clientX, e.clientY);
+  try { canvas.setPointerCapture(e.pointerId); } catch (er) { /* なし */ }
+  if (p.x < VW() * 0.42 && !joy) { joy = { id: e.pointerId, x: p.x, y: p.y }; joyEl.style.left = p.x + 'px'; joyEl.style.top = p.y + 'px'; joyEl.style.display = 'block'; knob.style.transform = ''; }
+  else if (!look) look = { id: e.pointerId, x: p.x, y: p.y };
+});
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerType === 'mouse') return;
+  const p = toStage(e.clientX, e.clientY);
+  if (joy && e.pointerId === joy.id) {
+    let dx = p.x - joy.x, dy = p.y - joy.y; const l = Math.hypot(dx, dy), m = 48; if (l > m) { dx *= m / l; dy *= m / l; }
+    IN.mx = dx / m; IN.my = -dy / m; knob.style.transform = `translate(${dx}px,${dy}px)`;
+  } else if (look && e.pointerId === look.id) { IN.lookX += (p.x - look.x) * 0.0058; IN.lookY += (p.y - look.y) * 0.0058; look.x = p.x; look.y = p.y; }
+});
+const endPtr = e => {
+  if (joy && e.pointerId === joy.id) { joy = null; IN.mx = IN.my = 0; joyEl.style.display = 'none'; }
+  if (look && e.pointerId === look.id) look = null;
+};
+canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
+addEventListener('pointerup', e => { if (e.pointerType === 'mouse') { if (e.button === 0) IN.spray = false; IN.drag = false; } });
+addEventListener('mousemove', e => {
+  if (GAME.state !== 'play') return;
+  if (IN.locked) { IN.lookX += e.movementX * 0.0022; IN.lookY += e.movementY * 0.0022; }
+  else if (IN.drag && !IS_TOUCH) { IN.lookX += e.movementX * 0.0035; IN.lookY += e.movementY * 0.0035; }
+});
+addEventListener('wheel', e => { if (GAME.state === 'play') IN.pressed.add(e.deltaY > 0 ? 'nnext' : 'nprev'); }, { passive: true });
+document.addEventListener('pointerlockchange', () => {
+  IN.locked = document.pointerLockElement === canvas;
+  if (!IN.locked) { IN.spray = false; if (GAME.state === 'play' && !IS_TOUCH && performance.now() - GAME.lockT > 400) pauseGame(); }
+});
+function tbtn(id, onDown, onUp) {
+  const b = $(id);
+  b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); AU.resume(); b.classList.add('on'); onDown && onDown(); try { b.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } });
+  const up = () => { if (!b.dataset.toggle) b.classList.remove('on'); onUp && onUp(); };
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
+}
+$('bSpray').dataset.toggle = '1';
+tbtn('bSpray', () => { IN.sprayT = !IN.sprayT; $('bSpray').classList.toggle('on', IN.sprayT); $('bSpray').textContent = IN.sprayT ? '止める' : '噴射'; });
+tbtn('bNoz', () => IN.pressed.add('nnext'));
+tbtn('bRot', () => IN.pressed.add('rot'));
+tbtn('bFind', () => IN.pressed.add('find'));
+tbtn('bJump', () => IN.pressed.add('jump'));
+tbtn('bCrouch', () => IN.pressed.add('crouch'));
+function stopSprayToggle() { IN.sprayT = false; $('bSpray').classList.remove('on'); $('bSpray').textContent = '噴射'; }
+
+// =========================================================================================
+//  音（Web Audio で作る：噴射の音・モーター・完了の「ピカッ」）
+// =========================================================================================
+const AU = {
+  ac: null, out: null,
+  resume() {
+    if (!this.ac) {
+      try { this.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+      const a = this.ac; this.out = a.createGain(); this.out.connect(a.destination);
+      const buf = a.createBuffer(1, a.sampleRate * 2, a.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      this.nbuf = buf;
+      const src = a.createBufferSource(); src.buffer = buf; src.loop = true;
+      this.hf = a.createBiquadFilter(); this.hf.type = 'bandpass'; this.hf.frequency.value = 2200; this.hf.Q.value = 0.6;
+      this.hg = a.createGain(); this.hg.gain.value = 0; src.connect(this.hf); this.hf.connect(this.hg); this.hg.connect(this.out);
+      this.sf = a.createBiquadFilter(); this.sf.type = 'lowpass'; this.sf.frequency.value = 900;
+      this.sg = a.createGain(); this.sg.gain.value = 0; src.connect(this.sf); this.sf.connect(this.sg); this.sg.connect(this.out);
+      src.start();
+      this.mf = a.createBiquadFilter(); this.mf.type = 'lowpass'; this.mf.frequency.value = 340; this.mg = a.createGain(); this.mg.gain.value = 0; this.mf.connect(this.mg); this.mg.connect(this.out);
+      this.mo = [['sawtooth', 46], ['square', 92.5]].map(([t, f]) => { const o = a.createOscillator(); o.type = t; o.frequency.value = f; const g = a.createGain(); g.gain.value = t === 'square' ? 0.25 : 1; o.connect(g); g.connect(this.mf); o.start(); return o; });
+      this.setVol();
+    }
+    if (this.ac.state === 'suspended') this.ac.resume();
+  },
+  setVol() { if (this.out) this.out.gain.value = HUB.sound && SET.sound ? 0.9 * HUB.vol : 0; },
+  ok() { return this.ac && this.ac.state === 'running'; },
+  spray(on, nz, hitD, play) {
+    if (!this.ok()) return;
+    const t = this.ac.currentTime, near = on && hitD < 14 ? clamp(1.2 - hitD / 8, 0.15, 1) : 0;
+    this.hg.gain.setTargetAtTime(on ? 0.16 : 0, t, on ? 0.03 : 0.06);
+    this.hf.frequency.setTargetAtTime(on ? 1500 + (3 - (nz ? nz.ang / 15 : 0)) * 600 : 1500, t, 0.05);
+    this.sg.gain.setTargetAtTime(on ? 0.22 * near : 0, t, 0.05);
+    this.mg.gain.setTargetAtTime(play ? (on ? 0.085 : 0.03) : 0, t, 0.25);
+    for (const [k, o] of this.mo.entries()) o.frequency.setTargetAtTime((k ? 92.5 : 46) * (on ? 1.18 : 1), t, 0.4);
+  },
+  tone(f, t0, dur, vol, type = 'sine', f2) {
+    if (!this.ok()) return; const a = this.ac, t = a.currentTime + t0, o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.out); o.start(t); o.stop(t + dur + 0.05);
+  },
+  ding() { this.tone(1318.5, 0, 0.5, 0.18); this.tone(1975.5, 0.07, 0.7, 0.14); this.tone(2637, 0.14, 0.5, 0.06); },
+  click() { this.tone(900, 0, 0.06, 0.08, 'triangle'); },
+  buy() { this.tone(988, 0, 0.12, 0.14, 'square'); this.tone(1319, 0.09, 0.3, 0.12, 'square'); },
+  fanfare() { [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => this.tone(f, i * 0.11, 0.5 + (i === 4 ? 0.6 : 0), 0.14, 'triangle')); },
+  step() {
+    if (!this.ok()) return; const a = this.ac, s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime;
+    s.buffer = this.nbuf; f.type = 'lowpass'; f.frequency.value = 500 + Math.random() * 300; g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    s.connect(f); f.connect(g); g.connect(this.out); s.start(t, Math.random()); s.stop(t + 0.1);
+  },
+  bird() { const b = 2600 + Math.random() * 1800, n = 2 + (Math.random() * 4) | 0; for (let i = 0; i < n; i++) this.tone(b * (1 + Math.random() * 0.1), i * 0.11, 0.08, 0.025, 'sine', b * 1.35); },
+};
+setInterval(() => { if (AU.ok() && Math.random() < 0.35 && GAME.state !== 'boot') AU.bird(); }, 2500);
+
+// =========================================================================================
+//  手に持った洗浄ガン（いつも一番手前に描く）
+// =========================================================================================
+const VM = { holder: new THREE.Group(), gun: new THREE.Group(), tip: new THREE.Object3D(), q: new THREE.Quaternion() };
+VM.holder.matrixAutoUpdate = false; vmScene.add(VM.holder); VM.holder.add(VM.gun);
+vmScene.environment = null;
+function buildGun() {
+  VM.gun.clear();
+  const body = new THREE.MeshStandardMaterial({ color: WASHERS[SAVE.wash].col, roughness: 0.35 }), blk = new THREE.MeshStandardMaterial({ color: 0x24262a, roughness: 0.55 }), met = new THREE.MeshStandardMaterial({ color: 0xd5d8db, roughness: 0.22, metalness: 1 });
+  const add = (g, m, x, y, z, rx = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.rotation.x = rx; VM.gun.add(o); return o; };
+  { const pb = new PB(), M = T(0, 0, 0, 90);
+    pb.prism([[-0.07, -0.024], [0.1, -0.024], [0.125, -0.008], [0.128, 0.02], [0.1, 0.036], [-0.05, 0.04], [-0.075, 0.018]], 0.046, M, { bev: 0.012, bs: 2 });
+    pb.prism([[-0.05, -0.02], [-0.004, -0.02], [-0.03, -0.15], [-0.082, -0.15]], 0.04, M, { bev: 0.012, bs: 2, mat: 1 });
+    pb.prism([[0.006, -0.024], [0.03, -0.024], [0.012, -0.075], [-0.006, -0.072]], 0.012, M, { bev: 0.004, bs: 1, mat: 1 });
+    pb.prism([[0.04, -0.02], [0.05, -0.02], [0.03, -0.095], [-0.03, -0.11], [-0.03, -0.1], [0.02, -0.088]], 0.01, M, { bev: 0.003, bs: 1, mat: 1 });
+    pb.cyl(0.02, 0.02, 0.03, 14, T(0, -0.16, 0.05), { mat: 2 });
+    VM.gun.add(new THREE.Mesh(pb.build(4, 64), [body, blk, met])); }
+  const len = SAVE.ext ? 0.82 : 0.55;
+  const l = add(new THREE.CylinderGeometry(0.0085, 0.0085, len, 10), met, 0, 0.005, -0.1 - len / 2, Math.PI / 2);
+  add(new THREE.CylinderGeometry(0.016, 0.016, 0.05, 12), blk, 0, 0.005, -0.12, Math.PI / 2);
+  VM.noz = add(new THREE.CylinderGeometry(0.014, 0.012, 0.04, 12), new THREE.MeshStandardMaterial({ color: NOZ[SAVE.noz].hex, roughness: 0.4 }), 0, 0.005, -0.1 - len - 0.02, Math.PI / 2);
+  VM.tip.position.set(0, 0.005, -0.1 - len - 0.045); VM.gun.add(VM.tip);
+  const curve = new THREE.CatmullRomCurve3([new V3(0, -0.17, 0.05), new V3(0, -0.3, 0.08), new V3(0.05, -0.55, 0.0), new V3(0.1, -0.9, -0.15)]);
+  add(new THREE.TubeGeometry(curve, 20, 0.011, 8), new THREE.MeshStandardMaterial({ color: 0x2d6fd0, roughness: 0.5 }), 0, 0, 0);
+  void l;
+  VM.gun.position.set(0.22, -0.24, -0.46); VM.gun.scale.setScalar(0.8);
+}
+
+// =========================================================================================
+//  水の見た目（水の筋・扇の膜・しぶき・霧）
+// =========================================================================================
+const FX = {
+  init() {
+    const cap = 160; this.cap = cap;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(cap * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(cap * 2), 2).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('aA', new THREE.BufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage));
+    g.setDrawRange(0, 0);
+    this.sm = new THREE.ShaderMaterial({
+      uniforms: { uNoise: { value: TX.noise }, uTime: TIME_U },
+      vertexShader: `attribute float aA; varying vec2 vUv; varying float vA; void main(){ vUv = uv; vA = aA; gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `uniform sampler2D uNoise; uniform float uTime; varying vec2 vUv; varying float vA;
+        void main(){ float e = 1.0 - abs(vUv.x * 2.0 - 1.0);
+          float n1 = texture2D(uNoise, vec2(vUv.x * 0.6 + vUv.y * 0.05, vUv.y * 0.22 - uTime * 2.4)).r;
+          float n2 = texture2D(uNoise, vec2(vUv.x * 1.7 + 0.37, vUv.y * 0.8 - uTime * 5.5)).r;
+          float a = vA * smoothstep(0.0, 0.5, e) * (0.3 + 1.5 * n1 * n2) * smoothstep(0.0, 0.1, vUv.y);
+          gl_FragColor = vec4(0.9, 0.96, 1.0, clamp(a, 0.0, 0.9)); }`,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    });
+    this.stream = new THREE.Mesh(g, this.sm); this.stream.frustumCulled = false; this.stream.renderOrder = 5; scene.add(this.stream);
+    const N = 900; this.N = N; this.pp = new Float32Array(N * 3); this.pv = new Float32Array(N * 3); this.pl = new Float32Array(N); this.pm = new Float32Array(N).fill(1); this.ps = new Float32Array(N); this.pk = new Uint8Array(N);
+    this.pa = new Float32Array(N); this.pc = new Float32Array(N * 3); this.next = 0;
+    const pg = new THREE.BufferGeometry();
+    pg.setAttribute('position', new THREE.BufferAttribute(this.pp, 3).setUsage(THREE.DynamicDrawUsage));
+    pg.setAttribute('aSize', new THREE.BufferAttribute(this.ps, 1).setUsage(THREE.DynamicDrawUsage));
+    pg.setAttribute('aAlpha', new THREE.BufferAttribute(this.pa, 1).setUsage(THREE.DynamicDrawUsage));
+    pg.setAttribute('aCol', new THREE.BufferAttribute(this.pc, 3).setUsage(THREE.DynamicDrawUsage));
+    this.pmU = { uScale: { value: 500 } };
+    this.pts = new THREE.Points(pg, new THREE.ShaderMaterial({
+      uniforms: this.pmU,
+      vertexShader: `attribute float aSize; attribute float aAlpha; attribute vec3 aCol; uniform float uScale; varying float vA; varying vec3 vC;
+        void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = min(90.0, aSize * uScale / max(0.05, -mv.z)); vA = aAlpha; vC = aCol; }`,
+      fragmentShader: `varying float vA; varying vec3 vC; void main(){ vec2 c = gl_PointCoord * 2.0 - 1.0; float d = dot(c, c); if (d > 1.0) discard; gl_FragColor = vec4(vC, vA * (1.0 - d)); }`,
+      transparent: true, depthWrite: false,
+    }));
+    this.pts.frustumCulled = false; this.pts.renderOrder = 6; scene.add(this.pts);
+  },
+  // 筋：ノズルの先から当たった所まで（扇なら膜も）
+  setStream(tip, hits, on) {
+    const g = this.stream.geometry; if (!on || !hits.length) { g.setDrawRange(0, 0); return; }
+    const P = g.attributes.position.array, U = g.attributes.uv.array, A = g.attributes.aA.array, cam = camera.position, K = hits.length;
+    let v = 0; const side = new V3(), ax = new V3(), toC = new V3(), E = new V3();
+    const put = (p, u, w, a) => { P[v * 3] = p.x; P[v * 3 + 1] = p.y; P[v * 3 + 2] = p.z; U[v * 2] = u; U[v * 2 + 1] = w; A[v] = a; v++; };
+    for (let i = 0; i < K; i++) {
+      const h = hits[i]; E.copy(h.p); const len = tip.distanceTo(E);
+      ax.subVectors(E, tip); toC.subVectors(cam, tip); side.crossVectors(ax, toC).normalize();
+      const w0 = 0.006, w1 = K === 1 ? 0.036 : 0.024, a = K === 1 ? 0.95 : 0.62, s0 = side.clone().multiplyScalar(w0), s1 = side.clone().multiplyScalar(w1);
+      const p0 = tip.clone().sub(s0), p1 = tip.clone().add(s0), p2 = E.clone().add(s1), p3 = E.clone().sub(s1);
+      put(p0, 0, 0, a); put(p1, 1, 0, a); put(p2, 1, len, a); put(p0, 0, 0, a); put(p2, 1, len, a); put(p3, 0, len, a);
+    }
+    for (let i = 0; i < K - 1; i++) {
+      const a = hits[i].p, b = hits[i + 1].p, u0 = i / (K - 1), u1 = (i + 1) / (K - 1);
+      put(tip, (u0 + u1) / 2, 0, 0.24); put(a, u0, tip.distanceTo(a), 0.24); put(b, u1, tip.distanceTo(b), 0.24);
+    }
+    for (let i = 0; i < v; i++) { /* 使った分だけ更新 */ }
+    g.attributes.position.needsUpdate = g.attributes.uv.needsUpdate = g.attributes.aA.needsUpdate = true;
+    g.setDrawRange(0, v);
+  },
+  // しぶき：反射した向きへ。よごれを落としているときは泥水の色
+  spawn(p, n, dir, n2, col, mist) {
+    for (let k = 0; k < n2; k++) {
+      const i = this.next; this.next = (this.next + 1) % this.N;
+      const rf = dir.clone().reflect(n), m = mist && k === 0;
+      const sp = m ? 0.5 + Math.random() * 0.6 : 1.4 + Math.random() * 2.6;
+      this.pp[i * 3] = p.x + n.x * 0.02; this.pp[i * 3 + 1] = p.y + n.y * 0.02; this.pp[i * 3 + 2] = p.z + n.z * 0.02;
+      this.pv[i * 3] = rf.x * sp + n.x * 0.6 + (Math.random() - 0.5) * 1.6; this.pv[i * 3 + 1] = rf.y * sp + n.y * 0.6 + (Math.random() - 0.3) * 1.4; this.pv[i * 3 + 2] = rf.z * sp + n.z * 0.6 + (Math.random() - 0.5) * 1.6;
+      this.pm[i] = this.pl[i] = m ? 0.9 + Math.random() * 0.5 : 0.35 + Math.random() * 0.4;
+      this.pk[i] = m ? 1 : 0;
+      this.ps[i] = m ? 0.22 + Math.random() * 0.25 : 0.012 + Math.random() * 0.02;
+      this.pc[i * 3] = col.r; this.pc[i * 3 + 1] = col.g; this.pc[i * 3 + 2] = col.b;
+    }
+  },
+  update(dt) {
+    const N = this.N;
+    for (let i = 0; i < N; i++) {
+      if (this.pl[i] <= 0) { this.pa[i] = 0; continue; }
+      this.pl[i] -= dt; const m = this.pk[i], t = this.pl[i] / this.pm[i];
+      if (m) { this.pv[i * 3 + 1] += 0.4 * dt; this.pv[i * 3] *= 0.96; this.pv[i * 3 + 2] *= 0.96; this.ps[i] += dt * 0.25; } else this.pv[i * 3 + 1] -= 9.8 * dt;
+      this.pp[i * 3] += this.pv[i * 3] * dt; this.pp[i * 3 + 1] += this.pv[i * 3 + 1] * dt; this.pp[i * 3 + 2] += this.pv[i * 3 + 2] * dt;
+      if (this.pp[i * 3 + 1] < 0.01) { this.pp[i * 3 + 1] = 0.01; this.pv[i * 3 + 1] *= -0.2; }
+      this.pa[i] = m ? 0.13 * Math.min(1, t * 2) * Math.min(1, (1 - t) * 6) : 0.75 * Math.min(1, t * 3);
+    }
+    const g = this.pts.geometry; g.attributes.position.needsUpdate = g.attributes.aSize.needsUpdate = g.attributes.aAlpha.needsUpdate = g.attributes.aCol.needsUpdate = true;
+  },
+};
+
+// =========================================================================================
+//  プレイヤー（一人称。箱にぶつかり、低い段は上れる）
+// =========================================================================================
+const PL = { pos: new V3(), vel: new V3(), vy: 0, yaw: 0, pitch: 0, crouch: false, ground: true, eye: 1.62, camY: 1.62, bob: 0, stepD: 0 };
+const RAD = 0.3, STEP = 0.45;
+function groundAt(x, z, feet) {
+  let g = 0;
+  for (const c of LV.cols) {
+    if (c.y1 > feet + STEP) continue;
+    const dx = x - c.x, dz = z - c.z, lx = dx * c.c - dz * c.s, lz = dx * c.s + dz * c.c;
+    if (Math.abs(lx) <= c.hx + 0.04 && Math.abs(lz) <= c.hz + 0.04 && c.y1 > g) g = c.y1;
+  }
+  return g;
+}
+function collide(p, feet, head) {
+  for (let it = 0; it < 3; it++) for (const c of LV.cols) {
+    if (c.y1 <= feet + STEP || c.y0 >= head) continue;
+    const dx = p.x - c.x, dz = p.z - c.z; let lx = dx * c.c - dz * c.s, lz = dx * c.s + dz * c.c;
+    const ex = lx - clamp(lx, -c.hx, c.hx), ez = lz - clamp(lz, -c.hz, c.hz), d2 = ex * ex + ez * ez;
+    if (d2 >= RAD * RAD) continue;
+    if (d2 > 1e-10) { const d = Math.sqrt(d2), k = (RAD - d) / d; lx += ex * k; lz += ez * k; }
+    else { const px = c.hx - Math.abs(lx), pz = c.hz - Math.abs(lz); if (px < pz) lx = (lx < 0 ? -1 : 1) * (c.hx + RAD); else lz = (lz < 0 ? -1 : 1) * (c.hz + RAD); }
+    p.x = c.x + lx * c.c + lz * c.s; p.z = c.z - lx * c.s + lz * c.c;
+  }
+}
+function updatePlayer(dt) {
+  const sens = SET.sens * HUB.sens;
+  PL.yaw -= IN.lookX * sens; PL.pitch -= IN.lookY * sens * (SET.inv ? -1 : 1); IN.lookX = IN.lookY = 0;
+  PL.pitch = clamp(PL.pitch, -1.48, 1.48);
+  if (IN.pressed.has('crouch')) { PL.crouch = !PL.crouch; $('bCrouch').classList.toggle('on', PL.crouch); }
+  let mx = IN.mx, my = IN.my; const k = keyAxes(); if (k.x || k.y) { const l = Math.hypot(k.x, k.y); mx = k.x / l; my = k.y / l; }
+  const run = IN.keys.ShiftLeft || IN.keys.ShiftRight, sp = PL.crouch ? 1.5 : run ? 4.6 : 3.0;
+  const fx = -Math.sin(PL.yaw), fz = -Math.cos(PL.yaw), rx = Math.cos(PL.yaw), rz = -Math.sin(PL.yaw);
+  const a = 1 - Math.exp(-(PL.ground ? 12 : 3) * dt);
+  PL.vel.x = lerp(PL.vel.x, (rx * mx + fx * my) * sp, a); PL.vel.z = lerp(PL.vel.z, (rz * mx + fz * my) * sp, a);
+  const p = PL.pos, ox = p.x, oz = p.z;
+  p.x += PL.vel.x * dt; p.z += PL.vel.z * dt;
+  const H = PL.crouch ? 1.2 : 1.78;
+  collide(p, p.y, p.y + H);
+  const B = LV.def.bounds; p.x = clamp(p.x, B[0], B[1]); p.z = clamp(p.z, B[2], B[3]);
+  if (IN.pressed.has('jump') && PL.ground) { PL.vy = 5.6; PL.ground = false; if (PL.crouch) { PL.crouch = false; $('bCrouch').classList.remove('on'); } }
+  PL.vy -= 15 * dt; p.y += PL.vy * dt;
+  const g = groundAt(p.x, p.z, Math.max(p.y, p.y - PL.vy * dt));
+  if (p.y <= g) { p.y = g; if (PL.vy < -3) AU.step(); PL.vy = 0; PL.ground = true; } else PL.ground = p.y - g < 0.03;
+  const moved = Math.hypot(p.x - ox, p.z - oz);
+  if (PL.ground) { PL.bob += moved * 5.2; PL.stepD += moved; if (PL.stepD > (run ? 0.75 : 0.62)) { PL.stepD = 0; AU.step(); } }
+  PL.eye = lerp(PL.eye, PL.crouch ? 1.0 : 1.62, 1 - Math.exp(-10 * dt));
+  const want = p.y + PL.eye; PL.camY = want > PL.camY ? lerp(PL.camY, want, 1 - Math.exp(-16 * dt)) : want;
+  camera.position.set(p.x, PL.camY + Math.sin(PL.bob) * 0.022 * (PL.ground ? 1 : 0), p.z);
+  camera.rotation.set(PL.pitch, PL.yaw, 0);
+}
+
+// =========================================================================================
+//  噴射：画面の真ん中から扇の形に光線を出し、当たった所をつないだ「カプセル」で洗う
+// =========================================================================================
+const SPR = { prev: null, prevKey: '', hits: [], aim: null, hintT: 0, stubHint: false };
+const _rc = new THREE.Raycaster(), _f = new V3(), _ax = new V3(), _fn = new V3();
+function castRays(nz, vert) {
+  const K = nz.rays, q = camera.quaternion, out = [];
+  _f.set(0, 0, -1).applyQuaternion(q); _ax.set(vert ? 1 : 0, vert ? 0 : 1, 0).applyQuaternion(q);
+  for (let i = 0; i < K; i++) {
+    const a = K === 1 ? 0 : (i / (K - 1) - 0.5) * nz.ang * DEG, d = _f.clone().applyAxisAngle(_ax, a);
+    _rc.set(camera.position, d); _rc.near = 0.05; _rc.far = 14;
+    const h = _rc.intersectObjects(LV.rayT, false)[0];
+    if (h) out.push({ ok: true, p: h.point.clone(), n: _fn.copy(h.face.normal).transformDirection(h.object.matrixWorld).clone(), d: h.distance, dir: d, part: h.object.userData.part || null });
+    else out.push({ ok: false, p: camera.position.clone().addScaledVector(d, 14), n: new V3(0, 1, 0), d: 14, dir: d, part: null });
+  }
+  return out;
+}
+function buildStamps(cur, prev, nz, dt) {
+  const out = [], mul = WASHERS[SAVE.wash].mul, reach = nz.reach * (SAVE.ext ? 1.3 : 1);
+  const pw = h => nz.pow * mul * clamp(1.15 - 0.15 * h.d / reach, 0, 1), rad = h => nz.thick * (1 + 0.12 * h.d);
+  const add = (a, b, r, p, dir, w) => {
+    if (p <= 0.02 || w <= 0) return;
+    out.push({ ax: a.x, ay: a.y, az: a.z, bx: b.x, by: b.y, bz: b.z, r, kr: 9 * p * w, kg: 9 * Math.max(0, p - 1.1) * 0.9 * w, dx: dir.x, dy: dir.y, dz: dir.z });
+  };
+  const K = cur.length;
+  if (K === 1) {
+    const c = cur[0]; if (!c.ok) return out;
+    const pv = prev && prev[0].ok && prev[0].p.distanceTo(c.p) < 0.6 ? prev[0].p : c.p, r = rad(c), L = pv.distanceTo(c.p);
+    add(pv, c.p, r, pw(c), c.dir, dt * Math.min(1, 2 * r / Math.max(L, 1e-5)));
+    return out;
+  }
+  let mv = 0, use = !!prev;
+  if (prev) for (let i = 0; i < K; i++) if (cur[i].ok && prev[i].ok) mv = Math.max(mv, cur[i].p.distanceTo(prev[i].p));
+  if (mv > 0.8) use = false;
+  const S = use ? clamp(Math.ceil(mv / (nz.thick * 1.5)), 1, 4) : 1, Q = [], step = Math.tan(nz.ang * DEG / (K - 1)), dv = new V3();
+  for (let s = 1; s <= S; s++) {
+    const t = s / S;
+    for (let i = 0; i < K; i++) { const c = cur[i]; if (!c.ok) { Q[i] = null; continue; } const pp = use && prev[i].ok ? prev[i].p : c.p; Q[i] = (Q[i] || new V3()).copy(pp).lerp(c.p, t); }
+    for (let i = 0; i < K - 1; i++) {
+      const a = Q[i], b = Q[i + 1], ha = cur[i], hb = cur[i + 1];
+      if (a && b && a.distanceTo(b) < (ha.d + hb.d) / 2 * step * 2.5 + 0.05) { add(a, b, (rad(ha) + rad(hb)) / 2, (pw(ha) + pw(hb)) / 2, dv.addVectors(ha.dir, hb.dir).normalize(), dt / S); continue; }
+      if (a) add(a, a, rad(ha), pw(ha), ha.dir, dt / S);
+      if (b && i === K - 2) add(b, b, rad(hb), pw(hb), hb.dir, dt / S);
+    }
+  }
+  return out;
+}
+const _col = new THREE.Color(), _wc = new THREE.Color(0xe8f4ff);
+function updateSpray(dt) {
+  const nz = NOZ[SAVE.noz], on = (IN.spray || IN.sprayT) && GAME.state === 'play';
+  const hits = castRays(nz, SAVE.vert);
+  const mid = hits[(hits.length - 1) >> 1];
+  SPR.aim = mid;
+  // ガンをねらう所へ向ける
+  camera.updateMatrixWorld(); VM.holder.matrix.copy(camera.matrixWorld); VM.holder.matrixWorldNeedsUpdate = true;
+  const tgt = mid.ok ? mid.p.clone() : camera.position.clone().addScaledVector(mid.dir, 10);
+  const lq = tgt.applyMatrix4(camera.matrixWorldInverse.copy(camera.matrixWorld).invert()), dir = lq.sub(VM.gun.position).normalize();
+  VM.q.setFromUnitVectors(new V3(0, 0, -1), dir); VM.gun.quaternion.slerp(VM.q, 1 - Math.exp(-14 * dt));
+  const kick = on ? 1 : 0; VM.gun.position.set(0.22 + (Math.random() - 0.5) * 0.002 * kick, -0.24 + (Math.random() - 0.5) * 0.002 * kick + Math.sin(PL.bob) * 0.006, -0.46 + 0.008 * kick);
+  VM.holder.updateMatrixWorld(true);
+  const tip = VM.tip.getWorldPosition(new V3());
+  FX.setStream(tip, hits, on);
+  AU.spray(on, nz, mid.d, GAME.state === 'play');
+  const key = SAVE.noz + '/' + SAVE.vert;
+  if (!on) { SPR.prev = null; return; }
+  const prev = SPR.prevKey === key ? SPR.prev : null;
+  const stamps = buildStamps(hits, prev, nz, dt);
+  SPR.prev = hits; SPR.prevKey = key;
+  // しぶき
+  for (const h of hits) {
+    if (!h.ok) continue;
+    const P = h.part, dirty = P && !P.done;
+    if (dirty) _col.copy(P.U.uDA.value).convertLinearToSRGB().lerp(_wc, 0.45); else _col.copy(_wc);
+    const n = Math.random() < (hits.length === 1 ? 0.9 : 0.35) ? 1 + (Math.random() * 2 | 0) : 0;
+    if (n) FX.spawn(h.p, h.n, h.dir, n, _col, Math.random() < 0.25);
+  }
+  if (!stamps.length) return;
+  for (const P of LV.parts) {
+    if (P.done) continue;
+    const bs = P.geo.boundingSphere; P.sl.length = 0;
+    for (const s of stamps) {
+      const cx = (s.ax + s.bx) / 2 - bs.center.x, cy = (s.ay + s.by) / 2 - bs.center.y, cz = (s.az + s.bz) / 2 - bs.center.z;
+      const rr = Math.hypot(s.bx - s.ax, s.by - s.ay, s.bz - s.az) / 2 + s.r + bs.radius;
+      if (cx * cx + cy * cy + cz * cz < rr * rr) P.sl.push(s);
+    }
+    if (!P.sl.length) continue;
+    gpuPaint(P, P.sl);
+    if (cpuApply(P, P.sl)) GAME.dirtyCh = true;
+    if (!P.done && P.dirty <= P.allow) completePart(P, false);
+  }
+  // こびりつきに弱いノズルを当てているとき、ひとことヒント
+  if (mid.ok && mid.part && !mid.part.done && !SPR.stubHint) {
+    const p = nz.pow * WASHERS[SAVE.wash].mul * clamp(1.15 - 0.15 * mid.d / (nz.reach * (SAVE.ext ? 1.3 : 1)), 0, 1);
+    if (p < 1.15 && stubAt(mid.part.dirt, mid.p.x, mid.p.y, mid.p.z, mid.n.y) > 0.5) { SPR.hintT += dt; if (SPR.hintT > 1.6) { SPR.stubHint = true; hint('こびりついた よごれは、<b>0°・15°</b>の強いノズルで<b>近く</b>から！', 5); } }
+  }
+}
+
+// =========================================================================================
+//  画面（HUD・メニュー）
+// =========================================================================================
+const SCREENS = ['title', 'jobs', 'shop', 'how', 'sets', 'pause', 'result'];
+let backTo = 'title';
+function showScreen(id) {
+  for (const s of SCREENS) $(s).classList.toggle('hide', s !== id);
+  const play = !id;
+  $('hud').classList.toggle('hide', !play && GAME.state !== 'play');
+  $('touch').classList.toggle('hide', !(play && IS_TOUCH));
+  if (id) $('plist').classList.add('hide');
+  if (id === 'title') $('tmoney').textContent = '所持金 ' + yen(SAVE.money);
+  if (id === 'jobs') drawJobs();
+  if (id === 'shop') drawShop();
+  if (id === 'sets') drawSets();
+}
+document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => { AU.click(); showScreen(backTo); }));
+function hint(html, sec = 5) { const h = $('hint'); h.innerHTML = html; h.style.opacity = 1; clearTimeout(hint.t); hint.t = setTimeout(() => (h.style.opacity = 0), sec * 1000); }
+function toast(t, m) {
+  const el = document.createElement('div'); el.className = 'toast'; el.innerHTML = t + (m ? '<em>' + m + '</em>' : '');
+  const box = $('toasts'); box.appendChild(el); while (box.children.length > 4) box.firstChild.remove();
+  setTimeout(() => el.classList.add('out'), 2600); setTimeout(() => el.remove(), 3200);
+}
+function big(t, p, sec = 2.2) { $('bigT').textContent = t; $('bigP').textContent = p || ''; $('big').classList.add('on'); clearTimeout(big.t); big.t = setTimeout(() => $('big').classList.remove('on'), sec * 1000); }
+function drawNoz() {
+  const el = $('noz'); let h = '';
+  NOZ.forEach((n, i) => { h += `<div class="chip${i === SAVE.noz ? ' on' : ''}${hasNoz(i) ? '' : ' no'}"><b style="background:${n.col}"></b>${n.name}</div>`; });
+  h += `<div class="fan${SAVE.vert ? ' v' : ''}"><i></i></div>`;
+  el.innerHTML = h;
+  if (VM.noz) VM.noz.material.color.setHex(NOZ[SAVE.noz].hex);
+}
+const HUDS = { money: -1, pct: -1, aim: '', listT: 0 };
+function totals() { let c = 0, n = 0; for (const P of LV.parts) { n += P.n; c += P.n - P.dirty; } return n ? c / n : 1; }
+const pctOf = P => (P.done ? 100 : Math.min(99, Math.floor(100 * (P.n - P.dirty) / Math.max(1, P.n))));
+function updateHUD(dt) {
+  if (HUDS.money !== SAVE.money) { HUDS.money = SAVE.money; $('money').textContent = yen(SAVE.money); }
+  const pct = LV.parts.every(P => P.done) ? 100 : Math.min(99, Math.floor(totals() * 100));
+  if (pct !== HUDS.pct) { HUDS.pct = pct; $('totBar').style.width = pct + '%'; $('totPct').textContent = pct + '%'; }
+  const a = SPR.aim, P = a && a.ok && a.part, el = $('aim');
+  if (P) {
+    const k = P.id + '/' + pctOf(P);
+    if (HUDS.aim !== k) { HUDS.aim = k; $('aimName').innerHTML = P.name + `<small>${P.done ? '✓ ピカピカ' : pctOf(P) + '%'}</small>`; $('aimBar').style.width = pctOf(P) + '%'; el.classList.toggle('done', P.done); }
+    el.style.opacity = 1;
+  } else el.style.opacity = 0;
+  HUDS.listT -= dt; if (HUDS.listT <= 0 && !$('plist').classList.contains('hide')) { HUDS.listT = 0.3; drawList(); }
+}
+function drawList() {
+  const box = $('plistIn'); let h = '', grp = null;
+  const done = LV.parts.filter(P => P.done).length; $('plTitle').textContent = `パーツ一覧 ${done}/${LV.parts.length}`;
+  for (const P of LV.parts) {
+    if (P.group !== grp) { grp = P.group; h += `<div class="pg">${grp}</div>`; }
+    const pc = pctOf(P); h += `<div class="pr${P.done ? ' ok' : ''}" data-p="${P.id}"><span class="nm">${P.done ? '✓ ' : ''}${P.name}</span><span class="pb"><i style="width:${pc}%"></i></span><span class="pc">${pc}%</span></div>`;
+  }
+  if (box.dataset.h !== h) { box.innerHTML = h; box.dataset.h = h; }
+}
+$('plistIn').addEventListener('click', e => { const r = e.target.closest('[data-p]'); if (!r) return; const P = LV.parts[+r.dataset.p]; if (P && !P.done) { P.reveal = 3.5; AU.click(); } });
+function toggleList(on) { const el = $('plist'); const v = on ?? el.classList.contains('hide'); el.classList.toggle('hide', !v); if (v) { HUDS.listT = 0; drawList(); } }
+$('plClose').addEventListener('click', () => toggleList(false));
+$('listB').addEventListener('click', e => { e.stopPropagation(); AU.click(); toggleList(); });
+$('pauseB').addEventListener('click', e => { e.stopPropagation(); pauseGame(); });
+$('findB').addEventListener('click', e => { e.stopPropagation(); IN.pressed.add('find'); });
+
+// ---------- しごと一覧・お店・せってい ----------
+const jobOpen = i => i === 0 || !!(SAVE.jobs[LEVELS[i - 1].id] && SAVE.jobs[LEVELS[i - 1].id].done) || !!SAVE.jobs[LEVELS[i].id];
+const mmss = s => Math.floor(s / 60) + '分' + String(Math.floor(s % 60)).padStart(2, '0') + '秒';
+function drawJobs() {
+  $('jMoney').textContent = '所持金 ' + yen(SAVE.money);
+  let h = '';
+  LEVELS.forEach((d, i) => {
+    const st = SAVE.jobs[d.id], cur = SAVE.cur && SAVE.cur.id === d.id, open = jobOpen(i);
+    let s = '', btn = '';
+    if (!open) { s = '<span class="st">前の仕事を終えると受けられます</span>'; btn = '<button class="btn" disabled>🔒</button>'; }
+    else if (cur) { s = `<span class="st">とちゅう（${SAVE.cur.pct || 0}%）</span>`; btn = `<div style="display:flex;flex-direction:column;gap:6px"><button class="btn go" data-job="${i}" data-m="cont">つづきから</button><button class="btn" data-job="${i}" data-m="new" style="padding:7px 10px;font-size:12px">さいしょから</button></div>`; }
+    else if (st && st.done) { s = `<span class="st ok">完了 ✓ ベスト ${mmss(st.best || 0)}（もう一度は報酬が半分）</span>`; btn = `<button class="btn" data-job="${i}" data-m="new">もう一度</button>`; }
+    else btn = `<button class="btn go" data-job="${i}" data-m="new">うける</button>`;
+    h += `<div class="job${open ? '' : ' lock'}"><div class="ic">${d.icon}</div><div class="tx"><b>${d.name}</b><span>${d.desc}</span><span>報酬 <b style="display:inline;color:#b07d00">${yen(d.reward)}</b>　${s}</span></div>${btn}</div>`;
+  });
+  $('jobList').innerHTML = h;
+}
+$('jobList').addEventListener('click', e => { const b = e.target.closest('[data-job]'); if (!b) return; AU.click(); startJob(+b.dataset.job, b.dataset.m); });
+const SHOP = [
+  { k: 'zero', ic: '🔴', name: '0°ノズル（赤）', desc: '水が一本の細い線になって、いちばん強く・遠くまで届く。こびりつきや高い所に。', price: 2500, own: () => SAVE.zero, buy: () => { SAVE.zero = true; } },
+  { k: 'ext', ic: '📏', name: '延長ランス', desc: 'ガンの先が長くなって、遠くでも水の勢いが落ちにくくなる（届く強さ 1.3倍）。', price: 3500, own: () => SAVE.ext, buy: () => { SAVE.ext = true; } },
+  { k: 'w1', ic: '🔵', name: '洗浄機「プロ」', desc: '水の強さ 1.4倍。どのよごれも速く落ち、25°でも近ければ こびりつきが落ちる。', price: 5000, own: () => SAVE.wash >= 1, buy: () => { SAVE.wash = Math.max(SAVE.wash, 1); } },
+  { k: 'w2', ic: '🔴', name: '洗浄機「ターボ」', desc: '水の強さ 1.9倍。広い40°でも どんどん落ちる、いちばん強い洗浄機。', price: 12000, own: () => SAVE.wash >= 2, buy: () => { SAVE.wash = 2; }, need: () => SAVE.wash >= 1 },
+];
+function drawShop() {
+  $('sMoney').textContent = '所持金 ' + yen(SAVE.money);
+  $('shopList').innerHTML = `<p class="sub" style="margin-top:-4px">いまの洗浄機：<b>${WASHERS[SAVE.wash].name}</b>（強さ ×${WASHERS[SAVE.wash].mul}）</p>` + SHOP.map(it => {
+    const own = it.own(), ok = !own && SAVE.money >= it.price && (!it.need || it.need());
+    return `<div class="item"><div class="ic">${it.ic}</div><div class="tx"><b>${it.name}</b><span>${it.desc}</span></div>${own ? '<button class="btn" disabled>もってる</button>' : `<button class="btn y" data-buy="${it.k}" ${ok ? '' : 'disabled'}>${yen(it.price)}</button>`}</div>`;
+  }).join('') + (SAVE.wash < 1 ? '<p class="note">「ターボ」は「プロ」を買うと買えるようになります。</p>' : '');
+}
+$('shopList').addEventListener('click', e => {
+  const b = e.target.closest('[data-buy]'); if (!b) return; const it = SHOP.find(x => x.k === b.dataset.buy); if (!it || it.own() || SAVE.money < it.price) return;
+  SAVE.money -= it.price; it.buy(); writeSave(); AU.buy(); buildGun(); drawNoz(); drawShop();
+});
+function drawSets() {
+  for (const b of $('sQ').children) b.classList.toggle('on', b.dataset.q === SET.quality);
+  $('sSens').value = Math.round(SET.sens * 100); $('sSensV').textContent = Math.round(SET.sens * 100) + '%'; $('sInv').checked = SET.inv; $('sSnd').checked = SET.sound;
+}
+$('sQ').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (!b) return; SET.quality = b.dataset.q; saveSet(); applyQuality(); drawSets(); });
+$('sSens').addEventListener('input', () => { SET.sens = +$('sSens').value / 100; saveSet(); drawSets(); });
+$('sInv').addEventListener('change', () => { SET.inv = $('sInv').checked; saveSet(); });
+$('sSnd').addEventListener('change', () => { SET.sound = $('sSnd').checked; saveSet(); AU.resume(); AU.setVol(); });
+$('tJobs').addEventListener('click', () => { AU.resume(); AU.click(); backTo = 'title'; showScreen('jobs'); });
+$('tShop').addEventListener('click', () => { AU.resume(); AU.click(); backTo = 'title'; showScreen('shop'); });
+$('tHow').addEventListener('click', () => { AU.resume(); AU.click(); backTo = 'title'; showScreen('how'); });
+$('tSet').addEventListener('click', () => { AU.resume(); AU.click(); backTo = 'title'; showScreen('sets'); });
+
+// =========================================================================================
+//  しごとの流れ
+// =========================================================================================
+const GAME = { state: 'boot', job: -1, t: 0, saveT: 0, replay: false, finished: false, doneT: -1, earned: 0, lockT: 0, pausedAt: 0, resetArm: false };
+let LV = null;
+const say = t => ($('loadMsg').textContent = t);
+async function loadLevel(def) {
+  if (LV) { LV.dispose(); LV = null; }
+  const L = new Level(def); def.build(L); await prepLevel(L, say);
+  LV = L; L.root.visible = true;
+  const S = def.shadow; sun.target.position.set(S.x, 0, S.z); sun.position.set(S.x, 0, S.z).addScaledVector(SUN_DIR, 45);
+  Object.assign(sun.shadow.camera, { left: -S.r, right: S.r, top: S.r, bottom: -S.r, near: 1, far: 100 }); sun.shadow.camera.updateProjectionMatrix();
+  SHADOW.dirty = true;
+  return L;
+}
+function snapshot() {
+  const bits = P => { const b = new Uint8Array(Math.ceil(P.n / 8)); for (let i = 0; i < P.n; i++) if (P.r[i] <= TH && P.g[i] <= TH) b[i >> 3] |= 1 << (i & 7); let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s); };
+  return { id: LV.def.id, t: Math.round(GAME.t), e: GAME.earned, pct: Math.floor(totals() * 100), p: LV.parts.map(P => (P.done ? 1 : P.dirty === P.n ? 0 : [P.n, bits(P)])) };
+}
+function saveProgress() { if (!LV || GAME.job < 0 || GAME.finished) return; SAVE.cur = snapshot(); writeSave(); GAME.dirtyCh = false; }
+function restoreProgress(c) {
+  GAME.t = c.t || 0; GAME.earned = c.e || 0;
+  LV.parts.forEach((P, i) => {
+    const e = c.p && c.p[i];
+    if (e === 1) { completePart(P, true); return; }
+    if (!Array.isArray(e) || e[0] !== P.n) return;
+    const s = atob(e[1]), list = [];
+    for (let k = 0; k < P.n; k++) if (s.charCodeAt(k >> 3) & (1 << (k & 7))) {
+      if (P.r[k] > TH || P.g[k] > TH) P.dirty--; P.r[k] = 0; P.g[k] = 0;
+      const o = k * 6, r = Math.max(0.035, P.spc * 0.85);
+      list.push({ ax: P.sp[o], ay: P.sp[o + 1], az: P.sp[o + 2], bx: P.sp[o], by: P.sp[o + 1], bz: P.sp[o + 2], r, kr: 9, kg: 9, dx: -P.sp[o + 3], dy: -P.sp[o + 4], dz: -P.sp[o + 5] });
+    }
+    if (list.length) gpuPaint(P, list);
+  });
+}
+function completePart(P, silent) {
+  if (P.done) return;
+  P.done = true; P.r.fill(0); P.g.fill(0); P.dirty = 0; clearMask(P); P.reveal = 0;
+  if (silent) return;
+  P.flash = 1.2; AU.ding();
+  const pay = GAME.replay ? Math.round(P.pay / 20) * 10 : P.pay;
+  SAVE.money += pay; GAME.earned += pay;
+  toast('✓ ' + P.name, '+' + yen(pay));
+  if (LV.parts.every(Q => Q.done)) { GAME.finished = true; GAME.doneT = 1.8; stopSprayToggle(); finishJob(); }
+  else saveProgress();
+}
+function finishJob() {
+  const d = LV.def, bonus = GAME.replay ? Math.round(d.reward * 0.25) : Math.round(d.reward * 0.5);
+  SAVE.money += bonus;
+  const st = SAVE.jobs[d.id] || {}; st.done = true; st.best = st.best ? Math.min(st.best, GAME.t) : GAME.t; SAVE.jobs[d.id] = st;
+  SAVE.cur = null; writeSave();
+  GAME.result = { bonus, earned: GAME.earned, t: GAME.t };
+  setTimeout(() => { AU.fanfare(); big('ピカピカ！', d.name + ' 完了', 2.6); }, 500);
+}
+function showResult() {
+  const r = GAME.result, d = LV.def;
+  $('rJob').textContent = d.name + (GAME.replay ? '（2回目以降は報酬が半分）' : '');
+  $('rLines').innerHTML = `<div class="rline"><span>パーツの報酬</span><span>${yen(r.earned)}</span></div><div class="rline"><span>完了ボーナス</span><span>${yen(r.bonus)}</span></div>` +
+    `<div class="rline tot"><span>合計</span><span>${yen(r.earned + r.bonus)}</span></div><div class="rline"><span>かかった時間</span><span>${mmss(r.t)}</span></div><div class="rline"><span>所持金</span><span>${yen(SAVE.money)}</span></div>`;
+  exitLock(); GAME.state = 'result'; showScreen('result');
+}
+$('rStay').addEventListener('click', () => { AU.click(); resumeGame(); });
+$('rNext').addEventListener('click', () => { AU.click(); toTitle('jobs'); });
+async function startJob(i, mode) {
+  const d = LEVELS[i];
+  GAME.state = 'load'; showScreen(null); $('hud').classList.add('hide'); $('touch').classList.add('hide'); $('load').classList.remove('hide'); say('しごとの場所へ むかっています…');
+  await nextFrame();
+  try { await loadLevel(d); } catch (err) { console.error(err); say('読み込みに失敗しました（' + (err && err.message || err) + '）'); return; }
+  GAME.job = i; GAME.t = 0; GAME.earned = 0; GAME.replay = !!(SAVE.jobs[d.id] && SAVE.jobs[d.id].done); GAME.finished = false; GAME.doneT = -1; GAME.result = null; GAME.shown = false;
+  SPR.prev = null; SPR.stubHint = false; SPR.hintT = 0;
+  if (mode === 'cont' && SAVE.cur && SAVE.cur.id === d.id) restoreProgress(SAVE.cur);
+  SAVE.cur = snapshot(); writeSave();
+  const sp = d.spawn; PL.pos.set(sp[0], 0, sp[1]); PL.pos.y = groundAt(sp[0], sp[1], 0); PL.vel.set(0, 0, 0); PL.vy = 0; PL.crouch = false; PL.yaw = Math.atan2(-(sp[2] - sp[0]), -(sp[3] - sp[1])); PL.pitch = -0.12; PL.camY = PL.pos.y + 1.62; PL.eye = 1.62;
+  $('jobName').textContent = d.icon + ' ' + d.name; HUDS.pct = -1; HUDS.aim = '';
+  $('load').classList.add('hide');
+  stopSprayToggle(); GAME.state = 'play'; showScreen(null); drawNoz();
+  big(d.name, GAME.replay ? 'もう一度（報酬は半分）' : '報酬 ' + yen(d.reward), 2.4);
+  setTimeout(() => hint(IS_TOUCH ? '「噴射」で水を出して、よごれに当てよう。🔍で残ったよごれが光ります。' : 'クリックで水を出して、よごれに当てよう。1〜4でノズル、Rで扇の向き、Fで残ったよごれ探し。', 7), 1600);
+}
+function pauseGame() {
+  if (GAME.state !== 'play') return;
+  GAME.state = 'pause'; GAME.pausedAt = performance.now(); IN.spray = false; stopSprayToggle(); AU.spray(false, null, 99, false);
+  exitLock(); saveProgress();
+  const pct = Math.floor(totals() * 100);
+  $('pInfo').textContent = `${LV.def.name}　${GAME.finished ? '完了 ✓' : pct + '%'}　${mmss(GAME.t)}`;
+  GAME.resetArm = false; $('pReset').textContent = 'この仕事を最初からやり直す';
+  $('pReset').style.display = GAME.finished ? 'none' : '';
+  showScreen('pause');
+}
+function resumeGame() { GAME.state = 'play'; showScreen(null); GAME.lockT = performance.now(); if (!IS_TOUCH) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* なし */ } } }
+function exitLock() { if (document.pointerLockElement) { GAME.lockT = performance.now(); try { document.exitPointerLock(); } catch (e) { /* なし */ } } }
+function toTitle(screen = 'title') {
+  saveProgress(); exitLock(); stopSprayToggle(); AU.spray(false, null, 99, false);
+  FX.setStream(null, [], false); GAME.state = 'title'; GAME.job = -1; backTo = 'title'; showScreen(screen);
+}
+$('pRes').addEventListener('click', () => { AU.click(); resumeGame(); });
+$('pList').addEventListener('click', () => { AU.click(); resumeGame(); toggleList(true); });
+$('pSet').addEventListener('click', () => { AU.click(); backTo = 'pause'; showScreen('sets'); });
+$('pQuit').addEventListener('click', () => { AU.click(); toTitle(); });
+$('pReset').addEventListener('click', () => {
+  AU.click();
+  if (!GAME.resetArm) { GAME.resetArm = true; $('pReset').textContent = 'もう一度押すと、最初からになります'; return; }
+  SAVE.cur = null; writeSave(); startJob(GAME.job, 'new');
+});
+addEventListener('visibilitychange', () => { if (document.hidden) { if (GAME.state === 'play') pauseGame(); else saveProgress(); } });
+addEventListener('pagehide', () => saveProgress());
+
+// =========================================================================================
+//  画質・画面の大きさ・ホームの設定
+// =========================================================================================
+function onResize() {
+  const r = $('rot');
+  r.style.width = VW() + 'px'; r.style.height = VH() + 'px';
+  r.style.transform = ROT.on ? 'rotate(90deg) translateY(-100%)' : 'none';
+  document.documentElement.style.setProperty('--sw', VW() / 100 + 'px'); document.documentElement.style.setProperty('--sh', VH() / 100 + 'px');
+  document.body.classList.toggle('short', VH() < 500);
+  const w = VW(), h = VH();
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.fov = w < h ? 80 : 70; camera.updateProjectionMatrix();
+  FX.pmU && (FX.pmU.uScale.value = renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(camera.fov * DEG / 2)));
+}
+addEventListener('resize', onResize);
+function applyQuality() {
+  const q = SET.quality;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, q === 'high' ? 2 : q === 'low' ? 0.85 : 1.3));
+  const ms = q === 'high' ? 2048 : q === 'low' ? 1024 : 1536;
+  renderer.shadowMap.enabled = true;
+  if (sun.shadow.mapSize.x !== ms) { sun.shadow.mapSize.set(ms, ms); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+  SHADOW.dirty = true; onResize();
+}
+function applyHome(S) {
+  if (!S || typeof S !== 'object') return;
+  if (typeof S.land === 'boolean' && S.land !== ROT.on) { ROT.on = S.land; onResize(); }
+  if (typeof S.sound === 'boolean') HUB.sound = S.sound;
+  if (typeof S.vol === 'number') HUB.vol = clamp(S.vol, 0, 1);
+  if (typeof S.sens === 'number') HUB.sens = clamp(S.sens, 0.4, 2.2);
+  AU.setVol();
+}
+
+// =========================================================================================
+//  毎フレーム
+// =========================================================================================
+let last = performance.now(), orbit = 0.6;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const real = (now - last) / 1000; last = now; const dt = Math.min(0.05, Math.max(0, real));
+  TIME_U.value += dt;
+  if (GAME.state === 'play' && LV) {
+    if (!GAME.finished) GAME.t += dt;
+    if (IN.pressed.has('pause') && performance.now() - GAME.pausedAt > 350) pauseGame();
+    for (let i = 0; i < 4; i++) if (IN.pressed.has('n' + i) && hasNoz(i)) { SAVE.noz = i; drawNoz(); AU.click(); }
+    if (IN.pressed.has('nnext') || IN.pressed.has('nprev')) { const d = IN.pressed.has('nnext') ? 1 : 3; let i = SAVE.noz; do { i = (i + d) % 4; } while (!hasNoz(i)); SAVE.noz = i; drawNoz(); AU.click(); }
+    if (IN.pressed.has('rot')) { SAVE.vert = !SAVE.vert; drawNoz(); AU.click(); }
+    if (IN.pressed.has('find')) { for (const P of LV.parts) if (!P.done) P.reveal = 3.2; AU.tone(660, 0, 0.25, 0.08, 'sine', 990); }
+    if (IN.pressed.has('list')) toggleList();
+    updatePlayer(dt);
+    updateSpray(dt);
+    updateHUD(dt);
+    GAME.saveT += dt; if (GAME.saveT > 15 && GAME.dirtyCh) { GAME.saveT = 0; saveProgress(); }
+    if (GAME.doneT > 0) { GAME.doneT -= dt; if (GAME.doneT <= 0 && GAME.result && !GAME.shown) { GAME.shown = true; setTimeout(showResult, 900); } }
+  } else if (LV) {
+    if (GAME.state === 'pause' && IN.pressed.has('pause') && performance.now() - GAME.pausedAt > 350) resumeGame();
+    if (GAME.state !== 'pause' && GAME.state !== 'result') {
+      const v = LV.def.view; orbit += dt * 0.05;
+      camera.position.set(v.x + Math.sin(orbit) * v.r, v.h, v.z + Math.cos(orbit) * v.r); camera.lookAt(v.x, v.y, v.z);
+    }
+    if (GAME.state !== 'pause' && GAME.state !== 'result') FX.setStream(null, [], false);
+  }
+  if (LV) for (const P of LV.parts) {
+    if (P.flash > 0) { P.flash = Math.max(0, P.flash - dt * 0.9); P.U.uFlash.value = Math.min(1, P.flash) * 0.9; }
+    if (P.reveal > 0) { P.reveal = Math.max(0, P.reveal - dt); P.U.uReveal.value = Math.min(1, P.reveal) * (0.55 + 0.45 * Math.sin(TIME_U.value * 7)); } else if (P.U.uReveal.value) P.U.uReveal.value = 0;
+  }
+  FX.update(dt);
+  IN.pressed.clear();
+  sky.position.copy(camera.position);
+  // 描く
+  renderer.setRenderTarget(null);
+  if (SHADOW.dirty) { renderer.shadowMap.needsUpdate = true; SHADOW.dirty = false; }
+  renderer.setClearColor(SKY.hor, 1); renderer.clear();
+  renderer.render(scene, camera);
+  if (GAME.state === 'play' || GAME.state === 'pause') { renderer.clearDepth(); renderer.render(vmScene, camera); }
+}
+
+// =========================================================================================
+//  起動
+// =========================================================================================
+async function boot() {
+  if (HUB.embedded) {
+    try { applyHome(JSON.parse(localStorage.getItem('3dame-settings'))); } catch (e) { /* ホームの設定なし */ }
+    addEventListener('message', e => { if (e.data && e.data.h3dSet) applyHome(e.data.h3dSet); });
+  }
+  say('道具を じゅんびしています…'); await nextFrame();
+  makeTextures();
+  // 空から映りこみ（環境マップ）を作る
+  { const pm = new THREE.PMREMGenerator(renderer), es = new THREE.Scene(), em = new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), skyMat.clone()); em.material.uniforms = Object.assign({}, skyMat.uniforms, { uClouds: { value: 0 } }); es.add(em);
+    const rt = pm.fromScene(es, 0.02, 0.1, 100); scene.environment = rt.texture; scene.environmentIntensity = 0.55; vmScene.environment = rt.texture; pm.dispose(); }
+  FX.init(); buildGun(); drawNoz(); applyQuality();
+  requestAnimationFrame(frame);
+  const i = SAVE.cur ? Math.max(0, LEVELS.findIndex(d => d.id === SAVE.cur.id)) : Math.max(0, LEVELS.findIndex((d, k) => !(SAVE.jobs[d.id] && SAVE.jobs[d.id].done) && jobOpen(k)));
+  try {
+    await loadLevel(LEVELS[i]);
+    if (SAVE.cur && SAVE.cur.id === LEVELS[i].id) restoreProgress(SAVE.cur);
+  } catch (err) { console.error(err); say('読み込みに失敗しました。ページを再読み込みしてください。（' + (err && err.message || err) + '）'); return; }
+  $('load').classList.add('hide');
+  GAME.state = 'title'; showScreen('title');
+}
+if (/[?&]debug/.test(location.search)) window.__w = { PL, IN, GAME, SAVE, SPR, LV: () => LV, startJob, completePart, LEVELS, renderer, THREE, TH };
+boot();
+
+
+
+</script>
+</body>
+</html>
