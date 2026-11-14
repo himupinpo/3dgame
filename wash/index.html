@@ -986,7 +986,7 @@ function makeSamples(P, L, sol, rc) {
     if (a > 1e-9) { tot += a; tri.push(k); cum.push(tot); }
   }
   const rnd = rng(seedOf(L.def.id + '/' + P.id + '/' + P.name)), want = clamp(Math.round(tot * 230), 24, 4000);
-  const out = [], p = new V3(), n = new V3(), q = new V3(), fn = new V3(), list = [], suv = [];
+  const out = [], p = new V3(), n = new V3(), q = new V3(), fn = new V3(), near = [], inb = [], suv = [], seen = new Set(), tg = new V3(), bt = new V3(), dd = new V3();
   const under = P.o.under ?? L.def.under ?? 0.95;
   for (let s = 0; s < want && tot > 0; s++) {
     const u = rnd() * tot; let lo = 0, hi = cum.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < u) lo = m + 1; else hi = m; }
@@ -994,26 +994,41 @@ function makeSamples(P, L, sol, rc) {
     const ia = ix[k] * 3, ib = ix[k + 1] * 3, ic = ix[k + 2] * 3, r0 = 1 - r1 - r2;
     p.set(pos[ia] * r0 + pos[ib] * r1 + pos[ic] * r2, pos[ia + 1] * r0 + pos[ib + 1] * r1 + pos[ic + 1] * r2, pos[ia + 2] * r0 + pos[ib + 2] * r1 + pos[ic + 2] * r2);
     n.set(nor[ia] * r0 + nor[ib] * r1 + nor[ic] * r2, nor[ia + 1] * r0 + nor[ib + 1] * r1 + nor[ic + 1] * r2, nor[ia + 2] * r0 + nor[ib + 2] * r1 + nor[ic + 2] * r2).normalize();
+    if (p.y < 0.008) continue;
     if (n.y < -0.55 && p.y < under) continue;
     if (n.y > 0.45 && p.y > L.topY) continue;
     if (P.o.keep && !P.o.keep(p, n)) continue;
     q.copy(p).addScaledVector(n, 0.003);
-    list.length = 0;
-    for (const o of sol) { const b = o.box; if (q.x > b.min.x - 0.45 && q.x < b.max.x + 0.45 && q.y > b.min.y - 0.45 && q.y < b.max.y + 0.45 && q.z > b.min.z - 0.45 && q.z < b.max.z + 0.45) list.push(o.m); }
-    rc.set(q, n); rc.near = 0; rc.far = 0.45;
-    const h = list.length ? rc.intersectObjects(list, false)[0] : null;
-    if (h) {
-      if (h.distance < 0.02) continue;
-      fn.copy(h.face.normal).transformDirection(h.object.matrixWorld);
-      if (fn.dot(n) > 0.05) continue;       // 物の中に埋まっている
+    // 届かない所を外す：
+    //  1) すき間：法線の向き 10cm 以内に物がある
+    //  2) 物の中：その点をふくむ物に、法線の向きで最初に当たる面が裏側（同じ距離の面が重なっていたら、どれか1つでも裏なら中）
+    //  3) まわりがふさがっている：法線のまわり7方向のうち、60cm 以内にぶつからずにぬけるのが1本以下
+    near.length = 0; inb.length = 0;
+    for (const o of sol) { const b = o.box; if (q.x > b.min.x - 0.6 && q.x < b.max.x + 0.6 && q.y > b.min.y - 0.6 && q.y < b.max.y + 0.6 && q.z > b.min.z - 0.6 && q.z < b.max.z + 0.6) { near.push(o.m); if (b.containsPoint(q)) inb.push(o.m); } }
+    rc.set(q, n); rc.near = 0; rc.far = 0.1;
+    if (near.length && rc.intersectObjects(near, false).length) continue;
+    if (inb.length) {
+      rc.far = 8; const hs = rc.intersectObjects(inb, false); seen.clear(); let inside = false;
+      for (let a = 0; a < hs.length && !inside; a++) {
+        const h = hs[a]; if (seen.has(h.object)) continue; seen.add(h.object);
+        for (let b = a; b < hs.length && hs[b].distance < h.distance + 2e-4; b++) if (hs[b].object === h.object && fn.copy(hs[b].face.normal).transformDirection(h.object.matrixWorld).dot(n) > 0.05) inside = true;
+      }
+      if (inside) continue;
     }
+    tg.set(Math.abs(n.y) < 0.9 ? 0 : 1, Math.abs(n.y) < 0.9 ? 1 : 0, 0).cross(n).normalize(); bt.crossVectors(n, tg);
+    let esc = 0;
+    for (let a = 0; a < 7 && esc < 2; a++) {
+      if (a === 0) dd.copy(n); else { const f = a / 6 * TAU; dd.copy(n).multiplyScalar(0.7071).addScaledVector(tg, Math.cos(f) * 0.7071).addScaledVector(bt, Math.sin(f) * 0.7071); }
+      rc.set(q, dd); rc.far = 0.6; if (!rc.intersectObjects(near, false).length) esc++;
+    }
+    if (esc < 2) continue;
     out.push(p.x, p.y, p.z, n.x, n.y, n.z);
     if (DEBUG) { const uv = g.attributes.uv.array; suv.push(uv[ix[k] * 2] * r0 + uv[ix[k + 1] * 2] * r1 + uv[ix[k + 2] * 2] * r2, uv[ix[k] * 2 + 1] * r0 + uv[ix[k + 1] * 2 + 1] * r1 + uv[ix[k + 2] * 2 + 1] * r2); }
   }
   if (DEBUG) P.suv = suv;
   P.n = out.length / 6; P.sp = new Float32Array(out); P.r = new Float32Array(P.n).fill(1); P.g = new Float32Array(P.n);
   for (let i = 0; i < P.n; i++) P.g[i] = stubAt(P.dirt, P.sp[i * 6], P.sp[i * 6 + 1], P.sp[i * 6 + 2], P.sp[i * 6 + 4]);
-  P.dirty = P.n; P.allow = Math.floor(P.n * 0.012); P.spc = Math.sqrt(tot / Math.max(1, want));
+  P.dirty = P.n; P.allow = Math.floor(P.n * 0.012) + 1; P.spc = Math.sqrt(tot / Math.max(1, want));
   P.grid = new Map();
   for (let i = 0; i < P.n; i++) { const key = gkey(Math.floor(P.sp[i * 6] / GC), Math.floor(P.sp[i * 6 + 1] / GC), Math.floor(P.sp[i * 6 + 2] / GC)); let c = P.grid.get(key); if (!c) P.grid.set(key, c = []); c.push(i); }
   if (!P.n) P.done = true;
@@ -1130,7 +1145,7 @@ function gardenChair(L, x, y, z, ry, tag, mat, dirt) {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) legs.pipe([sx * 0.215, 0, sz * 0.2 + (sz > 0 ? 0.02 : -0.02)], [sx * 0.2, 0.44, sz * 0.18], 0.02, 10, M);
   L.part(`いす${tag}の座面`, `いす${tag}`, seat, mat, dirt);
   L.part(`いす${tag}の背もたれ`, `いす${tag}`, back, mat, dirt);
-  L.part(`いす${tag}の脚`, `いす${tag}`, legs, mat, dirt);
+  L.part(`いす${tag}の脚`, `いす${tag}`, legs, mat, dirt, { keep: p => p.y < y + 0.4 });
   L.col(x, z, 0.52, 0.52, 0, y + 0.47, ry);
 }
 function bench(L, x, z, ry, tag, dW, dI, wood = 'wood') {
@@ -1147,7 +1162,7 @@ function bench(L, x, z, ry, tag, dW, dI, wood = 'wood') {
   }
   L.part(`ベンチ${tag}の座板`, `ベンチ${tag}`, seat, wood, dW);
   L.part(`ベンチ${tag}の背板`, `ベンチ${tag}`, back, wood, dW);
-  L.part(`ベンチ${tag}の脚`, `ベンチ${tag}`, legs, 'ironG', dI);
+  L.part(`ベンチ${tag}の脚`, `ベンチ${tag}`, legs, 'ironG', dI, { keep: p => !(p.y > 0.37 && p.y < 0.44) });
   colL(L, x, z, ry, 0, -0.02, 1.5, 0.48, 0, 0.47);
   colL(L, x, z, ry, 0, -0.3, 1.5, 0.12, 0, 0.98);
 }
@@ -1179,11 +1194,11 @@ LEVELS.push({
       L.part('テラスのれんが', 'テラス', pb, 'brick', { a: 0x584734, b: 0x4a6420, s: [1.7, 0.6, 0, 0], up: 0, ds: 1.0 }, { D: 64 }); L.col(0, -3.9, 6, 4, 0, 0.06); }
     // テーブル
     { const x = 0.25, z = -3.7, y = 0.06;
-      const top = new PB(); top.cyl(0.6, 0.6, 0.04, 44, T(x, y + 0.7, z)); top.cyl(0.6, 0.585, 0.05, 44, T(x, y + 0.655, z), { caps: '' });
-      L.part('テーブルの天板', 'ガーデンテーブル', top, 'plasW', G);
+      const top = new PB(); top.cyl(0.6, 0.6, 0.04, 44, T(x, y + 0.7, z)); top.lathe([[0.585, 0.681], [0.585, 0.63], [0.6, 0.63], [0.6, 0.681]], 44, T(x, y, z));
+      L.part('テーブルの天板', 'ガーデンテーブル', top, 'plasW', G, { keep: (p, n) => !(p.y < y + 0.7 && n.x * (p.x - x) + n.z * (p.z - z) < 0) });
       const leg = new PB(); leg.cyl(0.035, 0.035, 0.63, 14, T(x, y + 0.365, z)); leg.cyl(0.07, 0.05, 0.05, 16, T(x, y + 0.655, z));
       for (const a of [45, 135]) leg.prism([[-0.45, 0], [0.45, 0], [0.42, 0.05], [-0.42, 0.05]], 0.06, T(x, y, z, a), { bev: 0.01 });
-      L.part('テーブルの脚', 'ガーデンテーブル', leg, 'plasW', G);
+      L.part('テーブルの脚', 'ガーデンテーブル', leg, 'plasW', G, { keep: p => p.y < y + 0.55 });
       L.col(x, z, 1.0, 1.0, 0, y + 0.72); }
     gardenChair(L, -0.62, 0.06, -3.7, 90, '（左）', 'plasG', G);
     gardenChair(L, 1.12, 0.06, -3.7, -90, '（右）', 'plasG', G);
@@ -1198,7 +1213,7 @@ LEVELS.push({
       const wm = new THREE.Mesh(new THREE.CircleGeometry(0.345, 36), decoMat('water')); wm.rotation.x = -Math.PI / 2; wm.position.set(x, 0.82, z); L.obj(wm);
       L.col(x, z, 0.75, 0.75, 0, 0.9); }
     // 植木鉢
-    [[-5.6, -5.25, 1, '植木鉢（左）'], [4.9, -5.3, 1.15, '植木鉢（右）'], [5.85, -4.5, 0.85, '植木鉢（右の小）']].forEach(([x, z, s, nm], i) => {
+    [[-5.5, -4.95, 1, '植木鉢（左）'], [4.7, -4.95, 1.15, '植木鉢（右）'], [5.6, -4.25, 0.85, '植木鉢（右の小）']].forEach(([x, z, s, nm], i) => {
       const pb = new PB(); pb.lathe([[0, 0], [0.16, 0], [0.18, 0.03], [0.215, 0.4], [0.25, 0.41], [0.255, 0.47], [0.225, 0.472], [0.207, 0.43]].map(([r, y]) => [r * s, y * s]), 30, T(x, 0, z));
       L.part(nm, '植木鉢', pb, 'terra', { a: 0x5a4a38, b: 0x58702c, s: [4, 0.56, 0.9, 0.18 * s], up: 0, ds: 0.6 });
       const soil = new THREE.Mesh(new THREE.CircleGeometry(0.207 * s, 24), decoMat('soil')); soil.rotation.x = -Math.PI / 2; soil.position.set(x, 0.43 * s, z); L.obj(soil, { solid: true });
@@ -1254,7 +1269,7 @@ function keiTruck(L) {
     const gr = new PB(); gr.box(0.02, 0.14, 0.62, T(1.722, 0.82, 0)); for (let k = 0; k < 4; k++) gr.box(0.02, 0.012, 0.6, T(1.735, 0.77 + k * 0.033, 0), { mat: 1 });
     L.part('フロントグリル', 'まえ', gr, ['blackP', 'chrome'], DB);
     const bp = new PB(); bp.prism([[-0.07, -0.08], [0.07, -0.08], [0.07, 0.08], [-0.07, 0.08]], 1.48, T(1.75, 0.47, 0), { bev: 0.03 });
-    L.part('フロントバンパー', 'まえ', bp, 'grayP', DB); }
+    L.part('フロントバンパー', 'まえ', bp, 'grayP', DB, { keep: (p, n) => n.x > -0.5 }); }
   // 荷台
   { const f = new PB(); f.box(1.94, 0.04, 1.44, T(-0.75, 0.66, 0)); for (let k = -3; k <= 3; k++) f.box(1.9, 0.012, 0.03, T(-0.75, 0.686, k * 0.19));
     L.part('荷台の床', '荷台', f, 'carW', DR);
@@ -1272,14 +1287,14 @@ function keiTruck(L) {
   // うしろ
   { const r = new PB(); for (const s of [1, -1]) r.box(0.03, 0.12, 0.17, T(-1.737, 0.55, s * 0.6));
     r.box(0.08, 0.1, 1.38, T(-1.75, 0.42, 0), { mat: 1 });
-    L.part('テールランプとバンパー', 'うしろ', r, ['lensR', 'blackP'], DB); }
+    L.part('テールランプとバンパー', 'うしろ', r, ['lensR', 'blackP'], DB, { keep: (p, n) => n.x < 0.5 }); }
   // タイヤ
   for (const [x, s, nm] of [[1.02, 1, '右前'], [1.02, -1, '左前'], [-1.02, 1, '右うしろ'], [-1.02, -1, '左うしろ']]) {
     const M = T(x, 0.28, s * 0.6, 0, s > 0 ? 90 : -90), pb = new PB();
     pb.lathe([[0.165, -0.075], [0.24, -0.08], [0.27, -0.07]], 36, M, { ns: true });
     pb.lathe([[0.27, -0.07], [0.282, -0.045], [0.284, 0], [0.282, 0.045], [0.27, 0.07], [0.24, 0.08], [0.168, 0.074]], 36, M);
     pb.lathe([[0.168, 0.072], [0.15, 0.056], [0.11, 0.05], [0.09, 0.06], [0.06, 0.062], [0.045, 0.08], [0, 0.08]], 28, M, { mat: 1 });
-    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.4; pb.cyl(0.011, 0.009, 0.02, 6, TT(M, Math.cos(a) * 0.05, 0.068, Math.sin(a) * 0.05), { mat: 1 }); }
+    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.4; pb.cyl(0.011, 0.009, 0.02, 6, TT(M, Math.cos(a) * 0.05, 0.068, Math.sin(a) * 0.05), { mat: 1, caps: 't' }); }
     L.part(`タイヤ（${nm}）`, 'タイヤ', pb, ['tire', 'steelW'], DW, { keep: p => p.y > 0.04 });
   }
   // 見えにくい下まわり（飾り）
@@ -1322,7 +1337,7 @@ LEVELS.push({
 LEVELS.push({
   id: 'park', name: '団地の公園', icon: '🛝', reward: 9000,
   desc: 'すべり台、ブランコ、パンダの遊具、ベンチ、砂場、水飲み場。鳥のフンやさび、こけもいっぱい。すべり台の上にも登れます。',
-  bounds: [-7.6, 7.6, -6.8, 6.8], spawn: [0.2, 6.0, 0, 0], view: { x: 0, z: -0.5, r: 9.5, h: 4.2, y: 0.9 }, shadow: { x: 0, z: 0, r: 12 }, topY: 2.0,
+  bounds: [-7.6, 7.6, -6.8, 6.8], spawn: [0.2, 6.0, 0, 0], view: { x: 0, z: -0.5, r: 9.5, h: 4.2, y: 0.9 }, shadow: { x: 0, z: 0, r: 12 }, topY: 2.0, under: 1.25,
   build(L) {
     groundPlane(L, 'grass', 260, 260);
     groundPlane(L, 'sand', 15.2, 13.6, 0, 0, 0.004, { poly: true });
@@ -1392,17 +1407,18 @@ LEVELS.push({
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.cyl(0.07, 0.075, 0.2, 14, TT(M, sx * 0.17, 0.44, sz * 0.13), { mat: 1 });
       b.sphere(0.06, 12, 8, TT(M, -0.33, 0.66, 0));
       b.prism([[-0.13, -0.025], [0.13, -0.025], [0.13, 0.025], [-0.13, 0.025]], 0.26, TT(M, -0.04, 0.86, 0), { bev: 0.02, mat: 2 });
-      L.part('パンダの体', 'パンダの遊具', b, ['plasW', 'black', 'plasR'], { a: 0x5e5546, b: 0x5a4229, s: [4, 0.58, 1.0, 0.62], up: 0, ds: 0.6 });
+      L.part('パンダの体', 'パンダの遊具', b, ['plasW', 'black', 'plasR'], { a: 0x5e5546, b: 0x5a4229, s: [4, 0.58, 1.0, 0.62], up: 0, ds: 0.6 }, { keep: (p, n) => !(p.y < 0.56 && n.y < 0.2) });
       const hd = new PB(); hd.pipe([0.24, 1.02, -0.27], [0.24, 1.02, 0.27], 0.018, 10, M); for (const s of [-1, 1]) { hd.sphere(0.03, 10, 6, TT(M, 0.24, 1.02, s * 0.28)); hd.pipe([0.1, 0.56, s * 0.2], [0.1, 0.56, s * 0.36], 0.016, 8, M); }
       L.part('パンダの取っ手', 'パンダの遊具', hd, 'plasY', BIRD);
       L.col(x, z, 0.95, 0.6, 0, 1.15, 30); }
-    bench(L, -6.9, 0.8, 90, '（左）', MOSS, RUST, 'woodRed');
-    bench(L, -6.9, 3.6, 90, '（右）', MOSS, RUST, 'woodRed');
+    bench(L, -6.3, 0.8, 90, '（左）', MOSS, RUST, 'woodRed');
+    bench(L, -6.3, 3.6, 90, '（右）', MOSS, RUST, 'woodRed');
     // 砂場
     { const x = 4.4, z = 3.1, pb = new PB();
       for (const s of [-1, 1]) { pb.box(2.62, 0.22, 0.16, T(x, 0.11, z + s * 1.23), { grain: 1, to: [s, 0] }); pb.box(0.16, 0.22, 2.3, T(x + s * 1.23, 0.11, z), { grain: 1, to: [0, s] }); }
       L.part('砂場のわく', '砂場', pb, 'wood', MOSS);
       groundPlane(L, 'sand', 2.3, 2.3, x, z, 0.12).material = decoMat('sand');
+      { const sb = new THREE.Mesh(new THREE.BoxGeometry(2.32, 0.12, 2.32), decoMat('sand')); sb.position.set(x, 0.06, z); sb.visible = false; L.obj(sb, { solid: true }); }
       for (const s of [-1, 1]) { L.col(x, z + s * 1.23, 2.62, 0.16, 0, 0.22); L.col(x + s * 1.23, z, 0.16, 2.3, 0, 0.22); }
       const bk = new PB(); bk.cyl(0.11, 0.13, 0.16, 16, T(x - 0.5, 0.2, z + 0.3), { caps: 'b' }); bk.pipe([x - 0.62, 0.27, z + 0.3], [x - 0.38, 0.27, z + 0.3], 0.006, 6, new THREE.Matrix4());
       L.deco(bk, 'plasR', { solid: false }); }
@@ -1410,7 +1426,7 @@ LEVELS.push({
     { const x = -1.6, z = 5.1, pb = new PB();
       pb.box(0.32, 0.74, 0.32, T(x, 0.37, z), { skip: 'b' });
       pb.prism([[-0.27, 0], [0.27, 0], [0.27, 0.1], [0.23, 0.1], [0.2, 0.04], [-0.2, 0.04], [-0.23, 0.1], [-0.27, 0.1]], 0.46, T(x, 0.74, z), { bev: 0.015, bs: 1 });
-      L.part('水飲み場', '水飲み場', pb, 'concrete', { a: 0x4f4a3c, b: 0x34452a, s: [3.5, 0.64, 0.3, 0.6], up: 0.2, ds: 0.7 });
+      L.part('水飲み場', '水飲み場', pb, 'concrete', { a: 0x4f4a3c, b: 0x34452a, s: [3.5, 0.64, 0.3, 0.6], up: 0.2, ds: 0.7 }, { keep: p => p.y < 0.72 || p.y > 0.75 });
       const f = new PB(); f.pipe([x, 0.78, z], [x, 0.9, z], 0.016, 8, new THREE.Matrix4()); f.pipe([x, 0.9, z], [x + 0.05, 0.92, z], 0.012, 8, new THREE.Matrix4()); L.deco(f, 'chrome', { solid: false });
       L.col(x, z, 0.55, 0.48, 0, 0.84); }
   },
@@ -1434,7 +1450,7 @@ function lantern(L, x, z, tag, D) {
 LEVELS.push({
   id: 'shrine', name: '森の神社の参道', icon: '⛩️', reward: 14000,
   desc: '森の中の小さな神社。こけだらけの石だたみ、朱色の鳥居、石灯籠、手水鉢、石段、さい銭箱。高い所は遠くまで届く強いノズルで。',
-  bounds: [-5.6, 5.6, -7.6, 8.4], spawn: [0.6, 8.0, 0, 4], view: { x: 0, z: 0.5, r: 10.5, h: 4.4, y: 1.4 }, shadow: { x: 0, z: 0, r: 13 }, topY: 2.3,
+  bounds: [-5.6, 5.6, -7.6, 8.4], spawn: [0.6, 8.0, 0, 4], view: { x: 0, z: 0.5, r: 10.5, h: 4.4, y: 1.4 }, shadow: { x: 0, z: 0, r: 13 }, topY: 2.3, under: 1.2,
   build(L) {
     groundPlane(L, 'grass', 260, 260);
     groundPlane(L, 'pebW', 13, 19, 0, -0.2, 0.004, { poly: true });
@@ -1450,7 +1466,7 @@ LEVELS.push({
     // 鳥居
     { const z = 4.4, TD = { a: 0x4d4032, b: 0x26261f, s: [3.4, 0.6, 0.25, 1.4], up: 0, ds: 0.9 };
       for (const [s, nm] of [[-1, '左'], [1, '右']]) {
-        const p = new PB(); p.cyl(0.17, 0.155, 3.45, 28, T(s * 1.75, 1.725, z)); p.cyl(0.205, 0.2, 0.32, 28, T(s * 1.75, 0.16, z), { mat: 1 });
+        const p = new PB(); p.cyl(0.17, 0.155, 3.45, 28, T(s * 1.75, 1.725, z)); p.lathe([[0.205, 0], [0.2, 0.32], [0.16, 0.32]], 28, T(s * 1.75, 0, z), { mat: 1 });
         L.part(`鳥居の柱（${nm}）`, '鳥居', p, ['shu', 'black'], TD);
         L.col(s * 1.75, z, 0.42, 0.42, 0, 4);
       }
@@ -1458,7 +1474,7 @@ LEVELS.push({
       const g = new PB(); g.box(0.16, 0.54, 0.12, T(0, 3.12, z)); L.part('額束（がくづか）', '鳥居', g, 'shu', TD);
       const k = new PB(); k.box(5.0, 0.2, 0.26, T(0, 3.47, z));
       k.prism([[-2.85, 3.72], [-2.6, 3.6], [-1.5, 3.57], [1.5, 3.57], [2.6, 3.6], [2.85, 3.72], [2.85, 3.86], [2.6, 3.76], [1.5, 3.73], [-1.5, 3.73], [-2.6, 3.76], [-2.85, 3.86]], 0.34, T(0, 0, z), { bev: 0.02, bs: 1, crease: 25 });
-      k.prism([[-2.85, 3.86], [-2.6, 3.76], [-1.5, 3.73], [1.5, 3.73], [2.6, 3.76], [2.85, 3.86], [2.87, 3.93], [2.6, 3.83], [1.5, 3.8], [-1.5, 3.8], [-2.6, 3.83], [-2.87, 3.93]], 0.36, T(0, 0, z), { bev: 0.015, bs: 1, crease: 25, mat: 1 });
+      k.prism([[-2.85, 3.86], [-2.6, 3.76], [-1.5, 3.73], [1.5, 3.73], [2.6, 3.76], [2.85, 3.86], [2.85, 3.93], [2.6, 3.83], [1.5, 3.8], [-1.5, 3.8], [-2.6, 3.83], [-2.85, 3.93]], 0.34, T(0, 0, z), { bev: 0.015, bs: 1, crease: 25, mat: 1 });
       L.part('島木と笠木', '鳥居', k, ['shu', 'black'], TD);
       const pl = new PB(); pl.box(0.46, 0.66, 0.05, T(0, 3.12, z + 0.09)); pl.box(0.36, 0.54, 0.02, T(0, 3.12, z + 0.12), { mat: 1 }); L.deco(pl, ['black', 'gold']); }
     lantern(L, -2.6, -1.0, '左', MOSS); lantern(L, 2.6, -1.0, '右', MOSS);
@@ -1489,7 +1505,7 @@ LEVELS.push({
       const sb = new PB(), x = 0, z = -7.95; sb.box(1.3, 0.55, 0.56, T(x, 0.54 + 0.275, z), { skip: 'b', grain: 1 });
       for (let k = 0; k < 6; k++) sb.box(1.24, 0.03, 0.06, T(x, 1.1, z - 0.22 + k * 0.088, 0, 35), { grain: 1 });
       sb.box(1.34, 0.05, 0.6, T(x, 1.12, z), { grain: 1, skip: 't' });
-      L.part('さい銭箱', '拝殿', sb, 'woodDark', { a: 0x4a4232, b: 0x3e5a1c, s: [3, 0.82, 0, 0], up: 0.3, ds: 0.7 });
+      L.part('さい銭箱', '拝殿', sb, 'woodDark', { a: 0x4a4232, b: 0x3e5a1c, s: [3, 0.82, 0, 0], up: 0.3, ds: 0.7 }, { keep: (p, n) => n.z > -0.5 });
       L.col(x, z, 1.3, 0.56, 0.54, 1.12); }
     // 道の両はしの低い石の柱
     { const p = new PB(); for (let z = -4.5; z <= 7; z += 2.3) for (const s of [-1, 1]) if (Math.abs(z - 4.4) > 1) p.box(0.2, 0.55, 0.2, T(s * 1.55, 0.275, z), { skip: 'b' }); L.deco(p, 'stoneD');
