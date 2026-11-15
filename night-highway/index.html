@@ -122,7 +122,14 @@ input[type=range] { width: 100%; accent-color: var(--pink); }
 #load { z-index: 9; background: var(--bg); flex-direction: column; } #load h1 { font-size: 36px; font-weight: 400; margin: 0 0 10px; text-shadow: 3px 3px 0 #000, 0 0 14px var(--pink); } #load p { color: var(--dim); margin: 0; }
 body.short .panel { padding: 8px 18px; } body.short .mb { padding: 7px; margin: 6px 0; } body.short #logo { font-size: 40px; } body.short #talk .panel { gap: 10px; } body.short #portrait { width: 96px; height: 96px; } body.short #tText { min-height: 60px; font-size: 16px; }
 body:not(.racing) .hud, body:not(.racing) #pauseB, body:not(.racing) .tb { display: none !important; }
-body:not(.touch) .touchonly { display: none; } body.touch .pconly { display: none; }
+body:not(.touch) .touchonly { display: none; }
+/* ルームミラー（中の絵はゲームの画面にじかに描く。ここはふちだけ） */
+#mirrorF { display: none; left: 0; right: 0; margin: 0 auto; top: calc(98px + env(safe-area-inset-top, 0px)); width: min(300px, calc(36 * var(--sw))); height: 64px; border-radius: 5px; box-shadow: 0 0 0 4px #141418, 0 0 0 6px #50505a, 0 5px 0 6px rgba(0,0,0,.45); }
+body.touch #mirrorF { top: calc(88px + env(safe-area-inset-top, 0px)); height: 46px; } body.touch.tall #mirrorF { top: calc(150px + env(safe-area-inset-top, 0px)); } body.mirror #mirrorF { display: block; } body.editing #mirrorF { display: block; background: rgba(40,40,60,.5); }
+/* ライバルのピン */
+#rvPin { left: 0; top: 0; display: none; text-shadow: 2px 2px 0 #000; } #rvPin.on { display: block; } body.editing #rvPin { display: none !important; }
+#rvPin .pi { position: absolute; left: -70px; bottom: 0; width: 140px; text-align: center; } #rvPin canvas { display: block; width: 18px; height: 24px; margin: 1px auto 0; image-rendering: pixelated; }
+#rvPinT { font-size: 13px; color: #ffd0ea; white-space: nowrap; } #rvPin.edge { opacity: .75; } #rvPin.back #rvPinT { color: #ff8fd0; } body.touch .pconly { display: none; }
 #gauge { display: block; width: 210px; height: 210px; margin-left: auto; image-rendering: pixelated; image-rendering: crisp-edges; filter: drop-shadow(3px 3px 0 rgba(0,0,0,.6)); }
 body.touch #gauge { width: 132px; height: 132px; margin: 0 auto; } body.meterD #gauge, body:not(.meterD) #dig { display: none; }
 #secN { display: inline-block; background: #0a6636; color: #f4f4ee; border: 2px solid #f0f0e8; border-radius: 4px; box-shadow: 0 0 0 2px #000; padding: 0 8px; margin-bottom: 4px; text-shadow: none; font-size: 15px; }
@@ -146,6 +153,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
 <div class="hud" id="cash"></div>
 <div class="hud" id="meter"><canvas id="gauge" width="128" height="128"></canvas><div id="dig"><div id="spdN">0<small>km/h</small></div><div id="tach"></div><div style="margin-top:6px"><span id="gearN">N</span><span id="bl">BOOST</span><span id="boost"><b id="boostB"></b></span></div></div></div>
 <canvas class="hud" id="mini" width="150" height="150"></canvas>
+<div class="hud" id="mirrorF"></div><div class="hud" id="rvPin"><div class="pi"><span id="rvPinT"></span><canvas id="rvPinC" width="12" height="16"></canvas></div></div>
 <div class="hud" id="msg"></div><div class="hud" id="sub"></div><div class="hud" id="slip">SLIPSTREAM</div><div class="hud" id="toast"></div>
 <button id="pauseB" class="px" type="button">Ⅱ</button>
 <div class="tb" id="tL">◀</div><div class="tb" id="tR">▶</div><div class="tb" id="tPad">◀ ハンドル ▶<i id="tKnob"></i></div>
@@ -176,8 +184,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
   <div class="lab">ブラウン管風のしま</div><div class="seg" id="sCrt"><button data-v="0">なし</button><button data-v="1">あり</button></div>
   <div class="lab">BGM</div><div class="seg" id="sBgm"><button data-v="0">なし</button><button data-v="1">あり</button></div>
   <div class="lab">音量</div><input type="range" id="sVol" min="0" max="1" step="0.05">
-  <div class="lab">ハンドルのアシスト</div><div class="seg" id="sAssist"><button data-v="0">なし</button><button data-v="1">弱</button><button data-v="2">強</button></div>
-  <div class="lab">視点</div><div class="seg" id="sCam"><button data-v="0">うしろ</button><button data-v="1">遠め</button><button data-v="2">バンパー</button></div>
+  <div class="lab">視点</div><div class="seg" id="sCam"><button data-v="0">うしろ</button><button data-v="1">遠め</button><button data-v="2">主観（ミラーつき）</button></div>
   <div class="lab">速度計</div><div class="seg" id="sMeter"><button data-v="0">針のメーター</button><button data-v="1">数字だけ</button></div>
   <div class="lab">ボタンと表示の配置・大きさ</div><button class="mb" id="sLayout" type="button">配置を変える<small>速度計・地図・ボタンなどを動かす</small></button>
   <div class="touchonly"><div class="lab">ボタンのこさ</div><input type="range" id="sOpa" min="0.15" max="1" step="0.05">
@@ -188,7 +195,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
   <button class="mb" id="setBack" type="button">もどる</button>
 </div></div>
 <div class="screen" id="how"><div class="panel px"><h2>操作方法</h2><div class="how">
-  <b>バトル</b>：ライバルとならんで走りだし、<b>250m</b> 引きはなせば勝ち。ゴール（走る距離）に先に着いたほうも勝ち。250m 引きはなされたら負け。<br>
+  <b>バトル</b>：ライバルとならんで走りだし、<b>250m</b> 引きはなせば勝ち。ゴール（走る距離）に先に着いたほうも勝ち。<b>500m</b> 引きはなされたら負け。ライバルの上のピンで、どこにいるか分かる。<br>
   <b>コツ</b>：一般車をよけながら走る。前の車のすぐうしろを走ると風よけで速くなる（<b>スリップストリーム</b>）。急なカーブはブレーキで速度を落とさないと、かべにぶつかって遅くなる。<br>
   <b>PC</b>：←→（A・D）でハンドル、↑（W）でアクセル、↓（S）でブレーキ、Cで視点、EscかPで一時停止。<br>
   <b>スマホ</b>：左下のボタンでハンドル（設定でスライドにもできる）、右下でアクセルとブレーキ。オートアクセルもある。<br>
@@ -230,7 +237,7 @@ const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in wi
 if (IS_TOUCH) document.body.classList.add('touch');
 
 // ---------- 設定（この端末に保存） ----------
-const SET = { dot: 1, crt: 0, bgm: 1, vol: .8, assist: IS_TOUCH ? 2 : 1, cam: 0, steer: 0, auto: 0, meter: 0, opa: .55, tilt: 1, keys: {}, lay: {} };
+const SET = { dot: 1, crt: 0, bgm: 1, vol: .8, cam: 0, steer: 0, auto: 0, meter: 0, opa: .55, tilt: 1, keys: {}, lay: {} };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('nhw-settings')) || {}); } catch (e) { /* はじめて */ }
 const saveSet = () => { try { localStorage.setItem('nhw-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
 // 3dgame のホーム画面から渡される設定（横画面・音）
@@ -1210,6 +1217,7 @@ function carMats() {
   CMAT.beam = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: .05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
   CMAT.flame = new THREE.SpriteMaterial({ map: TEX.pool, color: new THREE.Color(2.6, 1.3, .5), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
   CMAT.shadow = new THREE.MeshBasicMaterial({ map: TEX.shadow, color: 0x000000, transparent: true, opacity: .82, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  CMAT.wheel = new THREE.MeshLambertMaterial({ color: 0x1c1c22 });
   CMAT.tireG = new THREE.CylinderGeometry(1, 1, 1, 14).rotateZ(Math.PI / 2); CMAT.tire = new THREE.MeshLambertMaterial({ color: 0x0b0b0d });
   const rt = tex(paint(16, 16, (x, y, o) => { const dx = x - 7.5, dy = y - 7.5, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx); let v = 26; if (r < 7.6) { v = Math.cos(5 * a) > .35 ? 200 : 54; if (r < 2.2) v = 150; if (r > 6.4) v = 176; } o[0] = o[1] = v; o[2] = v + 10; }), { near: true, repeat: false });
   CMAT.rim = new THREE.MeshLambertMaterial({ map: rt }); CMAT.rimG = new THREE.CircleGeometry(.74, 12).rotateY(Math.PI / 2);
@@ -1239,11 +1247,15 @@ function makeHero(id, color) {
     const rim = new THREE.Mesh(CMAT.rimG, CMAT.rim); rim.scale.setScalar(sh.wr); rim.position.x = s * .124; if (s < 0) rim.rotation.y = Math.PI; w.add(rim);
     w.position.set(s * (hw - .1), sh.wr, z * sh.wb / 2); grp.add(w); wheels.push(w);
   }
+  // 運転する人の目の位置（主観視点）とハンドル
+  const L = sh.L, z0 = -L / 2, zr0 = z0 + sh.r0 * L, zr1 = z0 + sh.r1 * L, zc = (zr0 + zr1) / 2, ey = sh.belt + .47 + (sh.H < 1.2 ? -.04 : 0);
+  const eye = [.36, Math.min(ey, sh.H - .12), zc - .07];
+  const swm = new THREE.Mesh(new THREE.TorusGeometry(.17, .022, 5, 14), CMAT.wheel); swm.position.set(.36, eye[1] - .3, eye[2] - .5); swm.rotation.x = -.42; body.add(swm); for (const [w2, h2, y2] of [[.3, .035, 0], [.035, .15, -.075]]) { const sp = new THREE.Mesh(new THREE.BoxGeometry(w2, h2, .02), CMAT.wheel); sp.position.y = y2; swm.add(sp); }   // スポーク（回っているのが分かる）
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(sh.W + .7, sh.L + 1).rotateX(-Math.PI / 2), CMAT.shadow); shadow.position.y = .03; shadow.renderOrder = 1; grp.add(shadow);
   const pool = new THREE.Mesh(new THREE.PlaneGeometry(11, 34).rotateX(-Math.PI / 2), CMAT.pool); pool.position.set(-.4, .07, -sh.L / 2 - 17); pool.renderOrder = 2; grp.add(pool);
   const beams = []; for (const s of [-1, 1]) { const b = new THREE.Mesh(CMAT.beamG, CMAT.beam); b.position.set(s * (hw - .38), sh.head === 'popup' ? sh.nose + .07 : sh.nose - .13, -sh.L / 2 + (sh.head === 'popup' ? .3 : 0)); b.rotation.x = -.05; b.renderOrder = 4; grp.add(b); beams.push(b); }
   const flames = []; for (const s of sh.ex === 2 ? [-1, 1] : [1]) { const f = new THREE.Sprite(CMAT.flame); f.position.set(s * (hw - .42), sh.cl + .1, sh.L / 2 + .3); f.scale.setScalar(.01); f.renderOrder = 5; grp.add(f); flames.push(f); }
-  return { grp, body, paint: paintM, head, tail, wheels, pool, beams, flames, shadow, d, sh, id };
+  return { grp, body, paint: paintM, head, tail, wheels, pool, beams, flames, shadow, d, sh, id, eye, sw: swm };
 }
 function disposeHero(h) { if (!h) return; h.grp.parent && h.grp.parent.remove(h.grp); h.body.traverse(o => { if (o.isMesh) o.geometry.dispose(); }); h.pool.geometry.dispose(); h.shadow.geometry.dispose(); h.paint.dispose(); h.head.dispose(); h.tail.dispose(); }
 
@@ -1615,7 +1627,7 @@ const camIn = (s, x, L, hw) => Math.abs(wrapD(s - CAM.s)) < L / 2 + .7 && Math.a
 function drawCar(c, dt) {
   const h = c.hero, g = h.grp; g.visible = (c === PL && !CAM.orbit) || !camIn(c.s, c.x, c.len, c.hw); tPos(c.s, c.x, 0, g.position); g.rotation.set(Math.atan(tSlope(c.s)), tYaw(c.s) - c.psi, 0);
   h.body.rotation.z = clamp(c.lat * .0035, -.05, .05) * (1 - c.st.stab * .1); h.body.rotation.x = clamp(c.acc * .0035, -.035, .025); h.body.position.y = Math.sin(c.dist * .9) * .008 * Math.min(1, c.v / 60) + (c.hitT > 0 ? Math.sin(c.hitT * 60) * .03 : 0);
-  c.wa += c.v * dt / h.sh.wr; for (let i = 0; i < 4; i++) { const w = h.wheels[i]; w.rotation.x = -c.wa; w.rotation.y = i < 2 ? -c.steer * .3 : 0; }
+  c.wa += c.v * dt / h.sh.wr; for (let i = 0; i < 4; i++) { const w = h.wheels[i]; w.rotation.x = -c.wa; w.rotation.y = i < 2 ? -c.steer * .3 : 0; } if (h.sw) h.sw.rotation.z = -c.steer * 1.6;
   h.tail.color.setScalar(c.brake ? 2.2 : 1);
   const fl = c.flash > 0 ? ((c.flash * 8 | 0) % 2 ? 2.4 : .35) : 1; h.head.color.setScalar(fl); for (const b of h.beams) b.visible = !(c === PL && CAM.bumper);
   // アフターファイア
@@ -1651,7 +1663,11 @@ function updateCamera(c, dt, mode) {
   } else {
     const yaw = tYaw(c.s) - c.psi;
     CAM.bumper = mode === 2;
-    if (mode === 2) { const f = c.len / 2 + .15; CAM.s = c.s + f * Math.cos(c.psi); CAM.x = c.x + f * Math.sin(c.psi); tPos(CAM.s, CAM.x, .72, camera.position); camera.rotation.set(Math.atan(tSlope(c.s)) - .015, yaw, -clamp(c.lat * .0015, -.03, .03)); }
+    if (mode === 2) {   // 主観：運転する人の目の位置（右ハンドル）。ボンネットとハンドルが見える
+      const e = c.hero.eye, sl = tSlope(c.s), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw); tPos(c.s, c.x, 0, _v);
+      camera.position.set(_v.x + rx * e[0] - fx * e[2], _v.y + e[1] - sl * e[2] + c.hero.body.position.y, _v.z + rz * e[0] - fz * e[2]); CAM.s = c.s; CAM.x = c.x;
+      camera.rotation.set(Math.atan(sl) - .012 + c.hero.body.rotation.x, yaw, -clamp(c.lat * .0012, -.03, .03) - c.hero.body.rotation.z * .5);
+    }
     else {
       const m = CAMS[mode] || CAMS[0], d = m.d + sp * 1.1;
       CAM.s = c.s - d * Math.cos(CAM.psi); CAM.x = c.x - d * Math.sin(CAM.psi) * .85; tPos(CAM.s, CAM.x, m.h - sp * .25, camera.position);
@@ -1690,8 +1706,8 @@ function onTraffic(c, dv, t, side) {
 // ---------- 自分の操作 ----------
 function playerCtl(dt) {
   if (window.__NHCTL) return window.__NHCTL(PL, dt);
-  const A = [[0, 0], [.62, 1.4], [1, 2.6]][clamp(SET.assist | 0, 0, 2)], steering = Math.abs(IN.steer) > .05;
-  return { gas: IN.gas, brake: IN.brake, steer: IN.steer, ff: A[0], align: steering ? 0 : A[1], pow: 1 };
+  // ハンドルは自分で回した分だけ（道にそって自動で向きを変えることはしない）
+  return { gas: IN.gas, brake: IN.brake, steer: IN.steer, ff: 0, align: 0, pow: 1 };
 }
 
 // ---------- 画面の数字（変わったときだけ書きかえる） ----------
@@ -1754,7 +1770,7 @@ function updateHud(dt) {
   } else drawGauge(c, R.phase === 'count');
   setH('secN', SECN[tSec(c.s)] || '');
   if (R.type === 'battle') {
-    const lead = Math.round(c.dist - RV.dist), f = clamp(lead / 250, -1, 1);
+    const lead = Math.round(c.dist - RV.dist), f = lead < 0 ? clamp(lead / 500, -1, 0) : clamp(lead / 250, 0, 1);   // 左半分＝500m（負け）、右半分＝250m（勝ち）
     setH('gapN', (lead > 0 ? '+' : '') + lead + 'm'); $('gapN').className = lead > 2 ? 'pos' : lead < -2 ? 'neg' : '';
     setSt('gapF', 'left', (f < 0 ? 50 + f * 50 : 50) + '%'); setSt('gapF', 'width', Math.abs(f) * 50 + '%'); $('gapF').className = f < 0 ? 'neg' : '';
     const left = Math.max(0, R.goal - Math.max(c.dist, RV.dist)); setH('gapD', R.phase === 'count' ? 'ならんでスタート' : `のこり ${(left / 1000).toFixed(1)}km`);
@@ -1765,6 +1781,7 @@ function updateHud(dt) {
     setH('cash', `${yen(SAVE.money)}<br><small style="color:var(--green)">+${yen(R.earn)}</small>`);
   }
   setSt('slip', 'opacity', c.draft > .25 && c.v > 39 ? String(Math.min(1, c.draft * 1.5)) : '0');
+  rivalPin(R);
   if (MSGT > 0) { MSGT -= dt; if (MSGT <= 0) $('msg').style.opacity = 0; } if (SUBT > 0) { SUBT -= dt; if (SUBT <= 0) $('sub').style.opacity = 0; } if (TOASTT > 0) { TOASTT -= dt; if (TOASTT <= 0) $('toast').style.opacity = 0; }
   drawMini();
 }
@@ -1786,6 +1803,49 @@ function drawMini() {
   if (PL) dot(PL.s, '#3ff0ff', 3);
 }
 
+// ---------- ライバルの頭の上のピン（遠くても、うしろにいても、どこにいるか分かる） ----------
+const _pp = V3();
+function rivalPin(R) {
+  const el = $('rvPin'), on = R && R.type === 'battle' && R.phase !== 'end' && RV; el.classList.toggle('on', !!on); if (!on) return;
+  tPos(RV.s, RV.x, RV.hero.sh.H + .55, _pp); _pp.project(camera);
+  const W = VW(), H = VH(), d = Math.round(Math.abs(PL.dist - RV.dist)), behind = _pp.z > 1 || wrapD(RV.s - PL.s) < -2 && (SET.cam === 2 || Math.abs(_pp.x) > 1.2);
+  let x = (_pp.x * .5 + .5) * W, y = (-_pp.y * .5 + .5) * H, edge = behind || x < 14 || x > W - 14 || y < 60 || y > H - 30;
+  if (behind) { x = clamp(W / 2 + (RV.x - PL.x) * 9, 40, W - 40); y = H - 40; }
+  x = clamp(x, 26, W - 26); y = clamp(y, 64, H - 30);
+  el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; el.classList.toggle('back', behind);
+  setH('rvPinT', `${behind ? '▼ うしろ ' : ''}${R.r.name} ${d}m`); el.classList.toggle('edge', edge && !behind);
+}
+function drawPinIcon() {
+  const g = $('rvPinC').getContext('2d'); g.clearRect(0, 0, 12, 16);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 12; x++) {
+    const dx = x + .5 - 6, dy = y + .5 - 6, inHead = dx * dx + dy * dy < 30, inTip = y >= 8 && Math.abs(dx) < (15.5 - y) * .55, inner = dx * dx + dy * dy < 5.5;
+    const inO = dx * dx + dy * dy < 38 || (y >= 7 && Math.abs(dx) < (16.5 - y) * .6);
+    if (inner) g.fillStyle = '#fff'; else if (inHead || inTip) g.fillStyle = '#ff4fb0'; else if (inO) g.fillStyle = '#2a0618'; else continue; g.fillRect(x, y, 1, 1);
+  }
+}
+// ---------- ルームミラー（主観のとき、うしろを小さく映す）。位置と大きさは配置の画面で変えられる ----------
+const MIRROR = { rt: null, cam: null, scene: null, ortho: null, quad: null, w: 0, h: 0 };
+function initMirror() {
+  MIRROR.rt = new THREE.WebGLRenderTarget(16, 4, { type: THREE.HalfFloatType }); const t = MIRROR.rt.texture; t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1;
+  MIRROR.cam = new THREE.PerspectiveCamera(22, 4, .5, 1400); MIRROR.cam.rotation.order = 'YXZ';
+  MIRROR.scene = new THREE.Scene(); MIRROR.ortho = new THREE.OrthographicCamera(0, 1, 1, 0, -1, 1);
+  MIRROR.quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(.5, .5, 0), new THREE.MeshBasicMaterial({ map: t, depthTest: false, depthWrite: false })); MIRROR.scene.add(MIRROR.quad);   // 画面の上にそのまま重ねる
+}
+function renderMirror() {
+  const racing = GAME.race && GAME.race.phase !== 'end', on = racing && (SET.cam | 0) === 2 && !GAME.paused || (EDIT.on && (SET.cam | 0) === 2);
+  document.body.classList.toggle('mirror', !!on); if (!on || !PL) return;
+  const el = $('mirrorF'), c = (SET.lay && SET.lay.mirrorF) || {}, sc = clamp(c.s || 1, .5, 2), W = VW(), H = VH(), w = el.offsetWidth * sc, h = el.offsetHeight * sc, cx = el.offsetLeft + el.offsetWidth / 2, cy = el.offsetTop + el.offsetHeight / 2;
+  const kx = LOW.w / W, ky = LOW.h / H, pw = Math.max(8, Math.round(w * kx)), ph = Math.max(4, Math.round(h * ky)), px = Math.round((cx - w / 2) * kx), py = Math.round(LOW.h - (cy + h / 2) * ky);
+  if (pw !== MIRROR.w || ph !== MIRROR.h) { MIRROR.w = pw; MIRROR.h = ph; MIRROR.rt.setSize(pw, ph); MIRROR.cam.aspect = pw / ph; MIRROR.cam.updateProjectionMatrix(); }
+  // 運転席の少し上から、うしろを見る
+  const yaw = tYaw(PL.s) - PL.psi, e = PL.hero.eye, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw); tPos(PL.s, PL.x, 0, _v);
+  MIRROR.cam.position.set(_v.x + rx * e[0] * .2 - fx * (e[2] + .3), _v.y + e[1] + .02, _v.z + rz * e[0] * .2 - fz * (e[2] + .3)); MIRROR.cam.rotation.set(-Math.atan(tSlope(PL.s)) - .035, yaw + Math.PI, 0);
+  // 自分の車の形はかくして（ライトはそのまま）、うしろの道と車を映す
+  const hh = PL.hero, hid = [hh.body, hh.shadow, hh.pool, ...hh.wheels, ...hh.beams]; for (const o of hid) { o.userData.v = o.visible; o.visible = false; }
+  renderer.setRenderTarget(MIRROR.rt); renderer.render(scene, MIRROR.cam); renderer.setRenderTarget(null); for (const o of hid) o.visible = o.userData.v;
+  renderer.setViewport(px, py, pw, ph); renderer.setScissor(px, py, pw, ph); renderer.setScissorTest(true); renderer.autoClear = false; renderer.render(MIRROR.scene, MIRROR.ortho); renderer.autoClear = true; renderer.setScissorTest(false); renderer.setViewport(0, 0, LOW.w, LOW.h);
+}
+
 // =========================================================================================
 //  ストーリー（8人のライバル）・バトルとフリーランの進み方・メニュー・ガレージ・顔のドット絵・はじまり
 // =========================================================================================
@@ -1793,7 +1853,7 @@ function drawMini() {
 const RIVALS = [
   { name: 'ハル', title: '週末だけ走る大学生', car: 'sui', col: 0x86cc3a, top: 238, acc: .96, grip: 1.08, skill: .35, dist: 4000, prize: 5000, start: 30,
     face: { bg: 0x1d5a3a, sk: 0xf2c49a, hr: 0x3a2a1c, hs: 2, cl: 0x2e8a52, ac: 0, ey: 2 },
-    pre: ['お、見ない車だね。白いクーペ……ずいぶん古いな。', 'ぼくの翠は軽いんだ。すき間をぬけるのは、だれにも負けないよ。', 'ならんで100km/hから。250m はなしたほうの勝ち。いくよ！'],
+    pre: ['お、見ない車だね。白いクーペ……ずいぶん古いな。', 'ぼくの翠は軽いんだ。すき間をぬけるのは、だれにも負けないよ。', 'ならんで100km/hから。きみが250m 引きはなすか、先にゴールしたら、きみの勝ち。いくよ！'],
     win: ['うそだろ……ストレートで置いていかれた。', 'つぎはミオさんだね。同じ白虎に乗ってる、整備士の人だよ。'], lose: ['軽さは正義！ ガレージでチューンしてから、また来なよ。'] },
   { name: 'ミオ', title: '整備士見習い', car: 'byakko', col: 0xc41c26, top: 262, acc: 1.0, grip: 1.02, skill: .45, dist: 4500, prize: 8000, start: 450,
     face: { bg: 0x5a1a24, sk: 0xf4cfae, hr: 0x7a2a1a, hs: 5, cl: 0x2a3a5a, ac: 4, ey: 2 },
@@ -1944,7 +2004,7 @@ function raceStep(dt) {
     } else if (R.phase === 'go') {
       const lead = PL.dist - RV.dist;
       if (lead >= 250) endBattle(true, '250m 引きはなした！');
-      else if (lead <= -250) endBattle(false, '250m 引きはなされた……');
+      else if (lead <= -500) endBattle(false, '500m 引きはなされた……');
       else if (PL.dist >= R.goal || RV.dist >= R.goal) endBattle(lead > 0, lead > 0 ? 'ゴールに先に着いた！' : 'ゴールで先をこされた……');
     }
   } else if (R.phase === 'go') {
@@ -2006,10 +2066,10 @@ function renderGarage() {
 // ---------- 設定 ----------
 function openSettings(from) {
   SCR.back = from; const seg = (id, key) => { for (const b of $(id).querySelectorAll('button')) b.classList.toggle('on', +b.dataset.v === (SET[key] | 0)); };
-  seg('sDot', 'dot'); seg('sCrt', 'crt'); seg('sBgm', 'bgm'); seg('sAssist', 'assist'); seg('sCam', 'cam'); seg('sSteer', 'steer'); seg('sAuto', 'auto'); seg('sMeter', 'meter'); $('sVol').value = SET.vol; $('sOpa').value = SET.opa; $('sTilt').value = SET.tilt; drawKeys(); tiltNote(); show('settings');
+  seg('sDot', 'dot'); seg('sCrt', 'crt'); seg('sBgm', 'bgm'); seg('sCam', 'cam'); seg('sSteer', 'steer'); seg('sAuto', 'auto'); seg('sMeter', 'meter'); $('sVol').value = SET.vol; $('sOpa').value = SET.opa; $('sTilt').value = SET.tilt; drawKeys(); tiltNote(); show('settings');
 }
 function wireSettings() {
-  const segs = { sDot: 'dot', sCrt: 'crt', sBgm: 'bgm', sAssist: 'assist', sCam: 'cam', sSteer: 'steer', sAuto: 'auto', sMeter: 'meter' };
+  const segs = { sDot: 'dot', sCrt: 'crt', sBgm: 'bgm', sCam: 'cam', sSteer: 'steer', sAuto: 'auto', sMeter: 'meter' };
   for (const [id, key] of Object.entries(segs)) for (const b of $(id).querySelectorAll('button')) b.addEventListener('click', () => {
     SET[key] = +b.dataset.v; saveSet(); AUDIO.click(); for (const o of $(id).querySelectorAll('button')) o.classList.toggle('on', o === b);
     if (key === 'dot' || key === 'crt') onResize(); if (key === 'bgm') AUDIO.setVol(); if (key === 'steer') { document.body.classList.toggle('slide', SET.steer === 1); if (SET.steer === 2) { askTilt(); setTimeout(tiltNote, 1500); } tiltNote(); }
@@ -2036,7 +2096,7 @@ function wireSettings() {
   $('setBack').addEventListener('click', () => { AUDIO.click(); if (SCR.back === 'pause') show('pause'); else show('title'); });
 }
 // ---------- ボタンと表示の配置（ドラッグで動かす・大きさ）・キーの割り当ての表示 ----------
-const LAYOUT_IDS = ['meter', 'mini', 'info', 'cash', 'gap', 'tL', 'tR', 'tPad', 'tGas', 'tBrake', 'tCam', 'pauseB'], LAYOUT_SEL = LAYOUT_IDS.map(q => '#' + q).join(', ');
+const LAYOUT_IDS = ['meter', 'mini', 'info', 'cash', 'gap', 'mirrorF', 'tL', 'tR', 'tPad', 'tGas', 'tBrake', 'tCam', 'pauseB'], LAYOUT_SEL = LAYOUT_IDS.map(q => '#' + q).join(', ');
 const EDIT = { on: false, sel: null, drag: null };
 const elCenter = el => { const r = el.getBoundingClientRect(); return toStage(r.left + r.width / 2, r.top + r.height / 2); };
 function applyLayout() {
@@ -2098,8 +2158,9 @@ function tick(dt) {
   if (GAME.paused) return;
   readInput(dt); updateTalk(dt);
   const R = GAME.race, steps = Math.max(1, Math.ceil(dt / (1 / 90))), h = dt / steps, racing = R && R.phase !== 'end';
+  // スタート前（ならんで走る3秒）だけは車線を保つ。GO のあとは、ハンドルは自分で切った分だけ
   for (let q = 0; q < steps; q++) {
-    let pc; if (racing) { pc = playerCtl(h); if (R.phase === 'count') { pc.gas = 1; pc.brake = 0; } } else pc = aiControl(PL, h, R ? { vmax: 26, margin: .7, look: 150, react: .4, others: RV ? [RV] : [] } : attractOpts());
+    let pc; if (racing) { pc = playerCtl(h); if (R.phase === 'count') { pc.gas = 1; pc.brake = 0; pc.steer = 0; pc.ff = 1; pc.align = 3; } } else pc = aiControl(PL, h, R ? { vmax: 26, margin: .7, look: 150, react: .4, others: RV ? [RV] : [] } : attractOpts());
     PL.draft = draftOf(PL, RV ? [RV] : []); physics(PL, h, pc);
     if (RV) { const ro = rivalOpts(); RV.ghost = !!ro.ghost; RV.draft = ro.ghost ? 0 : draftOf(RV, [PL]); physics(RV, h, aiControl(RV, h, ro)); }
     if (R && R.phase === 'count') { PL.v = 100 / KMH; if (RV) RV.v = 100 / KMH; }
@@ -2149,7 +2210,7 @@ function passCheck() {
 }
 // ---------- はじまり ----------
 let RUN = true, LAST = 0;
-function frame(t) { if (!RUN) return; requestAnimationFrame(frame); const dt = Math.min(.05, Math.max(.001, (t - LAST) / 1000)); LAST = t; tick(dt); composer.render(); }
+function frame(t) { if (!RUN) return; requestAnimationFrame(frame); const dt = Math.min(.05, Math.max(.001, (t - LAST) / 1000)); LAST = t; tick(dt); composer.render(); renderMirror(); }
 async function boot() {
   const say = t => { $('loadmsg').textContent = t; };
   if (HUB.embedded) { try { applyHome(JSON.parse(localStorage.getItem('3dame-settings'))); } catch (e) { /* なし */ } addEventListener('message', e => { if (e.data && e.data.h3dSet) applyHome(e.data.h3dSet); }); }
@@ -2159,15 +2220,15 @@ async function boot() {
     say('夜の街を作っています…'); await nextFrame();
     await buildTrackWorld(say);
     say('車を用意しています…'); await nextFrame();
-    carMats(); buildTrafficMeshes(); initTraffic(); initSparks(); initHud();
+    carMats(); buildTrafficMeshes(); initTraffic(); initSparks(); initHud(); initMirror(); drawPinIcon();
     setPlayerCar(); placeCar(PL, 60, -3.5, 36); resetTraffic(PL.s, [{ s: PL.s }]);
     wireUI(); document.body.classList.toggle('slide', SET.steer === 1); document.body.classList.toggle('meterD', SET.meter === 1); applyLayout();
     tick(.016); renderer.compile(scene, camera); composer.render();
     refreshTitle(); show('title'); LAST = performance.now(); requestAnimationFrame(frame);
   } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
 }
-window.__NH = { loop(on) { RUN = on; if (on) { LAST = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => composer.render(), GAME, SAVE, SET, TRK, TRAFFIC, RIVALS, CARS, AUDIO,
-  get PL() { return PL; }, get RV() { return RV; }, MAT, TEX, CMAT, SPOT, hemi, moon, WORLD, startBattle, startFree, openGarage, layoutEdit, applyLayout, openSettings, LAMPS, RETRO, GLB, aiControl, statsOf, playerCtl, time200, physics, openStory, preBattle, toTitle, showResult, IN, CAM, camera, scene, renderer };
+window.__NH = { loop(on) { RUN = on; if (on) { LAST = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { composer.render(); renderMirror(); }, composer, GAME, SAVE, SET, TRK, TRAFFIC, RIVALS, CARS, AUDIO,
+  get PL() { return PL; }, get RV() { return RV; }, MIRROR, LOW, renderMirror, MAT, TEX, CMAT, SPOT, hemi, moon, WORLD, startBattle, startFree, openGarage, layoutEdit, applyLayout, openSettings, LAMPS, RETRO, GLB, aiControl, statsOf, playerCtl, time200, physics, openStory, preBattle, toTitle, showResult, IN, CAM, camera, scene, renderer };
 boot();
 </script>
 </body></html>
