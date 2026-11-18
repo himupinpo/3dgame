@@ -41,7 +41,8 @@ body.touch #radar { width: 150px; height: 98px; }
 body.hub #feed { left: calc(62px + env(safe-area-inset-left, 0px)); }
 #feed div { opacity: .92; transition: opacity .6s; }
 /* タッチ操作 */
-#tArea { position: absolute; left: 0; top: 0; bottom: 0; width: 50%; display: none; touch-action: none; }
+#tArea { position: absolute; inset: 0; display: none; touch-action: none; }
+body.touch.match #tArea { display: block; }
 #tStick { position: absolute; width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(255,255,255,calc(var(--opa) * .8)); background: rgba(10,20,48,calc(var(--opa) * .4)); display: none; pointer-events: none; left: calc(40px + env(safe-area-inset-left, 0px)); bottom: calc(40px + env(safe-area-inset-bottom, 0px)); }
 #tStick.on { display: block; } #tKnob { position: absolute; left: 36px; top: 36px; width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,calc(var(--opa) * 1.2)); }
 .tb { position: absolute; display: none; align-items: center; justify-content: center; text-align: center; font: 800 calc(13px * var(--bs)) var(--f); color: #fff; border-radius: 50%; background: rgba(10,20,48,calc(var(--opa) * .9)); border: 2px solid rgba(255,255,255,calc(var(--opa) * 1.1)); touch-action: none; pointer-events: auto; line-height: 1.1; text-shadow: 0 1px 3px #000; }
@@ -184,6 +185,7 @@ body.shootout #pkHud { display: block; }
       <div class="opt">守りで自動で選手を切りかえる<div class="seg" id="sAssist"></div></div>
       <div class="opt">選手の名前<div class="seg" id="sNames"></div></div>
       <div class="opt">レーダー（小さな地図）<div class="seg" id="sRadar"></div></div>
+      <div class="opt">移動のしかた（タップ・クリックでその場所へ）<div class="seg" id="sTap"></div></div>
       <div class="opt">ボタンのこさ（スマホ）<input type="range" id="sOpa" min=".2" max="1" step=".05"></div>
       <div class="opt">ボタンの大きさ（スマホ）<input type="range" id="sBsz" min=".8" max="1.35" step=".05"></div>
     </div>
@@ -246,7 +248,7 @@ if (IS_TOUCH) document.body.classList.add('touch');
 const PL = 52.5, PW = 34, GOAL_W = 3.66, GOAL_H = 2.44, BOX_D = 16.5, BOX_W = 20.16, SIX_D = 5.5, SIX_W = 9.16, PEN_D = 11, CIRC = 9.15;
 
 // ---------- 設定（この端末に保存） ----------
-const SET = { cam: 0, diff: 1, len: 1, tod: 2, gfx: -1, vol: .8, bgm: 1, pad: 1, opa: .5, bsz: 1, assist: 1, names: 1, radar: 1, keys: {} };
+const SET = { cam: 0, diff: 1, len: 1, tod: 2, gfx: -1, vol: .8, bgm: 1, pad: 1, opa: .5, bsz: 1, assist: 1, names: 1, radar: 1, tapMove: 1, keys: {} };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('gpitch-settings')) || {}); } catch (e) { /* はじめて */ }
 const saveSet = () => { try { localStorage.setItem('gpitch-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
 // 画質：-1 は自動（スマホは「ふつう」、PC は「きれい」）
@@ -2337,18 +2339,28 @@ addEventListener('blur', () => { IN.kb.clear(); for (const b of BTN) btnUp(b); }
 // ---------- タッチ ----------
 function initTouch() {
   const pad = $('tStick'), knob = $('tKnob');
-  const st = { id: null, ox: 0, oy: 0 };
+  // 画面ぜんたいがタッチの場所（ボタンはその上）。左半分を押して動かす＝スティック、さっとタップ＝その場所へ走る。
+  // 「タップだけ」の設定なら、どこを押してもその場所へ（押したままなぞると、指についていく）
+  const st = { id: null, ox: 0, oy: 0, moved: false, t0: 0, stick: false };
   const area = $('tArea');
   area.addEventListener('pointerdown', e => {
-    if (st.id !== null) return; const p = toStage(e.clientX, e.clientY); st.id = e.pointerId; st.ox = p.x; st.oy = p.y; IN.lastDev = 'touch';
-    pad.style.left = (p.x - 60) + 'px'; pad.style.top = (p.y - 60) + 'px'; pad.classList.add('on'); knob.style.transform = 'translate(0,0)';
+    if (st.id !== null) return; const p = toStage(e.clientX, e.clientY); st.id = e.pointerId; st.ox = p.x; st.oy = p.y; st.moved = false; st.t0 = performance.now(); IN.lastDev = 'touch';
+    st.stick = SET.tapMove !== 2 && p.x < VW() * .5;
+    if (st.stick) { pad.style.left = (p.x - 60) + 'px'; pad.style.top = (p.y - 60) + 'px'; pad.classList.add('on'); knob.style.transform = 'translate(0,0)'; }
+    else if (SET.tapMove) IN.tapAt = [p.x, p.y, 'tap'];
     try { area.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } e.preventDefault();
   });
   area.addEventListener('pointermove', e => {
     if (e.pointerId !== st.id) return; const p = toStage(e.clientX, e.clientY); let dx = p.x - st.ox, dy = p.y - st.oy; const l = Math.hypot(dx, dy), R = 52;
-    if (l > R) { dx *= R / l; dy *= R / l; } IN.touchStick = [dx / R, dy / R]; knob.style.transform = `translate(${dx}px,${dy}px)`;
+    if (l > 12) st.moved = true;
+    if (st.stick) { if (l > R) { dx *= R / l; dy *= R / l; } IN.touchStick = [dx / R, dy / R]; knob.style.transform = `translate(${dx}px,${dy}px)`; }
+    else if (SET.tapMove && st.moved) IN.tapAt = [p.x, p.y, 'drag'];
   });
-  const end = e => { if (e && e.pointerId !== st.id) return; st.id = null; IN.touchStick = null; pad.classList.remove('on'); };
+  const end = e => {
+    if (e && e.pointerId !== st.id) return;
+    if (e && st.id !== null && st.stick && !st.moved && SET.tapMove && performance.now() - st.t0 < 350) IN.tapAt = [st.ox, st.oy, 'tap'];   // スティック側でも、さっとタップなら移動
+    st.id = null; IN.touchStick = null; pad.classList.remove('on');
+  };
   // 指をスティックの外ではなしても、つかまえそこねても、かならず放す（しないと、つぎから動けなくなる）
   area.addEventListener('pointerup', end); area.addEventListener('pointercancel', end); area.addEventListener('lostpointercapture', end);
   addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true);
@@ -2362,6 +2374,69 @@ function initTouch() {
   });
   IN.resetTouch = () => { end(); for (const el of [...held.keys()]) { const b = el.dataset.b; held.delete(el); el.classList.remove('on'); if (b !== 'pause' && b !== 'cam') btnUp(b); } };
   addEventListener('blur', IN.resetTouch); document.addEventListener('visibilitychange', () => { if (document.hidden) IN.resetTouch(); });
+}
+// ---------- マウス（PC）：ピッチをクリックした場所へ走る・味方をクリックでパス・ゴールをクリックでシュート ----------
+function initMouse() {
+  let down = false;
+  const onPitch = e => e.pointerType === 'mouse' && SET.tapMove && GAME.scr === 'match' && (e.target.id === 'c' || e.target.id === 'hud' || e.target.id === 'tArea');
+  addEventListener('pointerdown', e => { if (e.button !== 0 || !onPitch(e)) return; down = true; const p = toStage(e.clientX, e.clientY); IN.tapAt = [p.x, p.y, 'tap']; });
+  addEventListener('pointermove', e => { if (!down || !onPitch(e)) return; const p = toStage(e.clientX, e.clientY); IN.tapAt = [p.x, p.y, 'drag']; });
+  addEventListener('pointerup', () => (down = false));
+}
+// ---------- タップ：画面の点 → ピッチの上の点・選手 ----------
+const _tray = new THREE.Raycaster(), _tndc = new THREE.Vector2(), _thit = V3(), _tplane = new THREE.Plane(V3(0, 1, 0), 0), _tpv = V3();
+function screenToPitch(sx, sy) { _tndc.set(sx / VW() * 2 - 1, -(sy / VH()) * 2 + 1); _tray.setFromCamera(_tndc, camera); return _tray.ray.intersectPlane(_tplane, _thit) ? { x: _thit.x, z: _thit.z } : null; }
+// 画面の上で、タップした点にいちばん近い選手（胸のあたりで比べる）
+function nearOnScreen(list, sx, sy, r) {
+  let best = null, bd = r;
+  for (const Q of list) { _tpv.set(Q.p.x, 1.0, Q.p.z).project(camera); if (_tpv.z > 1) continue; const d = Math.hypot((_tpv.x * .5 + .5) * VW() - sx, (-_tpv.y * .5 + .5) * VH() - sy); if (d < bd) { bd = d; best = Q; } }
+  return best;
+}
+// 目じるし（ピッチの上の輪）：行き先・パスの相手・シュート・プレス
+const MARK = { m: null, t: 0, kind: '' }, MARK_COL = { move: 0xc6ff3a, pass: 0x3ad8ff, shot: 0xffd23a, press: 0xff4a5a, sw: 0xffffff };
+function mark(p, kind) {
+  if (!MARK.m) { MARK.m = new THREE.Mesh(new THREE.RingGeometry(.42, .6, 28).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xc6ff3a, transparent: true, depthWrite: false, fog: false })); MARK.m.renderOrder = 5; scene.add(MARK.m); }
+  MARK.m.position.set(p.x, .035, p.z); MARK.m.material.color.set(MARK_COL[kind] || 0xffffff); MARK.t = 1; MARK.kind = kind; MARK.m.visible = true;
+}
+function updMark(dt) {
+  if (!MARK.m) return; const mt = USER.moveTo, live = M.phase === 'play' || M.phase === 'restart';
+  if (mt && live) { MARK.m.position.set(mt.x, .035, mt.z); MARK.t = Math.max(MARK.t, .6); } else MARK.t -= dt * 1.6;
+  MARK.m.visible = MARK.t > 0 && live && !REC.on; const k = 1 + Math.sin(performance.now() / 160) * .08; MARK.m.scale.set(k, 1, k); MARK.m.material.opacity = clamp(MARK.t, 0, 1) * .9;
+}
+function setMoveTo(g) { USER.moveTo = { x: clamp(g.x, -PL - 2, PL + 2), z: clamp(g.z, -PW - 2, PW + 2) }; USER.chase = null; mark(USER.moveTo, 'move'); }
+// タップしたときの動き（試合中・自分のセットプレー）
+function userTap(sx, sy, kind) {
+  const T = TEAMS_M[USER.team], P = USER.P; if (!T || !P || M.autoUser) return;
+  const g = screenToPitch(sx, sy); if (!g) return;
+  const R = Math.max(30, VH() * .065), gx = oppGoalX(USER.team), onGoal = Math.abs(g.x - gx) < 4.5 && Math.abs(g.z) < GOAL_W + 2;
+  if (kind === 'drag') { if (M.phase === 'play') setMoveTo(g); return; }
+  if (M.phase === 'restart') {
+    const Rs = M.restart; if (Rs.team !== USER.team || M.t < .5) return;
+    if ((Rs.kind === 'pk' || Rs.kind === 'fk') && onGoal) { const gz = clamp(g.z, -GOAL_W + .45, GOAL_W - .45); takeRestart('shot', gx, gz, .7, { gy: .25 + .7 * 1.7 * .6, guess: Math.random() < .3 }); mark({ x: gx, z: gz }, 'shot'); return; }
+    const Q = nearOnScreen(T.players.filter(q => q !== Rs.taker && !q.off), sx, sy, R * 1.4); if (!Q || Rs.kind === 'pk') return;
+    const d = Math.hypot(Q.p.x - BALL.p.x, Q.p.z - BALL.p.z);
+    if (Rs.kind === 'throw') takeRestart('throw', Q.p.x, Q.p.z, .5, { R: Q });
+    else if (Rs.kind === 'corner') takeRestart('cross', Q.p.x, Q.p.z, .7, { R: Q, ang: .36, hy: 1.6, curl: -Math.sign(BALL.p.z) * T.dir * 18 });
+    else if (Rs.kind === 'gk' && d > 32) takeRestart('punt', Q.p.x, Q.p.z, 1, { R: Q });
+    else takeRestart(d > 32 ? 'lob' : 'pass', Q.p.x, Q.p.z, clamp((d - 6) / 30, .15, 1), { R: Q });
+    setUserP(Q); mark(Q.p, 'pass'); return;
+  }
+  if (M.phase !== 'play') return;
+  if (BALL.owner === P) {
+    // 味方をタップ：その人へパス（遠ければロングパス）
+    const Q = nearOnScreen(T.players.filter(q => q !== P && !q.off), sx, sy, R);
+    if (Q) { const d = dist2(P.p, Q.p); if (doKick(P, d > 32 ? 'lob' : 'pass', Q.p.x + Q.v.x * .45, Q.p.z + Q.v.z * .45, clamp((d - 6) / 30, .15, 1), { R: Q })) { setUserP(Q); mark(Q.p, 'pass'); } return; }
+    // ゴールをタップ：その場所へシュート
+    if (onGoal && Math.hypot(gx - P.p.x, P.p.z) < 36) { const gz = clamp(g.z, -GOAL_W + .45, GOAL_W - .45), pw = .62; if (doKick(P, 'shot', gx, gz, pw, { gy: .22 + Math.pow(pw, 1.5) * 1.75 })) mark({ x: gx, z: gz }, 'shot'); return; }
+  } else {
+    // ボールを持った相手をタップ：寄せてうばいに行く（プレス）
+    const O = BALL.owner && BALL.owner.team !== USER.team ? BALL.owner : null;
+    if (O && nearOnScreen([O], sx, sy, R * 1.3)) { USER.chase = O; USER.moveTo = null; mark(O.p, 'press'); return; }
+    // ほかの味方をタップ：その選手に切りかえ
+    const Q = nearOnScreen(T.players.filter(q => q !== P && !q.gk && !q.off), sx, sy, R * .8);
+    if (Q && !(BALL.owner && BALL.owner.team === USER.team)) { setUserP(Q); USER.swT = 1.5; mark(Q.p, 'sw'); return; }
+  }
+  setMoveTo(g);
 }
 // ---------- ゲームパッド ----------
 const PAD_MAP = { 0: 'pass', 1: 'lob', 2: 'shoot', 3: 'through', 4: 'sw', 5: 'dash', 7: 'dash', 9: 'pause', 8: 'cam' };
@@ -2393,14 +2468,14 @@ function stickWorld() {
   return { x: _cr.x * IN.sx - _cf.x * IN.sy, z: _cr.z * IN.sx - _cf.z * IN.sy, l: Math.hypot(IN.sx, IN.sy) };
 }
 // ---------- 自分のチームの選手を動かす ----------
-const USER = { P: null, team: 0, swT: 0, gauge: 0, gb: '', press: false, auto: false };
+const USER = { P: null, team: 0, swT: 0, gauge: 0, gb: '', press: false, auto: false, moveTo: null, chase: null };
 function userPick(exclude) {
   const T = TEAMS_M[USER.team]; let best = null, bt = 1e9;
   const live = PRED.n > 0;
   for (const P of T.players) { if (P.gk || P === exclude || P.off) continue; const t = BALL.owner ? dist2(P.p, BALL.owner.p) / 7 : live ? interceptPt(P).t : dist2(P.p, BALL.p) / 7; if (t < bt) { bt = t; best = P; } }
   return best;
 }
-function setUserP(P) { if (USER.P === P) return; USER.P = P; USER.gauge = 0; USER.gb = ''; UIX.onSwitch && UIX.onSwitch(P); }
+function setUserP(P) { if (USER.P === P) return; USER.P = P; USER.gauge = 0; USER.gb = ''; USER.moveTo = null; USER.chase = null; UIX.onSwitch && UIX.onSwitch(P); }
 function userUpdate(dt) {
   const T = TEAMS_M[USER.team]; if (!T) return;
   USER.swT -= dt;
@@ -2410,6 +2485,8 @@ function userUpdate(dt) {
   if (!USER.P || USER.P.off || USER.P.gk) setUserP(userPick());
   // 相手がボールを持ったら、近い選手に自動で切りかえ
   if (SET.assist && BALL.owner && BALL.owner.team !== USER.team && USER.swT <= 0 && USER.P && dist2(USER.P.p, BALL.owner.p) > 9) { const c = userPick(); if (c && dist2(c.p, BALL.owner.p) < dist2(USER.P.p, BALL.owner.p) - 4) { setUserP(c); USER.swT = 1.2; } }
+  const P0 = USER.P; if (!P0) return;
+  if (IN.tapAt) { const [sx, sy, kind] = IN.tapAt; IN.tapAt = null; userTap(sx, sy, kind); }
   const P = USER.P; if (!P) return;
   for (const [b, kind, held] of ev) {
     if (b === 'pause') { UIX.togglePause && UIX.togglePause(); continue; }
@@ -2430,10 +2507,17 @@ function userUpdate(dt) {
   if (M.phase !== 'play') { P.want.x = P.want.z = 0; return; }
   // 動かす
   const w = stickWorld(), top = P.top();
-  P.sprint = IN.dash && w.l > .2; P.jog = P.sprint ? 1 : .78;
+  // タップした行き先（スティックを動かしたら取り消し）
+  if (w.l > .15) { USER.moveTo = null; USER.chase = null; }
+  if (USER.chase && BALL.owner !== USER.chase) USER.chase = null;
+  let tw = null; const mt = USER.moveTo;
+  if (mt) { const dx = mt.x - P.p.x, dz = mt.z - P.p.z, d = Math.hypot(dx, dz); if (d < (BALL.owner === P ? 1.1 : .6)) USER.moveTo = null; else tw = { x: dx / d, z: dz / d, l: Math.min(1, d / 2.5), d }; }
+  P.sprint = IN.dash && (w.l > .2 || !!tw) || !!(tw && BALL.owner !== P && tw.d > 16); P.jog = P.sprint ? 1 : .78;
   const defend = !(BALL.owner && BALL.owner.team === USER.team) && !(BALL.held && BALL.held.team === USER.team) && possTeam() !== USER.team;
   const L = M.lastPass;
-  if (BALL.owner === P) { P.want.x = w.x * top * Math.min(1, w.l * 1.2); P.want.z = w.z * top * Math.min(1, w.l * 1.2); P.face = null; }
+  if (BALL.owner === P) { const v = tw || w; P.want.x = v.x * top * Math.min(1, v.l * 1.2); P.want.z = v.z * top * Math.min(1, v.l * 1.2); P.face = null; }
+  else if (USER.chase) aiPress(P, USER.chase, dt);
+  else if (tw) { P.want.x = tw.x * top * Math.min(1, tw.l * 1.2); P.want.z = tw.z * top * Math.min(1, tw.l * 1.2); P.face = null; }
   else if (defend && IN.held.pass && BALL.owner) { aiPress(P, BALL.owner, dt); if (w.l > .3) { P.want.x = P.want.x * .5 + w.x * top * .5; P.want.z = P.want.z * .5 + w.z * top * .5; } }
   else if (w.l > .15) { P.want.x = w.x * top * Math.min(1, w.l * 1.2); P.want.z = w.z * top * Math.min(1, w.l * 1.2); P.face = defend && !P.sprint ? yawOf(BALL.p.x - P.p.x, BALL.p.z - P.p.z) : null; }
   else if (L && L.R === P && !BALL.owner && M.t - L.t < 3) { const ip = interceptPt(P, 2.4); goTo(P, ip.x, ip.z, .9, .1); }
@@ -2803,10 +2887,10 @@ function wireUI() {
   $('halfGo').onclick = () => secondHalf();
   $('resMenu').onclick = () => { if (M.mode === 'cup') { drawCup(); show('cup'); } else show('title'); };
   $('resAgain').onclick = () => { if (M.mode === 'cup') { drawCup(); show('cup'); } else startMatch(M.home, M.away, USER.team, M.mode === 'pk' ? { pk: 1 } : {}); };
-  const atk = [['移動', 'WASD／矢印・スティック'], ['パス', 'J／Z・(A)・パス'], ['シュート', 'K／X／スペース・(X)・シュート'], ['スルーパス', 'L／C・(Y)・スルー'], ['ロングパス・クロス', 'I／V・(B)・ロング'], ['ダッシュ', 'Shift・(RB)・ダッシュ'], ['カメラ', 'T'], ['一時停止', 'Esc／P']];
-  const def = [['プレス（寄せてボールをうばう）', 'J／Z・(A)・パスのボタン'], ['スライディング', 'K／X・(X)・シュートのボタン'], ['2人目もプレス', 'L／C・(Y)・スルーのボタン'], ['選手を切りかえる', 'Q／E・(LB)・切替']];
+  const atk = [['移動', 'WASD／矢印・スティック。ピッチをタップ（クリック）すると、その場所へ走る'], ['タップでパス・シュート', '味方をタップでその人へパス、ゴールをタップでシュート'], ['パス', 'J／Z・(A)・パス'], ['シュート', 'K／X／スペース・(X)・シュート'], ['スルーパス', 'L／C・(Y)・スルー'], ['ロングパス・クロス', 'I／V・(B)・ロング'], ['ダッシュ', 'Shift・(RB)・ダッシュ'], ['カメラ', 'T'], ['一時停止', 'Esc／P']];
+  const def = [['プレス（寄せてボールをうばう）', 'J／Z・(A)・パスのボタン。ボールを持った相手をタップしてもプレス'], ['タップで切りかえ', '味方をタップすると、その選手を動かす'], ['スライディング', 'K／X・(X)・シュートのボタン'], ['2人目もプレス', 'L／C・(Y)・スルーのボタン'], ['選手を切りかえる', 'Q／E・(LB)・切替']];
   $('howAtk').innerHTML = atk.map(([a, b]) => `<b>${a}</b><span>${b}</span>`).join(''); $('howDef').innerHTML = def.map(([a, b]) => `<b>${a}</b><span>${b}</span>`).join('');
-  initTouch(); applyButtons();
+  initTouch(); initMouse(); applyButtons();
 }
 function applyButtons() { document.documentElement.style.setProperty('--opa', SET.opa); document.documentElement.style.setProperty('--bs', SET.bsz); document.body.classList.toggle('radar', !!SET.radar); }
 const KEY_NAMES = { up: '上', down: '下', left: '左', right: '右', pass: 'パス／プレス', shoot: 'シュート／スライディング', through: 'スルー／2人目', lob: 'ロング・クロス', dash: 'ダッシュ', sw: '切りかえ', pause: '一時停止', cam: 'カメラ' };
@@ -2817,6 +2901,7 @@ function openSettings() {
   seg($('sAssist'), ['しない', 'する'], () => SET.assist, v => { SET.assist = v; saveSet(); });
   seg($('sNames'), ['なし', 'あり'], () => SET.names, v => { SET.names = v; saveSet(); });
   seg($('sRadar'), ['なし', 'あり'], () => SET.radar, v => { SET.radar = v; saveSet(); applyButtons(); });
+  seg($('sTap'), ['スティックだけ', 'スティック＋タップ', 'タップだけ'], () => SET.tapMove, v => { SET.tapMove = v; saveSet(); });
   const vol = $('sVol'); vol.value = SET.vol; vol.oninput = () => { SET.vol = +vol.value; saveSet(); AUDIO.setVol(); };
   const op = $('sOpa'); op.value = SET.opa; op.oninput = () => { SET.opa = +op.value; saveSet(); applyButtons(); };
   const bs = $('sBsz'); bs.value = SET.bsz; bs.oninput = () => { SET.bsz = +bs.value; saveSet(); applyButtons(); };
@@ -3100,7 +3185,7 @@ function simulate(dt) {
   else if (ph === 'sowait') { stepPlayers(dt, false); ballStep(dt); if (M.t > 1.8) nextPk(); }
   for (const P of PLAYERS) { updateVis(P, dt); poseFromVis(P.B, P.vis); }
   updateRefs(dt); for (const R of REFS) poseRef(R);
-  ballDraw(dt); updateCam(dt); recFrame(dt);
+  ballDraw(dt); updateCam(dt); recFrame(dt); updMark(dt);
   // 観客の盛り上がり
   const bxa = TEAMS_M[0] ? Math.abs(BALL.p.x) : 0, ex = .22 + smooth(PL - 35, PL - 10, bxa) * .3 + (M.shot ? .45 : 0);
   AUDIO.update(dt, ex);
@@ -3113,6 +3198,11 @@ function afterGoal() {
   M.restart = { kind: 'kickoff', team: opp(M.goalTeam), x: 0, z: 0, title: 'キックオフ', sub: '' }; setupRestart(); say('', '', 0);
 }
 function hintFor(R) {
+  if (IN.lastDev === 'touch' && SET.tapMove) {   // スマホ：タップでも
+    if (R.kind === 'pk') return 'ゴールのねらう所をタップでシュート';
+    if (R.kind === 'fk') return 'ゴールをタップでシュート／味方をタップでパス';
+    return R.kind === 'throw' ? '投げる相手をタップ' : R.kind === 'corner' ? 'クロスを上げる相手をタップ' : 'パスする味方をタップ';
+  }
   const tch = IN.lastDev === 'touch', pad = IN.lastDev === 'pad';
   const B = n => tch ? { pass: 'パス', shoot: 'シュート', lob: 'ロング', through: 'スルー' }[n] : pad ? { pass: 'A', shoot: 'X', lob: 'B', through: 'Y' }[n] : { pass: 'J', shoot: 'K', lob: 'I', through: 'L' }[n];
   if (R.kind === 'pk') return 'スティックでねらい・' + B('shoot') + 'を長く押して強さ';
@@ -3167,7 +3257,7 @@ async function boot() {
     addEventListener('pointerdown', () => AUDIO.init(), { once: true }); addEventListener('keydown', () => AUDIO.init(), { once: true });
   } catch (e) { sayL('エラー：' + (e && e.message)); console.error(e); }
 }
-window.__GP = { SEL, buildSquad, teamAll, LINEUP, openMembers, faceSvg, loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, simulate, render: () => { if (composer) composer.render(); else renderer.render(scene, camera); drawHud(); drawRadar(); },
+window.__GP = { userTap, screenToPitch, nearOnScreen, SEL, buildSquad, teamAll, LINEUP, openMembers, faceSvg, loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, simulate, render: () => { if (composer) composer.render(); else renderer.render(scene, camera); drawHud(); drawRadar(); },
   M, BALL, PLAYERS, TEAMS_M, TEAMS, USER, IN, SET, CAM, REC, SO, CUP, WORLD, startMatch, setupRestart, takeRestart, doKick, kickVel, aiRestart, endHalf, secondHalf, showResult, camera, scene, renderer, applyTod, show, GAME,
   btnDown, btnUp, giveBall, predictBall, PRED, possTeam, shotVal, bestPass, startShootout, cupNext, newCup, saveCup, drawCup, openSettings, pauseGame, resume, ACT, setUserP };
 boot();
