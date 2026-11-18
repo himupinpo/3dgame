@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>ころりんパーティー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap">
+<style>
+/* ころりんパーティー：画面の文字・ボタン */
+:root { --ink: #fff; --pink: #ff5fa8; --yel: #ffd23a; --mint: #4ee0b0; --sky: #5ab8ff; --panel: rgba(60, 30, 110, .78); --f: "M PLUS Rounded 1c", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif; --sw: 1vw; --opa: .5; --bs: 1; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #8fd0ff; color: var(--ink); overflow: hidden; font-family: var(--f); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none; }
+#rot { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; overflow: hidden; }
+#c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#hc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hud { position: absolute; pointer-events: none; text-shadow: 0 2px 6px rgba(60, 0, 80, .55); display: none; }
+body.playing .hud { display: block; }
+#hTop { left: 50%; top: calc(10px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); text-align: center; font-weight: 900; }
+#hRound { font-size: 14px; padding: 3px 14px; border-radius: 14px; background: rgba(90, 40, 150, .7); display: inline-block; }
+#hCount { font-size: min(30px, calc(6.5 * var(--sw))); margin-top: 2px; } #hCount b { color: var(--yel); }
+#hPos { right: calc(16px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); font-size: min(40px, calc(8 * var(--sw))); font-weight: 900; text-align: right; } #hPos small { font-size: 15px; display: block; }
+#hTime { left: calc(16px + env(safe-area-inset-left, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); font-size: 16px; font-weight: 900; }
+#msg { left: 0; right: 0; top: 28%; text-align: center; font-size: min(64px, calc(12 * var(--sw))); font-weight: 900; opacity: 0; transition: opacity .25s, transform .25s; -webkit-text-stroke: 2px rgba(80, 20, 120, .6); }
+#msg.big { font-size: min(110px, calc(20 * var(--sw))); color: var(--yel); }
+#sub { left: 0; right: 0; top: calc(28% + min(76px, calc(14 * var(--sw)))); text-align: center; font-size: 19px; font-weight: 900; opacity: 0; transition: opacity .25s; }
+#feed { left: calc(16px + env(safe-area-inset-left, 0px)); top: calc(92px + env(safe-area-inset-top, 0px)); font-size: 13px; font-weight: 800; line-height: 1.7; }
+#feed div { animation: fd 4s forwards; } @keyframes fd { 0% { opacity: 0; transform: translateX(-10px); } 8% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
+/* タッチ */
+#tArea { position: absolute; inset: 0; display: none; touch-action: none; }
+body.touch.playing #tArea { display: block; }
+#tStick { position: absolute; width: 124px; height: 124px; border-radius: 50%; border: 3px solid rgba(255,255,255,calc(var(--opa) * .9)); background: rgba(80,30,140,calc(var(--opa) * .35)); display: none; pointer-events: none; }
+#tStick.on { display: block; } #tKnob { position: absolute; left: 37px; top: 37px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,calc(var(--opa) * 1.3)); }
+.tb { position: absolute; display: none; align-items: center; justify-content: center; text-align: center; font: 900 calc(15px * var(--bs)) var(--f); color: #fff; border-radius: 50%; background: rgba(120,40,180,calc(var(--opa) * .85)); border: 3px solid rgba(255,255,255,calc(var(--opa) * 1.2)); touch-action: none; pointer-events: auto; text-shadow: 0 1px 3px #000; }
+.tb.on { background: rgba(255,95,168,.7); }
+body.touch.playing .tb { display: flex; }
+#bJump { width: calc(96px * var(--bs)); height: calc(96px * var(--bs)); right: calc(22px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+#bDive { width: calc(70px * var(--bs)); height: calc(70px * var(--bs)); right: calc(126px * var(--bs) + 22px + env(safe-area-inset-right, 0px)); bottom: calc(30px + env(safe-area-inset-bottom, 0px)); font-size: calc(13px * var(--bs)); }
+#bPause { width: 44px; height: 44px; border-radius: 12px; left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); display: none; pointer-events: auto; font: 900 16px var(--f); color: #fff; background: rgba(80,30,140,.55); border: 2px solid rgba(255,255,255,.6); position: absolute; }
+body.playing #bPause { display: block; } body.hub #bPause { left: calc(64px + env(safe-area-inset-left, 0px)); }
+/* 画面 */
+.scr { position: absolute; inset: 0; display: none; overflow-y: auto; touch-action: pan-y; padding: calc(18px + env(safe-area-inset-top, 0px)) calc(18px + env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) calc(18px + env(safe-area-inset-left, 0px)); }
+.scr.on { display: block; }
+.veil { background: linear-gradient(180deg, rgba(90,40,160,.1), rgba(60,20,110,.55)); }
+.box { max-width: 620px; margin: 0 auto; }
+h1 { white-space: nowrap; text-align: center; font-size: min(62px, calc(9.5 * var(--sw))); font-weight: 900; margin: 5vh 0 0; letter-spacing: .02em; color: #fff; -webkit-text-stroke: 3px #7a2cc8; paint-order: stroke; text-shadow: 0 6px 0 #5a1aa0, 0 10px 24px rgba(60,0,100,.5); }
+h1 small { display: block; font-size: 15px; letter-spacing: .5em; margin-top: 6px; -webkit-text-stroke: 0; text-shadow: 0 2px 6px #5a1aa0; }
+.lead { text-align: center; font-weight: 800; font-size: 15px; margin: 8px 0 3vh; text-shadow: 0 2px 6px #5a1aa0; }
+.menu { display: flex; flex-direction: column; gap: 10px; max-width: 380px; margin: 0 auto; }
+.btn { font: 900 18px var(--f); color: #fff; background: var(--panel); border: 3px solid rgba(255,255,255,.4); border-radius: 22px; padding: 11px 18px; cursor: pointer; text-align: left; box-shadow: 0 4px 0 rgba(50,10,90,.6); }
+.btn small { display: block; font-size: 12px; font-weight: 500; opacity: .9; margin-top: 2px; }
+.btn.main { background: linear-gradient(180deg, #ff7ac0, #ff4a90); border-color: #fff; box-shadow: 0 5px 0 #b02a68; text-align: center; font-size: 22px; }
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(50,10,90,.6); }
+h2 { font-size: 26px; font-weight: 900; margin: 6px 0 12px; text-shadow: 0 2px 6px #5a1aa0; text-align: center; }
+.card { background: var(--panel); border: 3px solid rgba(255,255,255,.3); border-radius: 20px; padding: 12px 16px; margin-bottom: 12px; }
+.opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; font-weight: 800; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,.12); } .opt:last-child { border-bottom: 0; }
+.seg { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+.seg button { font: 800 13px var(--f); color: #fff; background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.3); border-radius: 12px; padding: 5px 10px; cursor: pointer; }
+.seg button.on { background: var(--yel); color: #4a2a00; border-color: var(--yel); }
+.cols { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; } .cols button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(255,255,255,.4); cursor: pointer; } .cols button.on { border-color: #fff; box-shadow: 0 0 0 3px var(--pink); }
+input[type=range] { width: 150px; accent-color: var(--pink); }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; font-weight: 800; } .keys span { font-weight: 500; opacity: .92; }
+#resList { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; font-weight: 800; } #resList div { padding: 3px 8px; border-radius: 8px; background: rgba(255,255,255,.08); } #resList .me { background: var(--pink); } #resList .out { opacity: .45; text-decoration: line-through; }
+#loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(180deg, #8a4ae0, #ff7ac0); font-weight: 800; z-index: 9; }
+#loading b { font-size: 46px; font-weight: 900; }
+@media (max-height: 460px) { h1 { margin-top: 1vh; } .lead { margin-bottom: 1vh; } #msg { top: 22%; } }
+</style></head><body>
+<div id="rot">
+  <canvas id="c"></canvas>
+  <canvas id="hc"></canvas>
+  <div id="tArea"></div><div id="tStick"><i id="tKnob"></i></div>
+  <div class="tb" data-b="jump" id="bJump">ジャンプ</div><div class="tb" data-b="dive" id="bDive">ダイブ</div>
+  <div id="hTop" class="hud"><div id="hRound"></div><div id="hCount"></div></div>
+  <div id="hPos" class="hud"></div><div id="hTime" class="hud"></div><div id="feed" class="hud"></div>
+  <div id="msg" class="hud"></div><div id="sub" class="hud"></div>
+  <button id="bPause">II</button>
+
+  <div id="title" class="scr veil"><div class="box">
+    <h1>ころりんパーティー<small>KORORIN PARTY</small></h1>
+    <div class="lead">20人でドタバタ障害物レース！ さいごの1人をめざせ</div>
+    <div class="menu">
+      <button class="btn main" id="tPlay">ショーにでる！</button>
+      <button class="btn" id="tChar">キャラクター<small>色・耳・ぼうしをえらぶ</small></button>
+      <button class="btn" id="tPractice">コースの練習<small>ひとりで（またはボットと）好きなコース</small></button>
+      <button class="btn" id="tSet">設定</button>
+      <button class="btn" id="tHow">あそびかた</button>
+    </div>
+    <div class="lead" id="tWins" style="margin-top:14px"></div>
+  </div></div>
+  <div id="charSel" class="scr"><div class="box" style="margin-top:30vh">
+    <div class="card">
+      <div class="opt">からだの色<div class="cols" id="cBody"></div></div>
+      <div class="opt">おなかの色<div class="cols" id="cBelly"></div></div>
+      <div class="opt">耳<div class="seg" id="cEar"></div></div>
+      <div class="opt">ぼうし<div class="seg" id="cHat"></div></div>
+      <div class="opt">なまえ<div class="seg" id="cName"></div></div>
+    </div>
+    <div class="menu"><button class="btn main" id="cBack">これでOK</button></div>
+  </div></div>
+  <div id="practice" class="scr veil"><div class="box"><h2 style="margin-top:4vh">コースの練習</h2>
+    <div class="menu" id="pList"></div>
+    <div class="card" style="margin-top:12px"><div class="opt">ボット<div class="seg" id="pBots"></div></div></div>
+    <div class="menu"><button class="btn" id="pBack">もどる</button></div></div></div>
+  <div id="pause" class="scr veil"><div class="box">
+    <h2 style="margin-top:10vh">一時停止</h2>
+    <div class="menu"><button class="btn main" id="paResume">つづける</button><button class="btn" id="paSet">設定</button><button class="btn" id="paHow">あそびかた</button><button class="btn" id="paQuit">ショーをやめる</button></div>
+  </div></div>
+  <div id="result" class="scr veil"><div class="box">
+    <h2 style="margin-top:3vh" id="resT"></h2>
+    <div class="card"><div id="resList"></div></div>
+    <div class="menu" id="resBtns"></div>
+  </div></div>
+  <div id="settings" class="scr veil"><div class="box"><h2>設定</h2><div class="card">
+    <div class="opt">カメラの速さ<input type="range" id="sSens" min=".3" max="2.5" step=".1"></div>
+    <div class="opt">カメラの上下<div class="seg" id="sInv"></div></div>
+    <div class="opt">音量<input type="range" id="sVol" min="0" max="1" step=".05"></div>
+    <div class="opt">音楽<div class="seg" id="sBgm"></div></div>
+    <div class="opt">画質（次の起動から）<div class="seg" id="sGfx"></div></div>
+    <div class="opt">ボットの強さ<div class="seg" id="sDiff"></div></div>
+    <div class="opt">ボタンのこさ（スマホ）<input type="range" id="sOpa" min=".2" max="1" step=".05"></div>
+    <div class="opt">ボタンの大きさ（スマホ）<input type="range" id="sBsz" min=".8" max="1.4" step=".05"></div>
+  </div><div class="menu"><button class="btn main" id="sBack">もどる</button></div></div></div>
+  <div id="how" class="scr veil"><div class="box"><h2>あそびかた</h2>
+    <div class="card"><div class="keys">
+      <b>移動</b><span>WASD／矢印・左スティック・画面の左をドラッグ</span>
+      <b>カメラ</b><span>マウス（クリックで固定、Esc で解除）・右スティック・画面の右をドラッグ</span>
+      <b>ジャンプ</b><span>スペース・(A)・ジャンプボタン</span>
+      <b>ダイブ</b><span>Shift・E・(X)・ダイブボタン（前にとびこむ。ジャンプ中にも）</span>
+      <b>一時停止</b><span>Esc・P</span>
+    </div></div>
+    <div class="card" style="font-size:14px;line-height:1.8">20人でショーに出て、ラウンドごとに勝ち抜けをめざします。<br>
+      <b>レース</b>：ゴールに早く着いた人から勝ち抜け（人数は上に表示）。回る棒・ふりこのハンマー・動く床・転がる大玉・ベルトコンベア・シーソーなどをこえよう。落ちても、最後に通ったチェックポイント（旗）からやりなおせます。<br>
+      <b>さいごのラウンド</b>：乗るとくずれる床の上で、回る棒をジャンプでよけて、最後まで残った人が優勝！<br>
+      ほかのころりんにぶつかると押し合いになります。ダイブで少し先へ飛べるので、ゴール前や床のすき間で使おう。</div>
+    <div class="menu"><button class="btn main" id="howBack">もどる</button></div></div></div>
+  <div id="loading"><b>ころりんパーティー</b><div id="loadmsg">読みこみ中…</div></div>
+</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+// =========================================================================================
+//  ころりんパーティー — 20人でドタバタ障害物レース（オリジナル作品）
+//  キャラクター・コース・音はすべてその場で作る
+// =========================================================================================
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v), lerp = (a, b, t) => a + (b - a) * t, damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
+const TAU = Math.PI * 2, D2R = Math.PI / 180, smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rr = (a, b) => a + Math.random() * (b - a);
+const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+if (IS_TOUCH) document.body.classList.add('touch');
+const FONT = '"M PLUS Rounded 1c", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif';
+// ---------- 設定（この端末に保存） ----------
+const SET = { sens: 1, inv: 0, vol: .8, bgm: 1, gfx: -1, diff: 1, opa: .5, bsz: 1, look: { body: 0, belly: 0, ear: 1, hat: 0, name: 0 } };
+try { const o = JSON.parse(localStorage.getItem('krp-settings')) || {}; Object.assign(SET, o, { look: Object.assign(SET.look, o.look || {}) }); } catch (e) { /* はじめて */ }
+const saveSet = () => { try { localStorage.setItem('krp-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
+const GFX = () => (SET.gfx >= 0 ? SET.gfx : IS_TOUCH ? 1 : 2);
+const HUB = { embedded: window.parent !== window, vol: 1 };
+if (HUB.embedded) document.body.classList.add('hub');
+const ROT = { on: false };
+const VW = () => (ROT.on ? innerHeight : innerWidth), VH = () => (ROT.on ? innerWidth : innerHeight);
+const toStage = (cx, cy) => (ROT.on ? { x: cy, y: innerWidth - cx } : { x: cx, y: cy });
+let FPS_CAP = 0;
+try { const f = +localStorage.getItem('3dame-fps'); if (f === 30 || f === 60) FPS_CAP = f; } catch (e) { /* なし */ }
+// ---------- 描く ----------
+const canvas = $('c'), hc = $('hc'), hx = hc.getContext('2d');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = GFX() >= 1; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(62, 16 / 9, .2, 900); scene.add(camera);
+scene.fog = new THREE.Fog(0xb4dcff, 140, 420);
+let HUD_DPR = 1;
+function onResize() {
+  const r = $('rot'); r.style.width = VW() + 'px'; r.style.height = VH() + 'px'; r.style.transform = ROT.on ? 'rotate(90deg) translateY(-100%)' : 'none';
+  document.documentElement.style.setProperty('--sw', VW() / 100 + 'px');
+  const g = GFX(), pr = Math.min(devicePixelRatio || 1, g >= 2 ? 2 : g === 1 ? 1.5 : 1);
+  renderer.setPixelRatio(pr); renderer.setSize(VW(), VH(), false); camera.aspect = VW() / VH(); camera.updateProjectionMatrix();
+  HUD_DPR = Math.min(devicePixelRatio || 1, 2); hc.width = Math.round(VW() * HUD_DPR); hc.height = Math.round(VH() * HUD_DPR);
+}
+addEventListener('resize', () => setTimeout(onResize, 30));
+function cvs(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; }
+function ctex(c, o = {}) { const t = new THREE.CanvasTexture(c); t.colorSpace = o.lin ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.anisotropy = 4; if (o.rep !== false) t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
+// ---------- 入力 ----------
+const KEYS = { up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], jump: ['Space'], dive: ['ShiftLeft', 'ShiftRight', 'KeyE'], pause: ['Escape', 'KeyP'] };
+const IN = { mx: 0, my: 0, jump: false, jumpP: false, diveP: false, kb: new Set(), ev: [], look: [0, 0], stick: null, padPrev: [], lastDev: IS_TOUCH ? 'touch' : 'kb', touchJump: false };
+const keyAct = c => { for (const k in KEYS) if (KEYS[k].includes(c)) return k; return null; };
+addEventListener('keydown', e => {
+  if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  const a = keyAct(e.code); if (a) e.preventDefault(); IN.lastDev = 'kb';
+  if (e.repeat) return; IN.kb.add(e.code);
+  if (a === 'jump') IN.jumpP = true; if (a === 'dive') IN.diveP = true; if (a === 'pause') IN.ev.push('pause');
+});
+addEventListener('keyup', e => IN.kb.delete(e.code));
+addEventListener('blur', () => IN.kb.clear());
+function initMouse() {
+  canvas.addEventListener('mousedown', e => { if (IS_TOUCH || !UI.playing()) return; if (document.pointerLockElement !== canvas && !HUB.embedded) { try { canvas.requestPointerLock(); } catch (er) { /* なし */ } } IN.drag = true; });
+  addEventListener('mouseup', () => (IN.drag = false));
+  addEventListener('mousemove', e => { if (!UI.playing()) return; if (document.pointerLockElement === canvas || IN.drag) { IN.look[0] += e.movementX; IN.look[1] += e.movementY; } });
+}
+function initTouch() {
+  const st = { id: null, ox: 0, oy: 0 }, lk = { id: null, x: 0, y: 0 }, area = $('tArea'), pad = $('tStick'), knob = $('tKnob');
+  area.addEventListener('pointerdown', e => {
+    const p = toStage(e.clientX, e.clientY); IN.lastDev = 'touch';
+    if (p.x < VW() * .45 && st.id === null) { st.id = e.pointerId; st.ox = p.x; st.oy = p.y; pad.style.left = (p.x - 62) + 'px'; pad.style.top = (p.y - 62) + 'px'; pad.classList.add('on'); knob.style.transform = 'translate(0,0)'; }
+    else if (lk.id === null) { lk.id = e.pointerId; lk.x = p.x; lk.y = p.y; }
+    try { area.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } e.preventDefault();
+  });
+  area.addEventListener('pointermove', e => {
+    const p = toStage(e.clientX, e.clientY);
+    if (e.pointerId === st.id) { let dx = p.x - st.ox, dy = p.y - st.oy; const l = Math.hypot(dx, dy), R = 52; if (l > R) { dx *= R / l; dy *= R / l; } IN.stick = [dx / R, dy / R]; knob.style.transform = `translate(${dx}px,${dy}px)`; }
+    if (e.pointerId === lk.id) { IN.look[0] += (p.x - lk.x) * 1.5; IN.look[1] += (p.y - lk.y) * 1.5; lk.x = p.x; lk.y = p.y; }
+  });
+  const end = e => { if (e.pointerId === st.id) { st.id = null; IN.stick = null; pad.classList.remove('on'); } if (e.pointerId === lk.id) lk.id = null; };
+  area.addEventListener('pointerup', end); area.addEventListener('pointercancel', end);
+  document.querySelectorAll('.tb[data-b]').forEach(el => {
+    const b = el.dataset.b;
+    el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); el.classList.add('on'); IN.lastDev = 'touch'; if (b === 'jump') { IN.jumpP = true; IN.touchJump = true; } else if (b === 'dive') IN.diveP = true; });
+    const up = () => { el.classList.remove('on'); if (b === 'jump') IN.touchJump = false; };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  });
+}
+function readInput() {
+  const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(g => g && g.connected) : null;
+  let x = 0, y = 0; const k = c => KEYS[c].some(code => IN.kb.has(code));
+  if (k('left')) x -= 1; if (k('right')) x += 1; if (k('up')) y -= 1; if (k('down')) y += 1;
+  if (IN.stick) { x = IN.stick[0]; y = IN.stick[1]; }
+  let jump = k('jump') || IN.touchJump;
+  if (gp) {
+    const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0; if (Math.hypot(ax, ay) > .2) { x = ax; y = ay; IN.lastDev = 'pad'; }
+    const rx = gp.axes[2] || 0, ry = gp.axes[3] || 0; if (Math.abs(rx) > .15) IN.look[0] += rx * 14; if (Math.abs(ry) > .15) IN.look[1] += ry * 10;
+    const b = i => gp.buttons[i] && gp.buttons[i].pressed;
+    if (b(0) && !IN.padPrev[0]) IN.jumpP = true; jump = jump || b(0); if ((b(2) || b(1)) && !(IN.padPrev[2] || IN.padPrev[1])) IN.diveP = true; if (b(9) && !IN.padPrev[9]) IN.ev.push('pause');
+    gp.buttons.forEach((bb, i) => (IN.padPrev[i] = bb.pressed));
+  }
+  const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+  IN.mx = x; IN.my = y; IN.jump = jump;
+}
+// =========================================================================================
+//  ころりん（キャラクター）：まるいからだ・耳・ぼうし・小さな手足。走る・とぶ・ダイブ・ころがる・よろこぶ
+//  前は +z。足もとが原点
+// =========================================================================================
+const BODY_COLS = ['#ff6fb0', '#ffd23a', '#5ab8ff', '#4ee0b0', '#a77bff', '#ff8a3d', '#ff4a5a', '#f4f4f4', '#8ad84a', '#3a4a8a', '#c8a0ff', '#f2c09a'];
+const BELLY_COLS = ['#fff4f8', '#fffbe0', '#ffe2ee', '#e4fff4', '#efe6ff', '#fff0d6', '#ffffff', '#ffe9b0'];
+const EARS = ['なし', 'ねこ', 'くま', 'うさぎ', 'かえる'];
+const HATS = ['なし', 'ぼうし', 'パーティー', 'リボン', 'お花', 'シルクハット'];
+const NAMES = ['もちこ', 'だいふく', 'ぷりん', 'こむぎ', 'あんず', 'ころすけ', 'まめた', 'ぽてと', 'うにまる', 'わらび', 'きなこ', 'ちくわ', 'おもち', 'ぴのこ', 'すあま', 'くるみ', 'みたらし', 'せんべい', 'かすてら', 'ましゅまろ', 'たまごろう', 'ぽんず', 'ゆずこ', 'どんぐり', 'らむね', 'ほっけ', 'こはく', 'ひなた'];
+const MY_NAMES = ['あなた', 'ころりん', 'ぽよまる', 'もちもち', 'ぴょんた'];
+const CG = {};
+function charGeos() {
+  CG.sph = new THREE.SphereGeometry(1, 18, 14); CG.sphHi = new THREE.SphereGeometry(1, 28, 20); CG.cone = new THREE.ConeGeometry(1, 1, 14); CG.cyl = new THREE.CylinderGeometry(1, 1, 1, 16);
+  for (const k of ['sph', 'sphHi', 'cone', 'cyl']) { const g = CG[k]; if (g.index) CG[k] = g.toNonIndexed(); CG[k].deleteAttribute('uv'); }
+  CG.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .45 });
+  CG.limb = CG.sph;
+}
+const _pm = new THREE.Matrix4(), _pq = new THREE.Quaternion(), _pe = new THREE.Euler(), _pc = new THREE.Color();
+// 部品を1つの形にまとめる（色は頂点ごと）。ころりん1人を少ない描画で
+function partGeo(list) {
+  const geos = list.map(([g, col, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0]) => {
+    const q = g.clone(); _pm.compose(V3(x, y, z), _pq.setFromEuler(_pe.set(rx, ry, rz)), V3(sx, sy, sz)); q.applyMatrix4(_pm);
+    _pc.set(col); const n = q.attributes.position.count, c = new Float32Array(n * 3); for (let i = 0; i < n; i++) { c[i * 3] = _pc.r; c[i * 3 + 1] = _pc.g; c[i * 3 + 2] = _pc.b; } q.setAttribute('color', new THREE.BufferAttribute(c, 3)); return q; });
+  return mergeGeometries(geos);
+}
+function makeChar(look) {
+  const L = Object.assign({ body: 0, belly: 0, ear: 1, hat: 0 }, look), root = new THREE.Group(), bod = new THREE.Group(); root.add(bod); bod.position.y = .52;
+  const B = BODY_COLS[L.body % BODY_COLS.length], W = BELLY_COLS[L.belly % BELLY_COLS.length], K = '#1a1020', Wh = '#ffffff', P = [];
+  P.push([CG.sphHi, B, 0, 0, 0, .46, .515, .44], [CG.sph, W, 0, -.06, .2, .3, .34, .24]);
+  for (const s of [-1, 1]) P.push([CG.sph, Wh, s * .15, .17, .37, .1, .125, .06], [CG.sph, K, s * .15, .16, .42, .055, .07, .03], [CG.sph, Wh, s * .135, .19, .445, .016, .02, .01], [CG.sph, '#ff9cc4', s * .27, .03, .36, .07, .045, .02]);
+  P.push([CG.sph, K, 0, .03, .445, .045, .02, .012]);
+  if (L.ear === 1) for (const s of [-1, 1]) P.push([CG.cone, B, s * .22, .5, 0, .12, .24, .1, 0, 0, -s * .35]);
+  if (L.ear === 2) for (const s of [-1, 1]) P.push([CG.sph, B, s * .27, .46, 0, .13, .13, .08], [CG.sph, W, s * .27, .46, .04, .07, .07, .05]);
+  if (L.ear === 3) for (const s of [-1, 1]) P.push([CG.sph, B, s * .13, .7, -.03, .08, .25, .055, 0, 0, -s * .15], [CG.sph, W, s * .125, .7, .015, .04, .19, .02, 0, 0, -s * .15]);
+  if (L.ear === 4) for (const s of [-1, 1]) P.push([CG.sph, B, s * .17, .44, .16, .13, .13, .12], [CG.sph, Wh, s * .17, .46, .26, .07, .07, .04], [CG.sph, K, s * .17, .46, .29, .035, .035, .02]);
+  if (L.hat === 1) P.push([CG.sph, '#3a7ae0', 0, .44, 0, .3, .17, .3], [CG.cyl, '#3a7ae0', 0, .44, .2, .2, .02, .14]);
+  if (L.hat === 2) P.push([CG.cone, '#ff5fa8', 0, .64, 0, .17, .36, .17, 0, 0, .12], [CG.cyl, '#ffd23a', -.01, .55, 0, .135, .05, .135, 0, 0, .12], [CG.sph, Wh, -.04, .83, 0, .05, .05, .05]);
+  if (L.hat === 3) P.push([CG.sph, '#ff4a8a', -.09, .5, .05, .1, .07, .04, 0, 0, -.5], [CG.sph, '#ff4a8a', .09, .5, .05, .1, .07, .04, 0, 0, .5], [CG.sph, '#ff4a8a', 0, .5, .07, .04, .04, .04]);
+  if (L.hat === 4) { for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; P.push([CG.sph, '#fff0f6', .14 + Math.cos(a) * .07, .48 + Math.sin(a) * .07, .12, .05, .05, .03]); } P.push([CG.sph, '#ffd23a', .14, .48, .14, .04, .04, .03]); }
+  if (L.hat === 5) P.push([CG.cyl, '#2a2030', 0, .62, 0, .17, .28, .17], [CG.cyl, '#2a2030', 0, .49, 0, .27, .025, .27], [CG.cyl, '#ff4a5a', 0, .52, 0, .175, .05, .175]);
+  const body = new THREE.Mesh(partGeo(P), CG.mat); body.castShadow = true; body.receiveShadow = true; bod.add(body);
+  const limb = partGeo([[CG.sph, B, 0, 0, 0, 1, 1, 1]]);
+  const arms = [-1, 1].map(s => { const m = new THREE.Mesh(limb, CG.mat); m.scale.set(.1, .14, .1); m.position.set(s * .45, -.08, .02); m.castShadow = true; bod.add(m); return m; });
+  const feet = [-1, 1].map(s => { const m = new THREE.Mesh(limb, CG.mat); m.scale.set(.13, .08, .17); m.position.set(s * .17, .07, .05); m.castShadow = true; root.add(m); return m; });
+  return { root, bod, body, arms, feet, ph: 0, sq: 0, look: L, tum: 0 };
+}
+// 見た目を動かす。st：{ spd, ground, vy, dive, tumble, cheer, t }
+function poseChar(C, st, dt) {
+  const b = C.bod, sp = st.spd || 0, run = st.ground && sp > .4 ? Math.min(1, sp / 5) : 0;
+  C.ph += dt * (2 + sp * 2.1);
+  const s = Math.sin(C.ph * 1.0), c = Math.cos(C.ph * 1.0);
+  C.sq = damp(C.sq, 0, 9, dt);
+  let rx = 0, rz = 0, y = .52, sy = 1 + C.sq * -.18, sxz = 1 + C.sq * .14;
+  if (st.tumble) { C.tum += dt * 11; rx = C.tum; y = .5; }
+  else if (st.dive) { rx = 1.35; y = .42; C.tum = 0; }
+  else if (!st.ground) { const k = clamp(st.vy / 9, -1, 1); sy *= 1 + k * .08; sxz *= 1 - k * .04; rx = .12; C.tum = 0; }
+  else { rx = run * .2; y = .52 + Math.abs(s) * .05 * run; rz = s * .05 * run; C.tum = 0; }
+  if (st.cheer) { y = .52 + Math.abs(Math.sin(st.t * 7)) * .35; rx = 0; }
+  b.rotation.set(rx, 0, rz); b.position.y = y; b.scale.set(sxz, sy, sxz);
+  // 手
+  const armSw = st.dive ? 0 : run * s * .5;
+  C.arms.forEach((a, i) => { const sd = i ? 1 : -1; a.position.z = .02 + armSw * sd * .3 + (st.dive ? .32 : 0); a.position.y = -.08 + (st.cheer || (!st.ground && !st.dive) ? .32 : 0) + (st.dive ? .12 : 0); });
+  // 足
+  C.feet.forEach((f, i) => { const sd = i ? 1 : -1; if (st.ground && !st.dive && !st.tumble) { f.position.z = .05 + s * sd * .2 * run; f.position.y = .07 + Math.max(0, s * sd) * .12 * run; } else { f.position.z = st.dive ? -.3 : .02; f.position.y = st.dive ? .25 : .16; } f.visible = !st.tumble; });
+}
+function landSquash(C, k) { C.sq = Math.max(C.sq, clamp(k, 0, 1)); }
+// =========================================================================================
+//  動き：まるい体（球）と、コースの箱・円柱・球（動く・回るものも）。のる・おされる・はね飛ばされる
+// =========================================================================================
+const PH = { R: .44, g: 27, run: 6.6, accG: 48, accA: 17, jump: 9.7, dive: 8.2, maxFall: 40 };
+const COL = [];   // { k:'box'|'cyl'|'sph', obj, m, inv, pm, half, r, h, o:{kick,bounce,conv,tile,see,slip}, c:V3, br }
+const _l = V3(), _q = V3(), _n = V3(), _w = V3(), _w2 = V3(), _sv = V3(), _m3 = new THREE.Matrix3();
+function colAdd(k, obj, o = {}, dims = {}) {
+  obj.updateWorldMatrix(true, false);
+  const c = { k, obj, m: obj.matrixWorld.clone(), inv: new THREE.Matrix4(), pm: obj.matrixWorld.clone(), half: dims.half || V3(), r: dims.r || 0, h: dims.h || 0, o, c: V3(), br: 0, dyn: !!o.dyn, on: true };
+  c.inv.copy(c.m).invert(); c.c.setFromMatrixPosition(c.m); c.br = k === 'box' ? c.half.length() : k === 'cyl' ? Math.hypot(c.r, c.h) : c.r;
+  COL.push(c); return c;
+}
+function colSync(c) { c.pm.copy(c.m); c.obj.updateWorldMatrix(true, false); c.m.copy(c.obj.matrixWorld); c.inv.copy(c.m).invert(); c.c.setFromMatrixPosition(c.m); }
+// 球の中心 p、半径 r → 当たっていれば { n（外向き）, d（めりこみ）, q（ローカルの接点） }
+function hitCol(c, p, r) {
+  if (!c.on) return null;
+  const dx = p.x - c.c.x, dy = p.y - c.c.y, dz = p.z - c.c.z; if (dx * dx + dy * dy + dz * dz > (c.br + r + .2) ** 2) return null;
+  _l.copy(p).applyMatrix4(c.inv);
+  if (c.k === 'box') {
+    const H = c.half; _q.set(clamp(_l.x, -H.x, H.x), clamp(_l.y, -H.y, H.y), clamp(_l.z, -H.z, H.z));
+    _n.subVectors(_l, _q); let d = _n.length();
+    if (d > r) return null;
+    if (d < 1e-6) { const px = H.x - Math.abs(_l.x), py = H.y - Math.abs(_l.y), pz = H.z - Math.abs(_l.z); _n.set(0, 0, 0);
+      if (py <= px && py <= pz) { _n.y = Math.sign(_l.y) || 1; _q.y = _n.y * H.y; d = -py; } else if (px <= pz) { _n.x = Math.sign(_l.x) || 1; _q.x = _n.x * H.x; d = -px; } else { _n.z = Math.sign(_l.z) || 1; _q.z = _n.z * H.z; d = -pz; } }
+    else _n.divideScalar(d);
+    return { n: _n.transformDirection(c.m).clone(), d: r - d, q: _q.clone() };
+  }
+  if (c.k === 'cyl') {
+    const rl = Math.hypot(_l.x, _l.z), cy = clamp(_l.y, -c.h, c.h);
+    if (rl > c.r) { const k = c.r / rl; _q.set(_l.x * k, cy, _l.z * k); }
+    else if (Math.abs(_l.y) > c.h) _q.set(_l.x, cy, _l.z);
+    else { const ps = c.r - rl, pt = c.h - Math.abs(_l.y); if (pt < ps) _q.set(_l.x, Math.sign(_l.y) * c.h, _l.z); else { const k = c.r / (rl || 1); _q.set(_l.x * k, _l.y, _l.z * k); } }
+    _n.subVectors(_l, _q); let d = _n.length(); if (d > r) return null;
+    const inside = rl < c.r && Math.abs(_l.y) < c.h;
+    if (d < 1e-6) { _n.set(0, 1, 0); d = 0; } else _n.divideScalar(d);
+    if (inside) { _n.negate(); d = -d; }
+    return { n: _n.transformDirection(c.m).clone(), d: r - d, q: _q.clone() };
+  }
+  // 球
+  const d = _l.length(), R = c.r; if (d > R + r) return null;
+  _n.copy(_l).divideScalar(d || 1); _q.copy(_n).multiplyScalar(R);
+  return { n: _n.transformDirection(c.m).clone(), d: R + r - d, q: _q.clone() };
+}
+function surfVel(c, q, dt, out) {
+  if (!c.dyn) { out.set(0, 0, 0); } else { _w.copy(q).applyMatrix4(c.m); _w2.copy(q).applyMatrix4(c.pm); out.subVectors(_w, _w2).divideScalar(Math.max(dt, 1e-4)); }
+  if (c.o.conv) out.add(c.o.conv);
+  return out;
+}
+// ---------- からだ ----------
+function newBody(id) { return { id, p: V3(), v: V3(), face: 0, ground: false, gV: V3(), gN: V3(0, 1, 0), air: 0, jumpBuf: 0, coyote: 0, dive: 0, slide: 0, tumble: 0, kickCd: 0, fell: false, ev: [], done: false, out: false, cp: 0, landV: 0 }; }
+const _wish = V3(), _rel = V3();
+function stepBody(B, inp, dt, world) {
+  B.kickCd = Math.max(0, B.kickCd - dt); B.jumpBuf = Math.max(0, B.jumpBuf - dt); B.coyote = Math.max(0, B.coyote - dt);
+  if (inp.jumpP) B.jumpBuf = .14;
+  const ctl = B.tumble <= 0 && B.slide <= 0 && !B.dive && !B.out;
+  // 走る
+  _wish.set(inp.x || 0, 0, inp.z || 0); const wl = Math.min(1, _wish.length()); if (wl > .01) _wish.normalize();
+  _rel.set(B.v.x - B.gV.x, 0, B.v.z - B.gV.z);
+  if (ctl) {
+    const acc = (B.ground ? PH.accG : PH.accA) * dt, tx = _wish.x * PH.run * wl * (inp.spd || 1), tz = _wish.z * PH.run * wl * (inp.spd || 1);
+    const dx = tx - _rel.x, dz = tz - _rel.z, dl = Math.hypot(dx, dz);
+    if (B.ground || wl > .05) { if (dl > acc) { _rel.x += dx / dl * acc; _rel.z += dz / dl * acc; } else { _rel.x = tx; _rel.z = tz; } }
+    if (wl > .1) B.face = Math.atan2(_wish.x, _wish.z) + angDiff(Math.atan2(_wish.x, _wish.z), B.face) * Math.exp(-14 * dt);
+  } else if (B.ground) { const f = Math.exp(-(B.slide > 0 ? 3.5 : 6) * dt); _rel.x *= f; _rel.z *= f; }
+  B.v.x = _rel.x + B.gV.x; B.v.z = _rel.z + B.gV.z;
+  // ジャンプ
+  if (ctl && B.jumpBuf > 0 && (B.ground || B.coyote > 0)) { B.v.y = PH.jump + Math.max(0, B.gV.y); B.ground = false; B.coyote = 0; B.jumpBuf = 0; B.ev.push('jump'); }
+  // ダイブ
+  if (inp.diveP && ctl) { const fx = Math.sin(B.face), fz = Math.cos(B.face), hs = Math.max(PH.dive, Math.hypot(_rel.x, _rel.z) + 1.5); B.v.x = fx * hs + B.gV.x * .5; B.v.z = fz * hs + B.gV.z * .5; B.v.y = B.ground ? 5.2 : Math.max(B.v.y, 2.6); B.dive = 1; B.ground = false; B.ev.push('dive'); }
+  B.slide = Math.max(0, B.slide - dt); if (B.tumble > 0) B.tumble -= dt * (B.ground ? 1 : .35);
+  // 地面の上では、重力は面に押しつける向きだけ（坂ですべり落ちない）
+  if (B.ground && B.gN.y > .7 && B.v.y <= B.gV.y + .5) B.v.addScaledVector(B.gN, -PH.g * dt * B.gN.y); else B.v.y = Math.max(B.v.y - PH.g * dt, -PH.maxFall);
+  B.p.addScaledVector(B.v, dt);
+  // 当たり
+  const wasG = B.ground; B.ground = false; B.gV.set(0, 0, 0); B.gN.set(0, 1, 0);
+  for (let it = 0; it < 2; it++) for (const c of COL) {
+    const h = hitCol(c, B.p, PH.R); if (!h || h.d <= 0) continue;
+    B.p.addScaledVector(h.n, h.d);
+    surfVel(c, h.q, dt, _sv);
+    const vn = (B.v.x - _sv.x) * h.n.x + (B.v.y - _sv.y) * h.n.y + (B.v.z - _sv.z) * h.n.z;
+    if (vn < 0) { B.v.addScaledVector(h.n, -vn); }
+    if (h.n.y > .55) { B.ground = true; B.gV.copy(_sv); B.gN.copy(h.n); if (c.o.tile && world.live) c.o.tile.hit = world.t; if (c.o.see) c.o.see.load += h.q.z; if (c.o.bounce && B.v.y < 6) { B.v.y = c.o.bounce; B.ground = false; B.ev.push('boing'); c.o.pad && (c.o.pad.sq = 1); } }
+    if (c.o.kick && B.kickCd <= 0) {
+      const nx = h.n.x, nz = h.n.z, nl = Math.hypot(nx, nz) || 1, sl = Math.hypot(_sv.x, _sv.z), K = c.o.kick * (c.o.kickV ? clamp(sl / c.o.kickV, .5, 1.3) : 1);
+      B.v.x = nx / nl * K + _sv.x * .4; B.v.z = nz / nl * K + _sv.z * .4; B.v.y = Math.max(B.v.y, K * .5); B.tumble = c.o.tum || .9; B.dive = 0; B.kickCd = .45; B.ground = false; B.ev.push('bonk');
+    }
+  }
+  if (B.ground) {
+    B.coyote = .1; B.air = 0;
+    if (!wasG) { B.landV = -B.v.y; B.ev.push('land'); if (B.dive) { B.dive = 0; B.slide = .42; } }
+  } else B.air += dt;
+  if (B.p.y < (world.fallY ?? -8)) B.fell = true;
+}
+// ころりんどうしの押し合い
+function pushBodies(list) {
+  const D = PH.R * 2;
+  for (let i = 0; i < list.length; i++) { const a = list[i]; if (a.out) continue;
+    for (let j = i + 1; j < list.length; j++) { const b = list[j]; if (b.out) continue;
+      const dx = b.p.x - a.p.x, dy = b.p.y - a.p.y, dz = b.p.z - a.p.z, d2 = dx * dx + dy * dy + dz * dz; if (d2 > D * D || d2 < 1e-8) continue;
+      const d = Math.sqrt(d2), k = (D - d) / 2 / d; a.p.x -= dx * k; a.p.z -= dz * k; b.p.x += dx * k; b.p.z += dz * k; if (Math.abs(dy) > .5) { a.p.y -= dy * k * .5; b.p.y += dy * k * .5; }
+      const rv = ((b.v.x - a.v.x) * dx + (b.v.z - a.v.z) * dz) / d; if (rv < 0) { const im = rv * .5 / d; a.v.x += dx * im; a.v.z += dz * im; b.v.x -= dx * im; b.v.z -= dz * im; }
+    } }
+}
+// =========================================================================================
+//  コース：ピンクのスライムの上にうかぶ足場。回る棒・ふりこのハンマー・動く床・転がる大玉・ベルト・シーソー・
+//  おし出す壁・回る円盤・はねる床・くずれる床。ボットのための道しるべ（wps）とチェックポイント（cps）
+// =========================================================================================
+const CR = { grp: null, upd: [], wps: [], cps: [], finishZ: -9999, kind: 'race', fallY: -6, id: '', sweeps: [], movers: [], balls: [], tiles: [], spawn: null, hazards: [] };
+const KMAT = {}, KTEX = {};
+function courseTex() {
+  const dots = (bg, fg) => { const [c, g] = cvs(128, 128); g.fillStyle = bg; g.fillRect(0, 0, 128, 128); g.fillStyle = fg; for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) { g.beginPath(); g.arc(32 + x * 64 + (y ? 32 : 0) % 64, 32 + y * 64, 13, 0, TAU); g.fill(); } return ctex(c); };
+  KTEX.dots = dots('#ffffff', '#ececf4');
+  { const [c, g] = cvs(128, 128); g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#e0e0ea'; for (let i = -2; i < 6; i++) { g.beginPath(); g.moveTo(i * 32, 0); g.lineTo(i * 32 + 16, 0); g.lineTo(i * 32 + 16 + 128, 128); g.lineTo(i * 32 + 128, 128); g.fill(); } KTEX.stripe = ctex(c); }
+  { const [c, g] = cvs(64, 128); g.fillStyle = '#4a4a5a'; g.fillRect(0, 0, 64, 128); g.fillStyle = '#ffd23a'; for (let y = 0; y < 128; y += 32) { g.beginPath(); g.moveTo(8, y + 24); g.lineTo(32, y + 6); g.lineTo(56, y + 24); g.lineTo(56, y + 32); g.lineTo(32, y + 14); g.lineTo(8, y + 32); g.fill(); } KTEX.belt = ctex(c); }
+  { const N = 128, [c, g] = cvs(N, N), d = g.createImageData(N, N), r = rng(5), H = new Float32Array(N * N); for (let k = 0; k < 40; k++) { const cx = r() * N, cy = r() * N, rad = 6 + r() * 16; for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { let dx = Math.abs(x - cx), dy = Math.abs(y - cy); dx = Math.min(dx, N - dx); dy = Math.min(dy, N - dy); const q = 1 - (dx * dx + dy * dy) / (rad * rad); if (q > 0) H[y * N + x] += q * q; } }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const o = (y * N + x) * 4, hx = H[y * N + (x + 1) % N] - H[y * N + (x + N - 1) % N], hy = H[((y + 1) % N) * N + x] - H[((y + N - 1) % N) * N + x]; d.data[o] = 128 + hx * 60; d.data[o + 1] = 128 + hy * 60; d.data[o + 2] = 255; d.data[o + 3] = 255; }
+    g.putImageData(d, 0, 0); KTEX.goo = ctex(c, { lin: true }); KTEX.goo.repeat.set(30, 30); }
+  { const [c, g] = cvs(64, 64), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.5, 'rgba(255,255,255,.7)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); KTEX.puff = ctex(c, { rep: false }); }
+}
+const PAL = { pink: 0xff7ab8, yel: 0xffd23a, sky: 0x6ac0ff, mint: 0x5ee0b4, purp: 0xb08aff, orange: 0xff9a4a, red: 0xff5a6a, white: 0xf6f4ff, blue: 0x4a7ae8, green: 0x7ad85a };
+function kmat(col, tex = 'dots', o = {}) { const k = col + tex + JSON.stringify(o); if (!KMAT[k]) KMAT[k] = new THREE.MeshStandardMaterial(Object.assign({ color: col, map: KTEX[tex] || null, roughness: .55, metalness: 0 }, o)); return KMAT[k]; }
+// 面ごとに uv を大きさに合わせる（2m でくり返す）
+function boxGeo(w, h, d, s = .5) {
+  const g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  for (let f = 0; f < 6; f++) for (let i = 0; i < 4; i++) { const k = f * 4 + i; uv.setXY(k, uv.getX(k) * dims[f][0] * s, uv.getY(k) * dims[f][1] * s); }
+  return g;
+}
+function mesh(geo, mat, parent = CR.grp, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; }
+// 足場（上の面の高さ top）
+function plat(x, top, z, w, d, col, o = {}, th = 1.4, parent) { const m = mesh(boxGeo(w, th, d), kmat(col, o.tex || 'dots'), parent || CR.grp, x, top - th / 2, z); const c = colAdd('box', m, o, { half: V3(w / 2, th / 2, d / 2) }); m.userData.col = c; return m; }
+function edgeTrim(x, top, z, w, d) { mesh(boxGeo(w + .3, .35, d + .3), kmat(PAL.white, 'stripe'), CR.grp, x, top - 1.6, z).castShadow = false; }
+function postCyl(x, y, z, r, h, col, o = {}) { const m = mesh(new THREE.CylinderGeometry(r, r, h, 20), kmat(col, 'stripe'), CR.grp, x, y, z); colAdd('cyl', m, o, { r, h: h / 2 }); return m; }
+// 回る棒（中心 x,z、高さ y、長さ L）
+function sweeper(x, y, z, L, w, col, o = {}) {
+  const g = new THREE.Group(); g.position.set(x, y, z); CR.grp.add(g);
+  const bar = mesh(new THREE.CylinderGeometry(.32, .32, L, 16).rotateZ(Math.PI / 2), kmat(col, 'stripe'), g); const c = colAdd('box', bar, { kick: o.kick || 6.5, kickV: 4, dyn: true, tum: .7 }, { half: V3(L / 2, .32, .32) });
+  for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(.45, 14, 10), kmat(PAL.white), g, s * L / 2, 0, 0);
+  const hub = postCyl(x, y + .2, z, .75, y * 2 + 1.6, PAL.white);
+  let a = o.a0 ?? rr(0, TAU), sp = w; CR.upd.push((t, dt) => { if (o.delay && t < o.delay) { colSync(c); return; } sp += (o.acc || 0) * dt; a += sp * dt; g.rotation.y = a; colSync(c); });
+  const S = { g, c, L, y, get a() { return a; }, get w() { return sp; }, x, z }; CR.sweeps.push(S); return S;
+}
+// ふりこのハンマー（橋をよこぎる）
+function hammer(x, z, py, len, amp, w, ph) {
+  const g = new THREE.Group(); g.position.set(x, py, z); CR.grp.add(g);
+  mesh(new THREE.CylinderGeometry(.16, .16, len, 8).translate(0, -len / 2, 0), kmat(0x8a8aa0, null, { metalness: .5, roughness: .3 }), g);
+  const head = mesh(new THREE.CylinderGeometry(.85, .85, 2.4, 20).rotateZ(Math.PI / 2), kmat(PAL.red, 'stripe'), g, 0, -len, 0);
+  const c = colAdd('cyl', head, { kick: 13, dyn: true, tum: 1.1 }, { r: .85, h: 1.2 });
+  head.rotation.set(0, 0, 0); // cyl の軸は head の y。回したジオメトリなので当たりは y 軸の円柱として近似
+  c.k = 'box'; c.half = V3(1.2, .85, .85); c.br = 1.6;
+  CR.upd.push(t => { g.rotation.z = amp * Math.sin(w * t + ph); colSync(c); });
+  CR.hazards.push({ k: 'hammer', x, z, get hx() { return x + Math.sin(g.rotation.z) * len; } });
+}
+// 動く床
+function mover(x, top, z, w, d, ax, az, amp, sp, ph, col) {
+  const m = plat(x, top, z, w, d, col, { dyn: true }); const c = m.userData.col, by = m.position.y;
+  const M = { m, x0: x, z0: z, get x() { return m.position.x; }, get z() { return m.position.z; }, w, d, xAt: t => x + ax * Math.sin(sp * t + ph) * amp };
+  CR.upd.push(t => { const s = Math.sin(sp * t + ph) * amp; m.position.set(x + ax * s, by, z + az * s); colSync(c); });
+  CR.movers.push(M); return M;
+}
+function bouncePad(x, top, z, w, d) {
+  const base = mesh(boxGeo(w, .5, d), kmat(PAL.white, 'stripe'), CR.grp, x, top - .25, z);
+  const pad = mesh(new THREE.CylinderGeometry(Math.min(w, d) * .45, Math.min(w, d) * .48, .3, 24), kmat(0x5ee08a, null, { emissive: 0x2a8a4a, emissiveIntensity: .6 }), CR.grp, x, top + .15, z);
+  const P = { sq: 0 }; colAdd('box', base, { bounce: 15.5, pad: P }, { half: V3(w / 2, .55, d / 2) });
+  CR.upd.push((t, dt) => { P.sq = damp(P.sq, 0, 8, dt); pad.scale.y = 1 - P.sq * .6; });
+}
+function conveyor(x, top, z, w, d, v) {
+  const m = mesh(boxGeo(w, 1, d), new THREE.MeshStandardMaterial({ map: KTEX.belt.clone(), roughness: .6 }), CR.grp, x, top - .5, z); m.material.map.needsUpdate = true; m.material.map.repeat.set(w / 2, d / 2);
+  colAdd('box', m, { conv: V3(0, 0, v) }, { half: V3(w / 2, .5, d / 2) });
+  for (const s of [-1, 1]) mesh(boxGeo(.4, .5, d), kmat(PAL.yel, 'stripe'), CR.grp, x + s * (w / 2 + .2), top - .1, z);
+  CR.upd.push((t, dt) => { m.material.map.offset.y = (m.material.map.offset.y - v * dt / 2) % 1; });
+}
+function seesaw(x, top, z, w, L, col) {
+  const g = new THREE.Group(); g.position.set(x, top - .3, z); CR.grp.add(g);
+  const m = mesh(boxGeo(w, .6, L), kmat(col, 'stripe'), g); const S = { load: 0, th: 0, w: 0 };
+  const c = colAdd('box', m, { see: S, dyn: true }, { half: V3(w / 2, .3, L / 2) });
+  mesh(new THREE.CylinderGeometry(.6, .9, 4, 4).rotateY(Math.PI / 4), kmat(PAL.white), CR.grp, x, top - 2.6, z);
+  CR.upd.push((t, dt) => { const tq = S.load * .055 - S.th * 1.2 - S.w * 1.6; S.w += tq * dt; S.th = clamp(S.th + S.w * dt, -.15, .15); if (Math.abs(S.th) >= .15) S.w *= -.2; S.load = 0; g.rotation.x = S.th; colSync(c); });
+}
+function pusher(x, top, z, dirX, reach, sp, ph) {
+  const post = mesh(boxGeo(1.6, 3.4, 3.2), kmat(PAL.purp), CR.grp, x + dirX * 1.2, top + .3, z); colAdd('box', post, {}, { half: V3(.8, 1.7, 1.6) });
+  const m = mesh(boxGeo(2.6, 1.6, 2.6), kmat(PAL.orange, 'stripe'), CR.grp, x, top + .8, z); const c = colAdd('box', m, { kick: 6.5, dyn: true, kickV: 3, tum: .6 }, { half: V3(1.3, .8, 1.3) });
+  CR.upd.push(t => { const k = Math.max(0, Math.sin(sp * t + ph)); m.position.x = x - dirX * (k * reach); colSync(c); });
+}
+function turntable(x, top, z, r, w) {
+  const m = mesh(new THREE.CylinderGeometry(r, r, 1.2, 40), kmat(PAL.sky, 'stripe'), CR.grp, x, top - .6, z); const c = colAdd('cyl', m, { dyn: true }, { r, h: .6 });
+  const arm = mesh(new THREE.CylinderGeometry(.3, .3, r * 2 - .4, 12).rotateZ(Math.PI / 2), kmat(PAL.red, 'stripe'), m, 0, 1.15, 0); const ca = colAdd('box', arm, { kick: 5, dyn: true, kickV: 3, tum: .6 }, { half: V3(r - .2, .3, .3) });
+  CR.upd.push((t, dt) => { m.rotation.y += w * dt; colSync(c); colSync(ca); });
+  CR.sweeps.push({ g: m, c: ca, L: r * 2, y: top + .55, get a() { return m.rotation.y; }, get w() { return w; }, x, z });
+}
+function rollBalls(x0, x1, zTop, zBot, yTop, yBot, every) {
+  const geo = new THREE.SphereGeometry(1.5, 22, 16), mats = [PAL.pink, PAL.yel, PAL.sky, PAL.mint].map(c => kmat(c, 'stripe'));
+  let tN = 0;
+  CR.upd.push((t, dt) => {
+    tN -= dt; if (tN <= 0) { tN = every * rr(.7, 1.3); const m = mesh(geo, mats[(Math.random() * 4) | 0], CR.grp, rr(x0, x1), yTop + 1.6, zTop); const c = colAdd('sph', m, { kick: 11, dyn: true, kickV: 4, tum: 1 }, { r: 1.5 }); CR.balls.push({ m, c, v: rr(6, 8.5) }); }
+    for (let i = CR.balls.length - 1; i >= 0; i--) { const B = CR.balls[i]; B.m.position.z += B.v * dt; const k = clamp((B.m.position.z - zTop) / (zBot - zTop), 0, 1.2); B.m.position.y = lerp(yTop, yBot, Math.min(1, k)) + 1.6 - (k > 1 ? (k - 1) * 40 : 0); B.m.rotation.x += B.v / 1.5 * dt; colSync(B.c);
+      if (k > 1.15) { CR.grp.remove(B.m); B.c.on = false; COL.splice(COL.indexOf(B.c), 1); CR.balls.splice(i, 1); } }
+  });
+}
+function flag(x, top, z, col) { const g = new THREE.Group(); g.position.set(x, top, z); CR.grp.add(g); mesh(new THREE.CylinderGeometry(.08, .08, 3.2, 8).translate(0, 1.6, 0), kmat(0xffffff), g); const f = mesh(new THREE.PlaneGeometry(1.4, .9).translate(.7, 0, 0), new THREE.MeshStandardMaterial({ color: col, side: THREE.DoubleSide, roughness: .6 }), g, .08, 2.7, 0); CR.upd.push(t => (f.rotation.y = Math.sin(t * 3 + x) * .3)); }
+function arch(z, top, w) {
+  const col = [PAL.pink, PAL.yel, PAL.sky, PAL.mint, PAL.purp];
+  for (let i = 0; i <= 12; i++) { const a = i / 12 * Math.PI, m = mesh(new THREE.SphereGeometry(.9, 16, 12), kmat(col[i % 5], null), CR.grp, Math.cos(a) * w / 2, top + Math.sin(a) * 6, z); m.castShadow = false; }
+  const [c, g] = cvs(512, 128); g.fillStyle = '#ff5fa8'; g.fillRect(0, 0, 512, 128); g.fillStyle = '#fff'; g.font = '900 78px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('GOAL', 256, 68);
+  const b = mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshBasicMaterial({ map: ctex(c, { rep: false }), side: THREE.DoubleSide }), CR.grp, 0, top + 6.6, z); b.castShadow = false;
+  const [c2, g2] = cvs(64, 64); for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { g2.fillStyle = (x + y) % 2 ? '#222' : '#fff'; g2.fillRect(x * 8, y * 8, 8, 8); } const t2 = ctex(c2); t2.repeat.set(w / 2, 1);
+  mesh(new THREE.PlaneGeometry(w, 1.6).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: t2, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2 }), CR.grp, 0, top + .02, z).castShadow = false;
+}
+// ---------- 背景（空・雲・スライム・遠くの島） ----------
+const SKYX = {};
+function makeWorld() {
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: {},
+    vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); gl_Position.z = gl_Position.w * .99999; }',
+    fragmentShader: 'varying vec3 vD; void main(){ float h = vD.y; vec3 top = vec3(.25,.55,1.), mid = vec3(.62,.84,1.), bot = vec3(1.,.82,.93); vec3 c = h > 0. ? mix(mid, top, pow(h, .7)) : mix(mid, bot, pow(-h, .5)); gl_FragColor = vec4(c, 1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}' }));
+  sky.renderOrder = -10; sky.frustumCulled = false; scene.add(sky); SKYX.sky = sky;
+  const goo = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x8a62f0, roughness: .18, metalness: .1, normalMap: KTEX.goo, normalScale: new THREE.Vector2(.6, .6), emissive: 0x3a1a8a, emissiveIntensity: .4 }));
+  goo.position.y = -7; goo.receiveShadow = true; scene.add(goo); SKYX.goo = goo;
+  scene.add(new THREE.HemisphereLight(0xdcefff, 0xffb0d8, 1.25));
+  const sun = new THREE.DirectionalLight(0xfff4e8, 2.2); sun.position.set(-40, 80, 30); sun.castShadow = renderer.shadowMap.enabled;
+  const S = sun.shadow; S.mapSize.set(2048, 2048); S.camera.left = S.camera.bottom = -45; S.camera.right = S.camera.top = 45; S.camera.near = 1; S.camera.far = 220; S.bias = -.0005; S.normalBias = .03; scene.add(sun, sun.target); SKYX.sun = sun;
+  // 雲・遠くの島・風船
+  const r = rng(11), puff = new THREE.SpriteMaterial({ map: KTEX.puff, transparent: true, depthWrite: false, opacity: .9 });
+  for (let i = 0; i < 40; i++) { const a = r() * TAU, d = 150 + r() * 250, cl = new THREE.Group(); cl.position.set(Math.cos(a) * d, 20 + r() * 60, Math.sin(a) * d - 100); for (let k = 0; k < 5; k++) { const s = new THREE.Sprite(puff); const sz = 18 + r() * 22; s.scale.set(sz, sz * .7, 1); s.position.set((r() - .5) * 30, (r() - .5) * 6, (r() - .5) * 10); cl.add(s); } scene.add(cl); }
+  const isl = [PAL.pink, PAL.mint, PAL.yel, PAL.purp, PAL.sky];
+  for (let i = 0; i < 16; i++) { const a = r() * TAU, d = 110 + r() * 120, x = Math.cos(a) * d, z = Math.sin(a) * d - 110, s = 6 + r() * 10;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(s, s * .3, s * 1.4, 7), kmat(isl[i % 5], null)); m.position.set(x, -4 + r() * 10, z); scene.add(m);
+    const tr = new THREE.Mesh(new THREE.SphereGeometry(s * .45, 12, 10), kmat(isl[(i + 2) % 5], null)); tr.position.set(x, m.position.y + s * .9, z); scene.add(tr); }
+  SKYX.balloons = []; for (let i = 0; i < 24; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(1.2, 14, 10), kmat(isl[i % 5], null, { roughness: .25 })); b.scale.y = 1.2; b.position.set((r() - .5) * 160, 6 + r() * 30, -r() * 260 + 20); b.userData.ph = r() * TAU; scene.add(b); SKYX.balloons.push(b); }
+}
+function clearCourse() {
+  if (CR.grp) { scene.remove(CR.grp); CR.grp.traverse(o => { if (o.geometry && !o.userData.shared) o.geometry.dispose(); }); }
+  COL.length = 0; CR.grp = new THREE.Group(); scene.add(CR.grp);
+  Object.assign(CR, { upd: [], wps: [], cps: [], finishZ: -9999, fallY: -6, sweeps: [], movers: [], balls: [], tiles: [], hazards: [], spawn: null });
+}
+// ---------- レース A：ぐるぐるコース ----------
+function courseA() {
+  clearCourse(); Object.assign(CR, { id: 'A', kind: 'race', name: 'ぐるぐるコース' });
+  plat(0, 0, -8, 24, 22, PAL.pink); edgeTrim(0, 0, -8, 24, 22);
+  plat(0, 0, -42, 22, 46, PAL.sky); edgeTrim(0, 0, -42, 22, 46);
+  sweeper(0, .6, -30, 21, .95, PAL.yel); sweeper(0, .6, -50, 21, -1.1, PAL.mint);
+  for (const x of [-6.5, 0, 6.5]) { postCyl(x, -4, -69.5, .9, 7.4, PAL.white); bouncePad(x, -.4, -69.5, 3.6, 3.6); }
+  plat(0, 0, -79, 24, 9, PAL.yel); edgeTrim(0, 0, -79, 24, 9); flag(-10.5, 0, -77, 0xff5fa8); flag(10.5, 0, -77, 0xff5fa8);
+  for (const x of [-7.5, 0, 7.5]) { plat(x, 0, -104, 3.4, 42, PAL.purp); for (let k = 0; k < 3; k++) hammer(x, -92 - k * 12, 7.8, 6.6, 1.15, 1.6 + k * .15 + x * .01, rr(0, TAU)); }
+  [-11.2, -3.75, 3.75, 11.2].forEach(x => { const m = mesh(boxGeo(.6, 9, .6), kmat(PAL.white, 'stripe'), CR.grp, x, 3.5, -104); m.scale.z = 1; mesh(boxGeo(.6, .6, 42), kmat(PAL.white, 'stripe'), CR.grp, x, 8.2, -104); });
+  plat(0, 0, -130, 24, 10, PAL.mint); edgeTrim(0, 0, -130, 24, 10); flag(-10.5, 0, -127, 0xffd23a); flag(10.5, 0, -127, 0xffd23a);
+  const rows = [-139.5, -146.5, -153.5, -160.5]; rows.forEach((z, i) => { for (const k of [0, 1]) mover(0, 0, z, 6, 4.6, 1, 0, 5, .65 + i * .08, k * Math.PI + i * .9, k ? PAL.orange : PAL.yel); });
+  plat(0, 0, -167.5, 24, 5, PAL.pink); edgeTrim(0, 0, -167.5, 24, 5); flag(-10.5, 0, -166, 0x4ee0b0); flag(10.5, 0, -166, 0x4ee0b0);
+  { const L = Math.hypot(45, 6), m = mesh(boxGeo(22, 1.4, L), kmat(PAL.sky, 'stripe'), CR.grp, 0, 3 - .7, -192.5); m.rotation.x = Math.atan2(6, 45); colAdd('box', m, {}, { half: V3(11, .7, L / 2) }); }
+  rollBalls(-9, 9, -214, -170, 6, 0, 1.1);
+  plat(0, 6, -226, 24, 24, PAL.yel); edgeTrim(0, 6, -226, 24, 24); arch(-228, 6, 16);
+  CR.finishZ = -228;
+  CR.cps = [{ z: -2, y: 1, x: 9 }, { z: -78.5, y: 1, x: 9 }, { z: -128, y: 1, x: 9 }, { z: -166.5, y: 1, x: 9 }];
+  CR.cpZ = [0, -75, -125, -165];
+  CR.wps = [{ z: -20, w: 18 }, { z: -62, w: 18, sweep: 1 }, { z: -65.6, w: 14, jump: 1, padX: [-6.5, 0, 6.5] }, { z: -80, w: 18 }, { z: -84, w: 0, lanes: [-7.5, 0, 7.5] }, { z: -125, w: 0, lanes: [-7.5, 0, 7.5], hammer: 1 }, { z: -134.6, w: 14, mover: 0 }, { z: -141.4, w: 0, mover: 1 }, { z: -148.4, w: 0, mover: 2 }, { z: -155.4, w: 0, mover: 3 }, { z: -162.4, w: 0, mover: 4 }, { z: -166, w: 18 }, { z: -214, w: 18, balls: 1 }, { z: -232, w: 12 }];
+  CR.spawn = startGrid(-2, -14, 20);
+}
+// ---------- レース B：ぴょんぴょんアイランド ----------
+function courseB() {
+  clearCourse(); Object.assign(CR, { id: 'B', kind: 'race', name: 'ぴょんぴょんアイランド' });
+  plat(0, 0, -8, 24, 22, PAL.mint); edgeTrim(0, 0, -8, 24, 22);
+  for (const x of [-7, 0, 7]) conveyor(x, 0, -37, 5.4, 36, 3.2);
+  for (const [x, z] of [[-8, -28], [7, -33], [0, -41], [-6, -47], [8, -45]]) postCyl(x, .6, z, .55, 1.2, PAL.red);
+  plat(0, 0, -59, 24, 8, PAL.yel); edgeTrim(0, 0, -59, 24, 8); flag(-10.5, 0, -57, 0xff5fa8); flag(10.5, 0, -57, 0xff5fa8);
+  for (const x of [-4.5, 4.5]) for (const [z, c] of [[-69.5, PAL.pink], [-82.3, PAL.sky], [-95.1, PAL.purp]]) seesaw(x, 0, z, 6, 12, c);
+  plat(0, 0, -107, 24, 10, PAL.pink); edgeTrim(0, 0, -107, 24, 10); flag(-10.5, 0, -107, 0xffd23a); flag(10.5, 0, -107, 0xffd23a);
+  plat(0, 0, -131.6, 11, 39.2, PAL.white, { tex: 'stripe' });
+  [-120, -128, -136, -144].forEach((z, i) => pusher(i % 2 ? 7.2 : -7.2, 0, z, i % 2 ? 1 : -1, 6.6, 1.3 + i * .1, i * 1.3));
+  [-124, -132, -140].forEach((z, i) => pusher(i % 2 ? -7.2 : 7.2, 0, z, i % 2 ? -1 : 1, 6.6, 1.15 + i * .12, i * 2.1 + 1));
+  plat(0, 0, -154, 24, 6, PAL.yel); edgeTrim(0, 0, -154, 24, 6); flag(-10.5, 0, -152, 0x4ee0b0); flag(10.5, 0, -152, 0x4ee0b0);
+  turntable(0, 0, -164.4, 7.2, .4); turntable(0, 0, -178.9, 7.2, -.45);
+  plat(0, 0, -189.6, 20, 7, PAL.mint); edgeTrim(0, 0, -189.6, 20, 7);
+  for (const [z, y] of [[-197.5, 0], [-203, 2.5], [-208.5, 5]]) for (const x of [-5.5, 0, 5.5]) { postCyl(x, y - 4, z, .7, 8, PAL.white); bouncePad(x, y, z, 3.6, 3.6); }
+  plat(0, 7.5, -222, 24, 20, PAL.pink); edgeTrim(0, 7.5, -222, 24, 20); arch(-224, 7.5, 16);
+  CR.finishZ = -224;
+  CR.cps = [{ z: -2, y: 1, x: 9 }, { z: -58, y: 1, x: 9 }, { z: -108, y: 1, x: 9 }, { z: -153, y: 1, x: 9 }, { z: -190.5, y: 1, x: 7 }];
+  CR.cpZ = [0, -56, -106, -152, -189];
+  CR.wps = [{ z: -18, w: 14, lanes: [-7, 0, 7] }, { z: -55, w: 0, lanes: [-7, 0, 7] }, { z: -62, w: 0, lanes: [-4.5, 4.5] }, { z: -75.2, w: 0, lanes: [-4.5, 4.5], jump: 1 }, { z: -88, w: 0, lanes: [-4.5, 4.5], jump: 1 }, { z: -101.2, w: 0, lanes: [-4.5, 4.5], jump: 1 }, { z: -112, w: 2 }, { z: -150, w: 3, push: 1 }, { z: -157.5, w: 6 }, { z: -186, w: 3, turn: 1 }, { z: -193.5, w: 12, jump: 1, padX: [-5.5, 0, 5.5] }, { z: -199, w: 0, jump: 1, padX: [-5.5, 0, 5.5] }, { z: -205, w: 0, jump: 1, padX: [-5.5, 0, 5.5] }, { z: -212, w: 10 }, { z: -228, w: 12 }];
+  CR.spawn = startGrid(-2, -14, 20);
+}
+// ---------- さいごのラウンド：くずれる床 ----------
+function courseF() {
+  clearCourse(); Object.assign(CR, { id: 'F', kind: 'surv', name: 'くずれる床', fallY: -13 });
+  const N = 13, S = 2.6, cols = [[PAL.pink, PAL.yel, PAL.sky], [PAL.mint, PAL.purp, PAL.orange]], geo = boxGeo(S - .12, .8, S - .12);
+  for (let L = 0; L < 2; L++) { const top = -L * 7;
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const x = (i - (N - 1) / 2) * S, z = (j - (N - 1) / 2) * S; if (Math.hypot(x, z) < 1.6) continue;
+      const base = cols[L][(i + j) % 3], m = mesh(geo, new THREE.MeshStandardMaterial({ color: base, map: KTEX.dots, roughness: .55 }), CR.grp, x, top - .4, z);
+      const T = { m, x, z, top, L, hp: 2.2, hit: -9, fallT: 0, gone: false, vy: 0, col: new THREE.Color(base) }; T.c = colAdd('box', m, { tile: T }, { half: V3((S - .12) / 2, .4, (S - .12) / 2) }); CR.tiles.push(T);
+    }
+    postCyl(0, top + .4, 0, 1.3, 2.6, PAL.white);
+  }
+  sweeper(0, .6, 0, 34, .55, PAL.red, { acc: .009, delay: 3, a0: 0 }); CR.sweep2 = null;
+  const white = new THREE.Color(0xffffff);
+  CR.upd.push((t, dt) => {
+    if (t > 20 && !CR.sweep2) CR.sweep2 = sweeper(0, -6.4, 0, 34, -.5, PAL.blue, { acc: -.01, a0: Math.PI / 2 });
+    for (const T of CR.tiles) {
+      if (T.gone) { if (T.m.visible) { T.vy -= 20 * dt; T.m.position.y += T.vy * dt; if (T.m.position.y < T.top - 25) T.m.visible = false; } continue; }
+      if (t - T.hit < .06 && !T.fallT) { T.hp -= dt; T.m.material.color.copy(T.col).lerp(white, clamp(1 - T.hp / 2.2, 0, 1) * .85); if (T.hp <= 0) T.fallT = t; }
+      if (T.fallT) { const k = t - T.fallT; T.m.position.x = T.x + Math.sin(t * 60) * .07; if (k > .45) { T.gone = true; T.c.on = false; T.m.position.x = T.x; } }
+    }
+  });
+  CR.spawn = []; for (let k = 0; k < 20; k++) { const a = k / 20 * TAU + .1, d = 5 + (k % 3) * 3.4; CR.spawn.push([Math.cos(a) * d, 1, Math.sin(a) * d]); }
+  CR.cps = []; CR.wps = [];
+}
+function startGrid(z0, z1, n) { const L = []; for (let i = 0; i < n; i++) { const row = i % 4, col = (i / 4) | 0; L.push([(col - 2) * 3.8 + (row % 2) * 1.2, 1, z0 - row * 3]); } return L; }
+const COURSE_LIST = [{ id: 'A', name: 'ぐるぐるコース', desc: '回る棒・はねる床・ハンマー・動く床・転がる大玉', build: courseA }, { id: 'B', name: 'ぴょんぴょんアイランド', desc: 'ベルト・シーソー・おし出す壁・回る円盤・はねる階段', build: courseB }, { id: 'F', name: 'くずれる床', desc: '乗ると落ちる床。回る棒をジャンプで！ さいごの1人', build: courseF }];
+// =========================================================================================
+//  ボット：道しるべにそって走る。回る棒はジャンプ、ハンマーは待つ、動く床はタイミングを見てとぶ、大玉はよける。
+//  さいごのラウンドは、まだくずれていない床へ移りつづける
+// =========================================================================================
+const BOTLV = [{ spd: [.78, .9], jump: .68, react: .16 }, { spd: [.85, .96], jump: .84, react: .1 }, { spd: [.9, 1], jump: .93, react: .06 }];
+function newBotAI() { const L = BOTLV[SET.diff] || BOTLV[1]; return { jd: rr(1, 2.1), wi: 0, lane: rr(-1, 1), spd: rr(L.spd[0], L.spd[1]), jumpOK: L.jump, react: L.react, pick: null, jumped: -1, wait: 0, sweepCd: 0, tile: null, think: 0, onM: null, hes: rr(.1, .6) }; }
+function botReset(A) { A.wi = 0; A.pick = null; A.jumped = -1; A.onM = null; A.tile = null; }
+function sweepThreat(B) {   // 低い回る棒がもうすぐ来る？
+  for (const S of CR.sweeps) {
+    const dy = S.y - (B.p.y - PH.R); if (dy > 1.3 || dy < -.6) continue;
+    const rx = B.p.x - S.x, rz = B.p.z - S.z, r = Math.hypot(rx, rz); if (r > S.L / 2 + .6 || r < .9) continue;
+    const dist = a => { const dx = Math.cos(a), dz = -Math.sin(a); return Math.abs(rx * dz - rz * dx); };
+    const now = dist(S.a), soon = dist(S.a + S.w * .24);
+    if (soon < 1.3 && soon <= now + .05) return true;
+  }
+  return false;
+}
+function botInput(P, dt) {
+  const B = P.B, A = P.ai, out = { x: 0, z: 0, jumpP: false, diveP: false, spd: A.spd };
+  if (B.done || B.out) return out;
+  A.sweepCd -= dt;
+  const jumpIf = c => { if (c && B.ground && Math.random() < A.jumpOK) out.jumpP = true; };
+  if (CR.kind === 'surv') return botSurv(P, dt, out);
+  // 道しるべを進める
+  let wp = CR.wps[A.wi];
+  while (wp && B.p.z < wp.z + .35 && !(wp.mover != null && A.onM !== 'done' && !wpPassed(B, wp))) { A.wi++; wp = CR.wps[A.wi]; A.pick = null; A.onM = null; }
+  let tx = 0, tz = CR.finishZ - 6;
+  if (wp) {
+    tz = wp.z - 1;
+    if (wp.lanes) { if (A.pick == null) A.pick = wp.lanes.map((x, i) => [Math.abs(x - B.p.x) + rr(0, 4), i]).sort((a, b) => a[0] - b[0])[0][1]; tx = wp.lanes[A.pick]; }
+    else if (wp.padX) { if (A.pick == null) A.pick = wp.padX.map((x, i) => [Math.abs(x - B.p.x) + rr(0, 3), i]).sort((a, b) => a[0] - b[0])[0][1]; tx = wp.padX[A.pick]; }
+    else tx = A.lane * wp.w / 2;
+    // すき間：ふちでジャンプ
+    if (wp.jump && A.jumped !== A.wi && B.p.z - wp.z < A.jd && B.ground) { A.jumped = A.wi; A.jd = rr(1, 2.1); out.jumpP = true; }
+    // 動く床
+    if (wp.mover != null) return botMover(P, wp, out);
+    // ハンマー：近くに来ていたら待つ
+    if (wp.hammer) for (const H of CR.hazards) { if (H.k !== 'hammer' || Math.abs(H.x - tx) > .5) continue; const dz = B.p.z - H.z; if (dz > .4 && dz < 3.2 && Math.abs(H.hx - tx) < 2.6) { out.x = 0; out.z = 0; return out; } }
+    // 大玉：よける
+    if (wp.balls) for (const b of CR.balls) { const dz = B.p.z - b.m.position.z; if (dz > -1 && dz < 10 && Math.abs(b.m.position.x - B.p.x) < 2.6) { tx = clamp(B.p.x + (B.p.x > b.m.position.x ? 4 : -4), -10, 10); tz = B.p.z - 2; } }
+  }
+  // 回る棒
+  if (sweepThreat(B) && A.sweepCd <= 0) { A.sweepCd = .5; jumpIf(true); }
+  const dx = tx - B.p.x, dz = tz - B.p.z, d = Math.hypot(dx, dz) || 1; out.x = dx / d; out.z = dz / d;
+  // ときどき迷う・ダイブ
+  if (CR.t < A.hes) { out.x = out.z = 0; }
+  if (wp && !wp.mover && Math.random() < .002 && B.ground) out.diveP = true;
+  if (!wp && B.p.z - CR.finishZ < 3 && Math.random() < .03) out.diveP = true;
+  return out;
+}
+function wpPassed(B, wp) { return B.p.z < wp.z - 2.5; }
+function botMover(P, wp, out) {
+  const B = P.B, A = P.ai, r = wp.mover;
+  const row = CR.movers.filter((M, i) => ((i / 2) | 0) === r);
+  let tx, tz, go = false;
+  if (r >= CR.movers.length / 2) { tx = clamp(B.p.x, -9, 9); tz = wp.z - 4; go = true; }
+  else { const T = CR.t + .72, M = row.sort((a, b) => Math.abs(a.xAt(T) - B.p.x) - Math.abs(b.xAt(T) - B.p.x))[0]; go = Math.abs(M.xAt(T) - B.p.x) < 1.1 && Math.abs(M.x - B.p.x) < 3.2; tx = M.xAt(T); tz = M.z; if (go) A.tgtM = M; }
+  if (!go) { // 足場の上で待つ
+    const cur = A.onM && A.onM !== 'done' ? A.onM : null; tx = cur ? cur.x : clamp(B.p.x, -3.5, 3.5); tz = cur ? cur.z : wp.z + 1.1; const dx = tx - B.p.x, dz = tz - B.p.z, d = Math.hypot(dx, dz); if (d > .3) { out.x = dx / d * Math.min(1, d); out.z = dz / d * Math.min(1, d); } return out; }
+  const dx = tx - B.p.x, dz = tz - B.p.z, d = Math.hypot(dx, dz) || 1; out.x = dx / d; out.z = dz / d;
+  if (B.ground && Math.abs(dz) < 4.6 + A.jd * .4 && A.jumped !== A.wi) { A.jumped = A.wi; A.jd = rr(1, 2.1); out.jumpP = true; }
+  if (!B.ground && Math.abs(dz) < 1.5 && r < CR.movers.length / 2) { A.onM = A.tgtM; A.wi++; A.pick = null; }
+  if (!B.ground && Math.abs(dz) < 1.5 && r >= CR.movers.length / 2) { A.onM = 'done'; A.wi++; }
+  return out;
+}
+function botSurv(P, dt, out) {
+  const B = P.B, A = P.ai; A.think -= dt;
+  const feet = B.p.y - PH.R, same = T => Math.abs(T.top - feet) < 1.6;
+  const tileAt = (x, z) => CR.tiles.find(T => !T.gone && same(T) && Math.abs(T.x - x) < 1.3 && Math.abs(T.z - z) < 1.3);
+  const under = tileAt(B.p.x, B.p.z);
+  const need = !A.tile || A.tile.gone || A.tile.fallT || !same(A.tile) || (under === A.tile && A.tile.hp < .6 + A.react * 3);
+  if (need || A.think <= 0) {
+    A.think = rr(.6, 1.4);
+    let best = null, bs = -1e9;
+    for (const T of CR.tiles) { if (T.gone || T.fallT || !same(T) || T.hp < 1) continue; const d = Math.hypot(T.x - B.p.x, T.z - B.p.z); if (d > 8) continue;
+      let s = T.hp * 1.5 - Math.abs(d - 2.6) * .8 - Math.hypot(T.x, T.z) * .05 + rr(0, .8) + (T === A.tile ? 1.5 : 0);
+      for (let k = 1; k < 4; k++) if (!tileAt(lerp(B.p.x, T.x, k / 4), lerp(B.p.z, T.z, k / 4))) s -= 8;
+      for (const Q of SHOW.active) if (Q !== P && !Q.B.out && Math.hypot(Q.B.p.x - T.x, Q.B.p.z - T.z) < 1.6) s -= 2;
+      if (s > bs) { bs = s; best = T; } }
+    if (best) A.tile = best;
+  }
+  if (A.tile) { const dx = A.tile.x - B.p.x, dz = A.tile.z - B.p.z, d = Math.hypot(dx, dz) || 1; if (d > .35) { out.x = dx / d * Math.min(1, d); out.z = dz / d * Math.min(1, d); } if (d > 3.5 && B.ground && !tileAt(B.p.x + dx / d * 1.6, B.p.z + dz / d * 1.6)) out.jumpP = true; }
+  if (sweepThreat(B) && A.sweepCd <= 0) { A.sweepCd = .5; if (B.ground && Math.random() < A.jumpOK) out.jumpP = true; }
+  return out;
+}
+// =========================================================================================
+//  ゲーム：ショー（20人 → レース → レース → さいごのラウンド）、練習、カメラ、表示、音、メニュー
+// =========================================================================================
+const UI = { playing: () => G.scr === 'play' && !G.paused };
+const G = { scr: 'title', paused: false, mode: 'demo', phase: 'intro', t: 0, yaw: 0, pitch: .3, dist: 7.5, msgT: 0, spect: null, resT: 0, endT: 0, bots: 1, pc: 'A' };
+const SHOW = { players: [], active: [], round: 0, rounds: [], quota: 0, qual: [], me: null, over: false };
+const STATS_KEY = 'krp-stats';
+const loadStats = () => { try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { shows: 0, wins: 0, rounds: 0 }; } catch (e) { return { shows: 0, wins: 0, rounds: 0 }; } };
+const saveStats = s => { try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) { /* なし */ } };
+// ---------- 音（その場で作る） ----------
+const AU = {
+  ctx: null, ok: false, beatT: 0, beat: 0, key: 0,
+  init() { if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; } try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    const c = this.ctx; this.master = c.createGain(); this.master.connect(c.destination); this.music = c.createGain(); this.music.connect(this.master); this.setVol();
+    const n = c.sampleRate, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; this.nb = buf; this.ok = true; },
+  setVol() { if (this.master) { this.master.gain.setTargetAtTime(clamp(SET.vol, 0, 1) * HUB.vol, this.ctx.currentTime, .05); this.music.gain.setTargetAtTime(SET.bgm ? .5 : 0, this.ctx.currentTime, .1); } },
+  tone(f, dur, peak, type = 'sine', t0 = 0, f2, dst) { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur); o.connect(g); g.connect(dst || this.master); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + dur); o.start(t); o.stop(t + dur + .05); },
+  noise(dur, f, peak, type = 'lowpass', t0 = 0) { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, s = c.createBufferSource(); s.buffer = this.nb; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; const g = c.createGain(); s.connect(fl); fl.connect(g); g.connect(this.master); g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.start(t); s.stop(t + dur + .05); },
+  jump() { this.tone(300, .16, .07, 'sine', 0, 640); },
+  land(k) { this.noise(.08, 400, .08 + k * .05); },
+  dive() { this.noise(.22, 1800, .08, 'bandpass'); this.tone(500, .18, .04, 'triangle', 0, 260); },
+  bonk() { this.tone(520, .25, .12, 'square', 0, 130); this.noise(.1, 900, .15); },
+  boing() { this.tone(180, .4, .12, 'sine', 0, 760); this.tone(240, .35, .05, 'triangle', .02, 900); },
+  splash() { this.noise(.5, 600, .2); this.tone(200, .4, .06, 'sine', 0, 80); },
+  qual() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, .45, .09, 'triangle', i * .08)); },
+  win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => this.tone(f, .6, .09, 'triangle', i * .12)); this.noise(1.6, 3000, .06, 'highpass', .2); },
+  sad() { [392, 370, 349, 311].forEach((f, i) => this.tone(f, .5, .07, 'sawtooth', i * .3, f * .97)); },
+  beep(hi) { this.tone(hi ? 1046 : 660, .2, .1, 'square'); },
+  click() { this.tone(900, .05, .04, 'triangle'); },
+  // たのしい音楽（4和音のくり返し）
+  update(dt) {
+    if (!this.ok || !SET.bgm) return; this.beatT -= dt; if (this.beatT > 0) return; const bpm = 132, sp = 60 / bpm / 2; this.beatT += sp;
+    const b = this.beat++, bar = (b >> 3) % 4, roots = [0, 7, 9, 5][bar], base = 130.8 * Math.pow(2, this.key / 12), sc = [0, 2, 4, 7, 9, 12, 14, 16];
+    const f = s => base * Math.pow(2, s / 12);
+    if (b % 2 === 0) this.tone(f(roots - 12), sp * 1.6, .06, 'triangle', 0, null, this.music);
+    if (b % 4 === 2) this.noise(.05, 6000, .025, 'highpass');
+    if (b % 8 === 0) this.noise(.09, 160, .1);
+    const r = Math.sin(b * 12.9898 + this.key) * 43758.5453, rn = r - Math.floor(r);
+    if (rn > .35) this.tone(f(roots + sc[(rn * 97 | 0) % sc.length] + 12), sp * .9, .035, 'square', 0, null, this.music);
+  },
+};
+// ---------- 人をつくる ----------
+function makePlayer(i, me) {
+  const look = me ? Object.assign({}, SET.look) : { body: (Math.random() * BODY_COLS.length) | 0, belly: (Math.random() * BELLY_COLS.length) | 0, ear: (Math.random() * EARS.length) | 0, hat: Math.random() < .6 ? (Math.random() * HATS.length) | 0 : 0 };
+  const P = { id: i, me, bot: !me, look, name: me ? MY_NAMES[SET.look.name % MY_NAMES.length] : '', C: makeChar(look), B: newBody(i), ai: me ? null : newBotAI(), out: false, q: false, fin: 0 };
+  scene.add(P.C.root); return P;
+}
+function clearPlayers() { for (const P of SHOW.players) scene.remove(P.C.root); SHOW.players = []; SHOW.active = []; }
+function buildPlayers(n, withMe = true) {
+  clearPlayers(); const names = NAMES.slice().sort(() => Math.random() - .5);
+  for (let i = 0; i < n; i++) { const me = withMe && i === 0, P = makePlayer(i, me); if (!me) P.name = names[i % names.length]; SHOW.players.push(P); }
+  SHOW.me = withMe ? SHOW.players[0] : null;
+}
+// ---------- ショー ----------
+function startShow() {
+  AU.init(); G.mode = 'show'; buildPlayers(20); SHOW.over = false;
+  const races = Math.random() < .5 ? ['A', 'B'] : ['B', 'A'];
+  SHOW.rounds = [{ c: races[0], q: 12 }, { c: races[1], q: 6 }, { c: 'F', q: 1 }]; SHOW.round = 0;
+  const st = loadStats(); st.shows++; saveStats(st);
+  startRound(0);
+}
+function startPractice(id, bots) { AU.init(); G.mode = 'practice'; buildPlayers(bots ? 12 : 1); SHOW.rounds = [{ c: id, q: 99 }]; SHOW.round = 0; startRound(0); }
+function startRound(i) {
+  const R = SHOW.rounds[i], C = COURSE_LIST.find(c => c.id === R.c); C.build(); CR.t = 0;
+  SHOW.quota = R.q; SHOW.qual = []; SHOW.active = SHOW.players.filter(P => !P.out); SHOW.round = i;
+  SHOW.active.sort(() => Math.random() - .5);
+  SHOW.players.forEach(P => { P.C.root.visible = !P.out; P.q = false; P.fin = 0; });
+  SHOW.active.forEach((P, k) => { const B = P.B = newBody(P.id); const s = CR.spawn[k % CR.spawn.length]; B.p.set(s[0], s[1], s[2]); B.face = CR.kind === 'surv' ? Math.atan2(-s[0], -s[2]) : Math.PI; if (P.ai) { P.ai = newBotAI(); } });
+  G.phase = 'intro'; G.t = 0; G.yaw = 0; G.pitch = CR.kind === 'surv' ? .62 : .3; G.dist = CR.kind === 'surv' ? 10 : 7.5; G.spect = null; G.endT = 0;
+  AU.key = [0, 5, 7, 3][i % 4];
+  show('play'); G.paused = false;
+  const goal = G.mode === 'practice' ? '練習：ゴールをめざそう' : CR.kind === 'surv' ? 'さいごの1人になったら優勝！' : `先に ${SHOW.quota} 人がゴールしたら終わり`;
+  msg(CR.name, (G.mode === 'show' ? `ラウンド ${i + 1}／${SHOW.rounds.length}　` : '') + goal, 3.2);
+  $('feed').innerHTML = '';
+}
+function feed(t) { const d = document.createElement('div'); d.textContent = t; const f = $('feed'); f.appendChild(d); while (f.children.length > 5) f.removeChild(f.firstChild); setTimeout(() => d.remove(), 4100); }
+function qualify(P) {
+  P.B.done = true; P.q = true; SHOW.qual.push(P); P.fin = SHOW.qual.length;
+  if (P.me) { msg('勝ち抜け！', SHOW.qual.length + '位でゴール', 2.6, 'big'); AU.qual(); } else feed(P.name + ' が勝ち抜け');
+  if (G.mode === 'show' && SHOW.qual.length >= SHOW.quota) endRound();
+  if (G.mode === 'practice' && P.me) { msg('ゴール！', 'タイム ' + fmtT(CR.t), 3, 'big'); AU.qual(); G.endT = 4; }
+}
+function eliminate(P, why) {
+  if (P.out || P.B.out) return; P.B.out = true; P.C.root.visible = false;
+  if (P.me) { msg('落ちちゃった…', '観戦にきりかえます', 2.5); AU.sad(); } else feed(P.name + ' が脱落' + (why ? '（' + why + '）' : ''));
+}
+function endRound() {
+  if (G.phase === 'end') return; G.phase = 'end'; G.t = 0;
+  const final = CR.kind === 'surv';
+  if (final) { const alive = SHOW.active.filter(P => !P.B.out); alive.forEach(P => (P.q = true)); SHOW.qual = alive; }
+  for (const P of SHOW.active) if (!P.q) P.out = true;
+  const meIn = SHOW.me && !SHOW.me.out;
+  if (final) { const w = SHOW.qual; if (w.length) { msg(w.length === 1 ? w[0].name + ' が優勝！' : '優勝！', '', 3, 'big'); if (meIn) { AU.win(); const st = loadStats(); st.wins++; saveStats(st); } else AU.qual(); } SHOW.over = true; }
+  else if (G.mode === 'show') { msg('しゅうりょう！', meIn ? '勝ち抜け！' : '', 2.4, 'big'); if (SHOW.me && meIn) { const st = loadStats(); st.rounds++; saveStats(st); } }
+  G.resT = 2.8;
+}
+function showResult() {
+  const final = CR.kind === 'surv', meIn = SHOW.me && !SHOW.me.out;
+  $('resT').textContent = final ? (meIn ? '👑 優勝おめでとう！' : '優勝したのは…') : meIn ? 'ラウンド勝ち抜け！' : 'ざんねん、脱落…';
+  const list = SHOW.active.slice().sort((a, b) => (b.q - a.q) || (a.fin || 99) - (b.fin || 99));
+  $('resList').innerHTML = list.map(P => `<div class="${P.me ? 'me' : ''} ${P.out ? 'out' : ''}">${P.q ? (final ? '👑 ' : P.fin ? P.fin + '位 ' : '◎ ') : '× '}${P.name}</div>`).join('');
+  const btns = $('resBtns'); btns.innerHTML = '';
+  const add = (t, cls, f) => { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = t; b.onclick = () => { AU.click(); f(); }; btns.appendChild(b); };
+  if (!SHOW.over && SHOW.round < SHOW.rounds.length - 1) { if (meIn) add('次のラウンドへ', 'main', () => startRound(SHOW.round + 1)); else add('観戦をつづける', 'main', () => startRound(SHOW.round + 1)); }
+  else add('もう一度ショーへ', 'main', startShow);
+  add('タイトルへ', '', toTitle);
+  show('result');
+}
+const fmtT = t => { const m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ':' + (s < 10 ? '0' : '') + s; };
+// ---------- タイトル（スタートの台でみんなが待つ） ----------
+function toTitle() {
+  G.mode = 'demo'; courseA(); CR.t = 0; buildPlayers(9); SHOW.active = SHOW.players.slice();
+  SHOW.active.forEach((P, k) => { const a = k / 9 * TAU; P.B.p.set(Math.cos(a) * 3.2, 1, -8 + Math.sin(a) * 3.2); P.B.face = Math.atan2(-P.B.p.x, -(P.B.p.z + 8)) + Math.PI; });
+  const st = loadStats(); $('tWins').textContent = st.shows ? `ショー ${st.shows}回・優勝 ${st.wins}回` : '';
+  show('title'); G.phase = 'demo'; G.paused = false;
+}
+// ---------- カメラ ----------
+const _ct = V3();
+function camTarget() {
+  if (G.mode === 'demo') return null;
+  const me = SHOW.me; if (me && !me.B.out && !(G.mode === 'show' && me.out)) return me;
+  if (!G.spect || G.spect.B.out || G.spect.B.done) G.spect = SHOW.active.filter(P => !P.B.out && !P.B.done).sort((a, b) => a.B.p.z - b.B.p.z)[0] || SHOW.active.find(P => !P.B.out) || null;
+  return G.spect;
+}
+function updateCam(dt) {
+  if (G.mode === 'demo' || G.scr === 'title' || G.scr === 'charSel' || G.scr === 'practice' || (G.scr === 'settings' || G.scr === 'how') && G.mode === 'demo') {
+    const a = performance.now() / 1000 * .12, me = SHOW.players[0], cs = G.scr === 'charSel';
+    if (cs && me) { _ct.copy(me.B.p); camera.position.set(_ct.x + Math.sin(a * 3) * 2.6, _ct.y + 1.4, _ct.z + Math.cos(a * 3) * 2.6); camera.lookAt(_ct.x, _ct.y + .45, _ct.z); }
+    else { camera.position.set(Math.sin(a) * 14, 6.5, -8 + Math.cos(a) * 14); camera.lookAt(0, 1, -8); }
+    camera.fov = 55; camera.updateProjectionMatrix(); return;
+  }
+  if (UI.playing()) { G.yaw -= IN.look[0] * .0045 * SET.sens; G.pitch = clamp(G.pitch + IN.look[1] * .0035 * SET.sens * (SET.inv ? -1 : 1), -.15, 1.15); }
+  IN.look[0] = IN.look[1] = 0;
+  const T = camTarget(); if (!T) return;
+  _ct.copy(T.B.p); _ct.y += .9;
+  if (G.phase === 'intro' && G.mode === 'show') { const k = smooth(0, 3, G.t); const z0 = CR.kind === 'surv' ? 0 : CR.finishZ; camera.position.set(lerp(0, _ct.x + Math.sin(G.yaw) * 7.5, k), lerp(CR.kind === 'surv' ? 30 : 22, _ct.y + 2.4, k), lerp(z0 + (CR.kind === 'surv' ? 26 : 30), _ct.z + 7.5, k)); camera.lookAt(lerp(0, _ct.x, k), lerp(0, _ct.y, k), lerp(z0, _ct.z, k)); camera.fov = 62; camera.updateProjectionMatrix(); return; }
+  const cp = Math.cos(G.pitch), off = V3(Math.sin(G.yaw) * cp, Math.sin(G.pitch), Math.cos(G.yaw) * cp).multiplyScalar(G.dist);
+  const want = _ct.clone().add(off); want.y = Math.max(want.y, CR.fallY - 2);
+  camera.position.lerp(want, 1 - Math.exp(-12 * dt)); camera.lookAt(_ct); camera.fov = 62; camera.updateProjectionMatrix();
+}
+// ---------- 表示 ----------
+let MSGK = '';
+function msg(t, sub, dur, cls = '') { $('msg').textContent = t; $('msg').className = 'hud ' + cls; $('sub').textContent = sub || ''; $('msg').style.opacity = 1; $('sub').style.opacity = sub ? 1 : 0; G.msgT = dur; }
+function updateHud() {
+  const R = SHOW.rounds[SHOW.round] || {}, act = SHOW.active, alive = act.filter(P => !P.B.out);
+  $('hRound').textContent = (G.mode === 'show' ? `ラウンド ${SHOW.round + 1}　` : '練習　') + CR.name;
+  if (CR.kind === 'surv') $('hCount').innerHTML = `のこり <b>${alive.length}</b> 人`;
+  else $('hCount').innerHTML = G.mode === 'show' ? `勝ち抜け <b>${SHOW.qual.length}</b> / ${SHOW.quota}` : '';
+  const me = SHOW.me;
+  if (me && !me.B.out && CR.kind !== 'surv') { const rank = me.B.done ? me.fin : SHOW.qual.length + 1 + act.filter(P => !P.B.done && !P.B.out && P !== me && P.B.p.z < me.B.p.z).length; $('hPos').innerHTML = rank + '<small>位</small>'; }
+  else if (me && me.B.out) $('hPos').innerHTML = '<small>観戦中</small>'; else $('hPos').textContent = '';
+  $('hTime').textContent = G.phase === 'run' || G.phase === 'end' ? fmtT(CR.t) : '';
+}
+const _hp = V3();
+function drawHud() {
+  const w = hc.width, h = hc.height; hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, w, h); if (G.scr !== 'play') return;
+  hx.setTransform(HUD_DPR, 0, 0, HUD_DPR, 0, 0); const W = w / HUD_DPR, H = h / HUD_DPR;
+  hx.textAlign = 'center'; hx.textBaseline = 'bottom';
+  for (const P of SHOW.active) {
+    if (P.B.out) continue; _hp.copy(P.B.p); _hp.y += 1.15; const d = _hp.distanceTo(camera.position); if (d > (P.me ? 999 : 16)) continue;
+    _hp.project(camera); if (_hp.z > 1) continue; const x = (_hp.x + 1) / 2 * W, y = (1 - _hp.y) / 2 * H;
+    if (P.me) { hx.fillStyle = '#ffd23a'; hx.strokeStyle = 'rgba(80,20,120,.8)'; hx.lineWidth = 2; hx.beginPath(); hx.moveTo(x - 9, y - 16); hx.lineTo(x + 9, y - 16); hx.lineTo(x, y - 4); hx.closePath(); hx.fill(); hx.stroke(); }
+    else { hx.font = `800 ${clamp(15 - d * .4, 10, 13)}px ${FONT}`; hx.lineWidth = 3; hx.strokeStyle = 'rgba(60,20,100,.7)'; hx.strokeText(P.name, x, y); hx.fillStyle = P.q ? '#ffd23a' : '#fff'; hx.fillText(P.name, x, y); }
+  }
+}
+// ---------- 画面 ----------
+function show(id) { document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id === id)); G.scr = id; document.body.classList.toggle('playing', id === 'play'); }
+function pause(on) { if (on) { G.paused = true; show('pause'); if (document.pointerLockElement) document.exitPointerLock(); } else { G.paused = false; show('play'); } }
+function seg(el, labels, get, set) { el.innerHTML = ''; labels.forEach((l, i) => { const b = document.createElement('button'); b.textContent = l; b.onclick = () => { set(i); [...el.children].forEach((c, j) => c.classList.toggle('on', j === get())); AU.click(); }; el.appendChild(b); }); [...el.children].forEach((c, j) => c.classList.toggle('on', j === get())); }
+function rng2(el, get, set) { el.value = get(); el.oninput = () => set(+el.value); }
+function applyBtn() { document.documentElement.style.setProperty('--opa', SET.opa); document.documentElement.style.setProperty('--bs', SET.bsz); }
+let SET_BACK = 'title';
+function openSettings(back) {
+  SET_BACK = back;
+  rng2($('sSens'), () => SET.sens, v => { SET.sens = v; saveSet(); });
+  seg($('sInv'), ['ふつう', '反対'], () => SET.inv, v => { SET.inv = v; saveSet(); });
+  rng2($('sVol'), () => SET.vol, v => { SET.vol = v; saveSet(); AU.setVol(); });
+  seg($('sBgm'), ['なし', 'あり'], () => SET.bgm, v => { SET.bgm = v; saveSet(); AU.setVol(); });
+  seg($('sGfx'), ['自動', '軽い', 'ふつう', 'きれい'], () => SET.gfx + 1, v => { SET.gfx = v - 1; saveSet(); });
+  seg($('sDiff'), ['よわい', 'ふつう', 'つよい'], () => SET.diff, v => { SET.diff = v; saveSet(); });
+  rng2($('sOpa'), () => SET.opa, v => { SET.opa = v; saveSet(); applyBtn(); });
+  rng2($('sBsz'), () => SET.bsz, v => { SET.bsz = v; saveSet(); applyBtn(); });
+  show('settings');
+}
+function remakeMe() { const P = SHOW.players[0]; if (!P) return; scene.remove(P.C.root); P.look = Object.assign({}, SET.look); P.C = makeChar(P.look); scene.add(P.C.root); }
+function openChar() {
+  const cols = (el, list, key) => { el.innerHTML = ''; list.forEach((c, i) => { const b = document.createElement('button'); b.style.background = c; b.onclick = () => { SET.look[key] = i; saveSet(); remakeMe(); [...el.children].forEach((q, j) => q.classList.toggle('on', j === i)); AU.click(); }; el.appendChild(b); }); [...el.children].forEach((q, j) => q.classList.toggle('on', j === SET.look[key])); };
+  cols($('cBody'), BODY_COLS, 'body'); cols($('cBelly'), BELLY_COLS, 'belly');
+  seg($('cEar'), EARS, () => SET.look.ear, v => { SET.look.ear = v; saveSet(); remakeMe(); });
+  seg($('cHat'), HATS, () => SET.look.hat, v => { SET.look.hat = v; saveSet(); remakeMe(); });
+  seg($('cName'), MY_NAMES, () => SET.look.name, v => { SET.look.name = v; saveSet(); });
+  if (G.mode === 'demo') { const P = SHOW.players[0]; P.B.p.set(0, 1, -8); P.B.face = 0; }
+  show('charSel');
+}
+function wireUI() {
+  const on = (id, f) => $(id).addEventListener('click', () => { AU.init(); AU.click(); f(); });
+  on('tPlay', startShow); on('tChar', openChar); on('cBack', () => show('title'));
+  on('tPractice', () => { const el = $('pList'); el.innerHTML = ''; COURSE_LIST.forEach(C => { const b = document.createElement('button'); b.className = 'btn'; b.innerHTML = `${C.name}<small>${C.desc}</small>`; b.onclick = () => { AU.click(); startPractice(C.id, G.bots); }; el.appendChild(b); }); seg($('pBots'), ['なし', 'いっしょに走る'], () => G.bots, v => (G.bots = v)); show('practice'); });
+  on('pBack', () => show('title'));
+  on('tSet', () => openSettings('title')); on('tHow', () => { SET_BACK = 'title'; show('how'); });
+  on('sBack', () => show(SET_BACK)); on('howBack', () => show(SET_BACK));
+  on('paResume', () => pause(false)); on('paSet', () => openSettings('pause')); on('paHow', () => { SET_BACK = 'pause'; show('how'); }); on('paQuit', toTitle);
+  $('bPause').addEventListener('click', () => { if (G.scr === 'play') pause(true); });
+  initTouch(); initMouse(); applyBtn();
+}
+// ---------- 1コマ ----------
+const _f = V3(), _r = V3();
+function myInput() {
+  _f.set(-Math.sin(G.yaw), 0, -Math.cos(G.yaw)); _r.set(Math.cos(G.yaw), 0, -Math.sin(G.yaw));
+  const x = _r.x * IN.mx - _f.x * IN.my, z = _r.z * IN.mx - _f.z * IN.my;
+  const o = { x, z, jumpP: IN.jumpP, diveP: IN.diveP, spd: 1 }; IN.jumpP = false; IN.diveP = false; return o;
+}
+const WORLD = { t: 0, fallY: -6 };
+function gameStep(dt) {
+  CR.t += dt; WORLD.t = CR.t; WORLD.fallY = CR.fallY; WORLD.live = G.phase === 'run' || G.phase === 'end';
+  for (const f of CR.upd) f(CR.t, dt);
+  const frozen = G.phase === 'intro' || G.phase === 'count';
+  for (const P of SHOW.active) {
+    const B = P.B; if (B.out) continue;
+    let inp = { x: 0, z: 0 };
+    if (!frozen && !(B.done && G.mode === 'show')) inp = P.me ? (UI.playing() ? myInput() : { x: 0, z: 0 }) : P.bot && G.mode !== 'demo' ? botInput(P, dt) : { x: 0, z: 0 };
+    if (B.done) { inp = { x: 0, z: 0 }; }
+    stepBody(B, inp, dt, WORLD);
+    for (const e of B.ev.splice(0)) { if (P.me || camTarget() === P) { if (e === 'jump') AU.jump(); else if (e === 'dive') AU.dive(); else if (e === 'bonk') AU.bonk(); else if (e === 'boing') AU.boing(); else if (e === 'land') { AU.land(clamp(B.landV / 15, 0, 1)); landSquash(P.C, clamp(B.landV / 14, 0, 1)); } } else if (e === 'land') landSquash(P.C, clamp(B.landV / 14, 0, 1)); }
+    if (B.fell) { B.fell = false;
+      if (CR.kind === 'surv' && G.mode !== 'demo') { eliminate(P, '落下'); if (P.me) AU.splash(); continue; }
+      let ci = 0; for (let k = 0; k < CR.cpZ.length; k++) if (B.maxZ !== undefined && B.maxZ < CR.cpZ[k] + 1) ci = k;
+      const cp = CR.cps[ci] || { z: -2, y: 1, x: 8 }; B.p.set(rr(-cp.x, cp.x), cp.y + 1.5, cp.z - rr(0, 2)); B.v.set(0, 0, 0); B.tumble = 0; B.dive = 0; B.slide = 0; B.face = Math.PI; if (P.ai) botReset(P.ai), P.ai.wi = Math.max(0, CR.wps.findIndex(w => w.z < cp.z - .5));
+      if (P.me) { AU.splash(); msg('', 'チェックポイントから', 1); }
+    }
+    B.maxZ = Math.min(B.maxZ ?? 0, B.ground ? B.p.z : B.maxZ ?? 0);
+    if (CR.kind === 'race' && !B.done && B.p.z < CR.finishZ && B.p.y > CR.fallY + 3 && G.mode !== 'demo' && (G.phase === 'run' || G.mode === 'practice')) qualify(P);
+  }
+  pushBodies(SHOW.active.map(P => P.B));
+  if (CR.kind === 'surv' && G.mode === 'show' && G.phase === 'run') { const alive = SHOW.active.filter(P => !P.B.out); if (alive.length <= 1 || CR.t > 200) endRound(); }
+  if (G.mode === 'show' && G.phase === 'run' && CR.kind === 'race' && CR.t > 200) endRound();
+}
+function poseAll(dt) {
+  for (const P of SHOW.active) { const B = P.B, C = P.C; if (B.out) continue;
+    C.root.position.set(B.p.x, B.p.y - PH.R, B.p.z); C.root.rotation.y = B.face;
+    poseChar(C, { spd: Math.hypot(B.v.x - B.gV.x, B.v.z - B.gV.z), ground: B.ground, vy: B.v.y, dive: B.dive || B.slide > 0, tumble: B.tumble > 0, cheer: (B.done && B.ground) || G.mode === 'demo' && P.cheerOn, t: CR.t + P.id }, dt); }
+}
+function tick(dt) {
+  readInput();
+  for (const e of IN.ev.splice(0)) if (e === 'pause') { if (G.scr === 'play') pause(true); else if (G.scr === 'pause') pause(false); }
+  if (G.msgT > 0) { G.msgT -= dt; if (G.msgT <= 0) { $('msg').style.opacity = 0; $('sub').style.opacity = 0; } }
+  if (!G.paused) {
+    if (G.mode === 'demo') { CR.t += dt; for (const f of CR.upd) f(CR.t, dt); SHOW.active.forEach((P, k) => { P.cheerOn = Math.sin(CR.t * .7 + k) > .3; P.B.p.y = PH.R; P.B.v.set(0, 0, 0); P.B.ground = true; P.B.gV.set(0, 0, 0); }); }
+    else if (G.scr === 'play' || G.scr === 'result') {
+      G.t += dt;
+      if (G.phase === 'intro' && G.t > (G.mode === 'show' ? 3.2 : .6)) { G.phase = 'count'; G.t = 0; }
+      if (G.phase === 'count') { const n = 3 - Math.floor(G.t); if (n !== G.cnt) { G.cnt = n; if (n > 0) { msg(String(n), '', .9, 'big'); AU.beep(false); } } if (G.t >= 3) { G.phase = 'run'; G.t = 0; CR.t = 0; msg('GO!', '', .9, 'big'); AU.beep(true); } }
+      const n = dt > .025 ? 2 : 1; for (let i = 0; i < n; i++) gameStep(dt / n);
+      if (G.phase === 'end' && G.resT > 0) { G.resT -= dt; if (G.resT <= 0 && G.scr === 'play') showResult(); }
+      if (G.endT > 0) { G.endT -= dt; if (G.endT <= 0 && G.mode === 'practice') startRound(0); }
+    }
+  }
+  poseAll(dt); updateCam(dt);
+  if (SKYX.sun) { const T = camTarget(), p = T ? T.B.p : V3(0, 0, -8); SKYX.sun.target.position.set(p.x, 0, p.z); SKYX.sun.position.set(p.x - 40, 80, p.z + 30); SKYX.sun.target.updateMatrixWorld(); }
+  SKYX.sky.position.copy(camera.position); KTEX.goo.offset.x = (performance.now() / 1000 * .01) % 1; KTEX.goo.offset.y = (performance.now() / 1000 * .017) % 1;
+  for (const b of SKYX.balloons) b.position.y += Math.sin(performance.now() / 1000 + b.userData.ph) * .004;
+  if (G.scr === 'play') updateHud(); drawHud(); AU.update(dt);
+}
+// ---------- はじまり ----------
+let RUN = true, LASTT = 0;
+function frame(t) {
+  if (!RUN) return; requestAnimationFrame(frame);
+  if (FPS_CAP && t - LASTT < 1000 / FPS_CAP - 2) return;
+  const dt = Math.min(.05, Math.max(.001, (t - LASTT) / 1000)); LASTT = t;
+  tick(dt); renderer.render(scene, camera);
+}
+async function boot() {
+  const say = t => { $('loadmsg').textContent = t; };
+  if (HUB.embedded) {
+    const applyHome = S => { if (!S || typeof S !== 'object') return; if (typeof S.land === 'boolean' && S.land !== ROT.on) { ROT.on = S.land; onResize(); } if (typeof S.sound === 'boolean' || typeof S.vol === 'number') { HUB.vol = S.sound === false ? 0 : clamp(typeof S.vol === 'number' ? S.vol : HUB.vol, 0, 1); AU.setVol(); } };
+    try { applyHome(JSON.parse(localStorage.getItem('3dame-settings'))); } catch (e) { /* なし */ } addEventListener('message', e => { if (e.data && e.data.h3dSet) applyHome(e.data.h3dSet); });
+  }
+  try {
+    onResize(); say('ステージを作っています…'); await nextFrame();
+    courseTex(); charGeos(); makeWorld(); wireUI(); toTitle();
+    tick(1 / 60); renderer.compile(scene, camera); renderer.render(scene, camera);
+    $('loading').style.display = 'none'; LASTT = performance.now(); requestAnimationFrame(frame);
+    addEventListener('pointerdown', () => AU.init(), { once: true }); addEventListener('keydown', () => AU.init(), { once: true });
+  } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
+}
+window.__KP = { loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => renderer.render(scene, camera), G, SHOW, CR, COL, IN, SET, startShow, startRound, startPractice, toTitle, show, camera, scene, renderer, endRound };
+boot();
+</script>
+</body></html>
