@@ -1,0 +1,1464 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>摩天楼フライト</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap">
+<style>
+/* 旅客機で摩天楼の街を飛ぶゲーム。画面の文字・ボタンはこのファイルで */
+:root { --ink: #ffffff; --hud: #8dffb0; --amber: #ffc94a; --red: #ff5a5a; --panel: rgba(14, 24, 44, .78); --f: "M PLUS Rounded 1c", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif; --sw: 1vw; --opa: .5; --bs: 1; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #6f8fb4; color: var(--ink); overflow: hidden; font-family: var(--f); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none; }
+#rot { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; overflow: hidden; }
+#c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#hc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+body.playing #hc { display: block; }
+.hud { position: absolute; pointer-events: none; text-shadow: 0 1px 4px rgba(0, 0, 0, .7); display: none; }
+body.playing .hud { display: block; }
+/* 速さ・高さ */
+#hSpd, #hAlt { top: 50%; transform: translateY(-50%); font-weight: 900; text-align: center; min-width: 84px; padding: 6px 10px; border-radius: 12px; background: rgba(0, 20, 10, .32); border: 2px solid rgba(141, 255, 176, .55); color: var(--hud); }
+#hSpd { left: calc(14px + env(safe-area-inset-left, 0px)); } #hAlt { right: calc(14px + env(safe-area-inset-right, 0px)); }
+body.touch #hAlt { right: calc(64px + env(safe-area-inset-right, 0px)); top: calc(84px + env(safe-area-inset-top, 0px)); transform: none; } body.touch #hSpd { top: calc(172px + env(safe-area-inset-top, 0px)); transform: none; min-width: 72px; padding: 4px 8px; } body.touch #hSpd b, body.touch #hAlt b { font-size: 22px; }
+#hSpd b, #hAlt b { display: block; font-size: 26px; line-height: 1.05; } #hSpd small, #hAlt small { font-size: 11px; opacity: .9; } #hSpd i, #hAlt i { display: block; font-style: normal; font-size: 11px; opacity: .85; }
+#hVs { font-size: 11px; }
+/* 下の状態 */
+#hStat { position: absolute; pointer-events: none; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: none; gap: 6px; white-space: nowrap; }
+body.playing #hStat { display: flex; }
+#hStat span { font-size: 12px; font-weight: 900; padding: 3px 9px; border-radius: 9px; background: rgba(0, 0, 0, .38); border: 1px solid rgba(255, 255, 255, .25); }
+#hStat span.on { color: #102010; background: var(--hud); } #hStat span.warn { color: #2a1a00; background: var(--amber); } #hStat span.bad { background: var(--red); }
+#hThrV { color: var(--amber); display: inline-block; min-width: 2em; text-align: right; }
+body.touch #hStat { bottom: auto; top: calc(48px + env(safe-area-inset-top, 0px)); }
+/* コースの情報 */
+#hTop { left: 50%; top: calc(8px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); text-align: center; font-weight: 900; }
+#hTime { font-size: 26px; letter-spacing: .02em; } #hRing { font-size: 13px; opacity: .95; } #hRing b { color: var(--amber); }
+#hWarn { left: 0; right: 0; top: 24%; text-align: center; font-size: min(34px, calc(7 * var(--sw))); font-weight: 900; color: var(--red); letter-spacing: .08em; }
+#hWarn.amber { color: var(--amber); }
+#msg { left: 0; right: 0; top: 30%; text-align: center; font-size: min(44px, calc(8.5 * var(--sw))); font-weight: 900; opacity: 0; transition: opacity .3s; }
+#sub { left: 0; right: 0; top: calc(30% + min(54px, calc(10 * var(--sw)))); text-align: center; font-size: 17px; font-weight: 800; opacity: 0; transition: opacity .3s; }
+#flash { position: absolute; inset: 0; background: #e8eef6; opacity: 0; pointer-events: none; }
+/* タッチ */
+#tArea { position: absolute; inset: 0; display: none; touch-action: none; }
+body.touch.playing #tArea { display: block; }
+#tStick { position: absolute; width: 130px; height: 130px; border-radius: 50%; border: 2px solid rgba(255,255,255,calc(var(--opa) * .9)); background: rgba(10,20,40,calc(var(--opa) * .35)); display: none; pointer-events: none; }
+#tStick.on { display: block; } #tKnob { position: absolute; left: 39px; top: 39px; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,calc(var(--opa) * 1.3)); }
+#tHint { position: absolute; left: calc(26px + env(safe-area-inset-left, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: 120px; height: 120px; border-radius: 50%; border: 2px dashed rgba(255,255,255,calc(var(--opa) * .6)); display: none; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,calc(var(--opa) * 1.4)); text-align: center; pointer-events: none; }
+body.touch.playing #tHint { display: flex; } body.touch.playing #tHint.off { display: none; }
+#tThr { position: absolute; right: calc(10px + env(safe-area-inset-right, 0px)); top: 14%; bottom: 14%; width: calc(46px * var(--bs)); border-radius: 23px; background: rgba(10,20,40,calc(var(--opa) * .7)); border: 2px solid rgba(255,255,255,calc(var(--opa) * 1.1)); display: none; touch-action: none; }
+body.touch.playing #tThr { display: block; }
+#tThrF { position: absolute; left: 4px; right: 4px; bottom: 4px; border-radius: 18px; background: linear-gradient(0deg, rgba(141,255,176,.65), rgba(255,201,74,.8)); }
+#tThr span { position: absolute; left: 0; right: 0; top: -20px; text-align: center; font-size: 11px; font-weight: 900; }
+.tb { position: absolute; display: none; align-items: center; justify-content: center; text-align: center; font: 900 calc(13px * var(--bs)) var(--f); color: #fff; border-radius: 50%; background: rgba(10,20,40,calc(var(--opa) * .8)); border: 2px solid rgba(255,255,255,calc(var(--opa) * 1.2)); touch-action: none; pointer-events: auto; text-shadow: 0 1px 3px #000; width: calc(60px * var(--bs)); height: calc(60px * var(--bs)); line-height: 1.1; }
+.tb.on { background: rgba(141,255,176,.55); } .tb.lit { background: rgba(255,201,74,.6); }
+body.touch.playing .tb { display: flex; }
+#bBrake { right: calc(72px * var(--bs) + 16px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+#bGear { right: calc(140px * var(--bs) + 16px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+#bFlap { right: calc(140px * var(--bs) + 16px + env(safe-area-inset-right, 0px)); bottom: calc(82px * var(--bs) + 14px + env(safe-area-inset-bottom, 0px)); }
+#bCam { right: calc(72px * var(--bs) + 16px + env(safe-area-inset-right, 0px)); bottom: calc(82px * var(--bs) + 14px + env(safe-area-inset-bottom, 0px)); }
+#bPause { width: 44px; height: 44px; border-radius: 12px; left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); display: none; pointer-events: auto; font: 900 16px var(--f); color: #fff; background: rgba(10,20,40,.5); border: 2px solid rgba(255,255,255,.6); position: absolute; }
+body.playing #bPause { display: block; } body.hub #bPause { left: calc(64px + env(safe-area-inset-left, 0px)); }
+/* 画面 */
+.scr { position: absolute; inset: 0; display: none; overflow-y: auto; touch-action: pan-y; padding: calc(20px + env(safe-area-inset-top, 0px)) calc(18px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(18px + env(safe-area-inset-left, 0px)); }
+.scr.on { display: block; }
+.veil { background: linear-gradient(180deg, rgba(10,20,40,.05), rgba(6,12,28,.62)); }
+.box { max-width: 600px; margin: 0 auto; }
+h1 { text-align: center; font-size: min(70px, calc(13 * var(--sw))); font-weight: 900; margin: 7vh 0 0; letter-spacing: .06em; text-shadow: 0 6px 24px rgba(0,10,40,.6); }
+h1 small { display: block; font-size: 14px; font-weight: 800; letter-spacing: .6em; margin-top: 4px; opacity: .9; }
+.lead { text-align: center; font-weight: 800; font-size: 14px; margin: 10px 0 4vh; opacity: .92; text-shadow: 0 2px 8px #000; }
+.menu { display: flex; flex-direction: column; gap: 10px; max-width: 380px; margin: 0 auto; }
+.btn { font: 900 17px var(--f); color: #fff; background: var(--panel); border: 2px solid rgba(255,255,255,.3); border-radius: 16px; padding: 11px 18px; cursor: pointer; text-align: left; backdrop-filter: blur(6px); }
+.btn small { display: block; font-size: 12px; font-weight: 500; opacity: .85; margin-top: 2px; }
+.btn.main { background: linear-gradient(90deg, #2f7de0, #6a52d8); border-color: rgba(255,255,255,.7); }
+.btn:hover { filter: brightness(1.12); }
+.row2 { display: flex; gap: 10px; } .row2 .btn { flex: 1; text-align: center; }
+h2 { font-size: 24px; font-weight: 900; margin: 6px 0 12px; text-shadow: 0 2px 8px #000; }
+.card { background: var(--panel); border: 2px solid rgba(255,255,255,.22); border-radius: 16px; padding: 12px 16px; margin-bottom: 12px; backdrop-filter: blur(6px); }
+.opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; font-weight: 800; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,.1); } .opt:last-child { border-bottom: 0; }
+.seg { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.seg button { font: 800 13px var(--f); color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 10px; padding: 5px 10px; cursor: pointer; }
+.seg button.on { background: var(--amber); color: #3a2a00; border-color: var(--amber); }
+input[type=range] { width: 150px; accent-color: var(--amber); }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; font-weight: 800; } .keys span { font-weight: 500; opacity: .9; }
+.course { display: flex; gap: 12px; align-items: center; }
+.course .num { flex: none; width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; }
+.course .tx { flex: 1; min-width: 0; } .course .tx small { display: block; }
+.course .md { flex: none; font-size: 24px; width: 30px; text-align: center; }
+.course .bt { flex: none; font-size: 12px; font-weight: 800; opacity: .9; min-width: 52px; text-align: right; }
+.medal { display: inline-block; width: 1.1em; height: 1.1em; border-radius: 50%; vertical-align: -.15em; box-shadow: inset 0 -2px 0 rgba(0,0,0,.25); }
+.m3 { background: #ffd23a; } .m2 { background: #d8dee8; } .m1 { background: #d08a4a; } .m0 { background: rgba(255,255,255,.15); }
+#resBox .big { font-size: 46px; font-weight: 900; text-align: center; margin: 6px 0; }
+#resBox .ln { display: flex; justify-content: space-between; font-weight: 800; font-size: 15px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+#loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(180deg, #1c2c4c, #6f8fb4); font-weight: 800; z-index: 9; }
+#loading b { font-size: 44px; font-weight: 900; letter-spacing: .06em; }
+@media (max-height: 460px) { h1 { margin-top: 3vh; } .lead { margin-bottom: 2vh; } #hWarn { top: 20%; } }
+</style></head><body>
+<div id="rot">
+  <canvas id="c"></canvas>
+  <canvas id="hc"></canvas>
+  <div id="tArea"></div><div id="tStick"><i id="tKnob"></i></div><div id="tHint">ここを<br>ドラッグで<br>操縦</div>
+  <div id="tThr"><span>推力</span><div id="tThrF"></div></div>
+  <div class="tb" data-b="brake" id="bBrake">ブレーキ</div><div class="tb" data-b="gear" id="bGear">ギア</div><div class="tb" data-b="flap" id="bFlap">フラップ</div><div class="tb" data-b="cam" id="bCam">カメラ</div>
+  <div id="hSpd" class="hud"><i>速さ</i><b id="hSpdV">0</b><small id="hSpdU">ノット</small></div>
+  <div id="hAlt" class="hud"><i>高さ</i><b id="hAltV">0</b><small>m</small><i id="hVs"></i></div>
+  <div id="hTop" class="hud"><div id="hTime"></div><div id="hRing"></div></div>
+  <div id="hStat"><span id="sThr">推力 <b id="hThrV">0</b>%</span><span id="sGear">ギア</span><span id="sFlap">フラップ</span><span id="sBrk">ブレーキ</span><span id="sAp" style="display:none">自動操縦</span></div>
+  <div id="hWarn" class="hud"></div><div id="msg" class="hud"></div><div id="sub" class="hud"></div>
+  <div id="flash"></div>
+  <button id="bPause">II</button>
+
+  <div id="title" class="scr veil"><div class="box">
+    <h1>摩天楼フライト<small>SKYLINE FLIGHT</small></h1>
+    <div class="lead">旅客機で、高いビルがならぶ島の上を飛ぼう</div>
+    <div class="menu">
+      <button class="btn main" id="tCourse">コースにちょうせん<small>光るリングをくぐって飛ぶ・6コース</small></button>
+      <button class="btn" id="tFree">じゆうに飛ぶ<small>滑走路から離陸、または空からスタート</small></button>
+      <button class="btn" id="tSet">設定</button>
+      <button class="btn" id="tHow">あそびかた</button>
+    </div>
+  </div></div>
+  <div id="courseSel" class="scr veil"><div class="box">
+    <h2 style="margin-top:2vh">コースを選ぶ</h2>
+    <div class="menu" id="courseList" style="max-width:600px"></div>
+    <div class="menu" style="margin-top:12px"><button class="btn" id="cBack">もどる</button></div>
+  </div></div>
+  <div id="freeSel" class="scr veil"><div class="box">
+    <h2 style="margin-top:2vh">じゆうに飛ぶ</h2>
+    <div class="card">
+      <div class="opt">スタート<div class="seg" id="fStart"></div></div>
+      <div class="opt">時間<div class="seg" id="fTime"></div></div>
+    </div>
+    <div class="menu"><button class="btn main" id="fGo">出発</button><button class="btn" id="fBack">もどる</button></div>
+  </div></div>
+  <div id="pause" class="scr veil"><div class="box">
+    <h2 style="margin-top:8vh;text-align:center">一時停止</h2>
+    <div class="menu"><button class="btn main" id="pResume">つづける</button><button class="btn" id="pRetry">はじめからやりなおす</button><button class="btn" id="pSet">設定</button><button class="btn" id="pHow">あそびかた</button><button class="btn" id="pTitle">タイトルへ</button></div>
+  </div></div>
+  <div id="result" class="scr veil"><div class="box">
+    <h2 style="margin-top:4vh;text-align:center" id="resTtl">ゴール！</h2>
+    <div class="card" id="resBox"></div>
+    <div class="menu"><button class="btn main" id="rNext">次のコースへ</button><div class="row2"><button class="btn" id="rRetry">もう一度</button><button class="btn" id="rList">コース一覧</button></div><button class="btn" id="rFree">このまま飛びつづける</button></div>
+  </div></div>
+  <div id="settings" class="scr veil"><div class="box"><h2>設定</h2><div class="card">
+    <div class="opt">操縦<div class="seg" id="sCtl"></div></div>
+    <div class="opt">上下の向き<div class="seg" id="sInv"></div></div>
+    <div class="opt">操縦の効き<input type="range" id="sSens" min=".5" max="1.6" step=".05"></div>
+    <div class="opt">視野の広さ<input type="range" id="sFov" min="50" max="85" step="1"></div>
+    <div class="opt">速さの単位<div class="seg" id="sUnit"></div></div>
+    <div class="opt">音量<input type="range" id="sVol" min="0" max="1" step=".05"></div>
+    <div class="opt">画質（次の起動から）<div class="seg" id="sGfx"></div></div>
+    <div class="opt">ボタンのこさ（スマホ）<input type="range" id="sOpa" min=".2" max="1" step=".05"></div>
+    <div class="opt">ボタンの大きさ（スマホ）<input type="range" id="sBsz" min=".8" max="1.4" step=".05"></div>
+  </div><div class="menu"><button class="btn main" id="sBack">もどる</button></div></div></div>
+  <div id="how" class="scr veil"><div class="box"><h2>あそびかた</h2>
+    <div class="card"><div class="keys">
+      <b>上昇・下降</b><span>W／S・↑／↓・左スティック上下・画面の左をドラッグ</span>
+      <b>かたむけて曲がる</b><span>A／D・←／→（地上ではハンドル）</span>
+      <b>方向だ</b><span>Q／E・LB／RB（なくても飛べます）</span>
+      <b>推力（スピード）</b><span>R／F・Shift／Ctrl・RT／LT・スマホは右はしのバーを上下</span>
+      <b>ギア（車輪）</b><span>G・(A)・ギアボタン</span>
+      <b>フラップ</b><span>V・(X)・フラップボタン（ゆっくり飛べる）</span>
+      <b>ブレーキ</b><span>B・スペース・(B)（地上で止まる）</span>
+      <b>カメラ</b><span>C・(Y)・カメラボタン（うしろ／遠く／機首）</span>
+      <b>一時停止</b><span>Esc・P</span>
+    </div></div>
+    <div class="card" style="font-size:14px;line-height:1.8">
+      <b>離陸</b>：推力を100%にして滑走路を走り、速さが140ノットくらいになったら上昇（W・スティック上）。上がったらギアをしまおう。<br>
+      <b>着陸</b>：ギアを出し、フラップを下げ、推力をしぼってゆっくり滑走路へ。高さ0で落ちる速さが小さいと成功。止まるまでブレーキ。滑走路の左の4つのランプが「白2・赤2」なら、ちょうどよい角度です。<br>
+      <b>コース</b>：光るリングを順番にくぐります。黄色が次のリング。ビルや地面にふれるとシミュレーターがリセットされ、最後にくぐったリングからやりなおし（+5秒）。<br>
+      「かんたん」操縦では、スティックをはなすと水平にもどり、かたむけるだけで曲がれます。「リアル」は宙返りもできます。
+    </div>
+    <div class="menu"><button class="btn main" id="howBack">もどる</button></div></div></div>
+  <div id="loading"><b>摩天楼フライト</b><div id="loadmsg">読みこみ中…</div></div>
+</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+// =========================================================================================
+//  摩天楼フライト — 旅客機で、高いビルがならぶ島の上を飛ぶ（オリジナル作品）
+//  街・飛行機・音はすべてその場で作る。ビルにふれてもシミュレーターがリセットされるだけ
+// =========================================================================================
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v), lerp = (a, b, t) => a + (b - a) * t, damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
+const TAU = Math.PI * 2, D2R = Math.PI / 180, smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+if (IS_TOUCH) document.body.classList.add('touch');
+const FONT = '"M PLUS Rounded 1c", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif';
+// ---------- 設定（この端末に保存） ----------
+const SET = { ctl: 0, inv: 0, sens: 1, fov: 62, unit: 0, vol: .8, gfx: -1, opa: .5, bsz: 1 };
+try { Object.assign(SET, JSON.parse(localStorage.getItem('skyf-settings')) || {}); } catch (e) { /* はじめて */ }
+const saveSet = () => { try { localStorage.setItem('skyf-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
+const GFX = () => (SET.gfx >= 0 ? SET.gfx : IS_TOUCH ? 1 : 2);
+const HUB = { embedded: window.parent !== window, vol: 1 };
+if (HUB.embedded) document.body.classList.add('hub');
+const ROT = { on: false };
+const VW = () => (ROT.on ? innerHeight : innerWidth), VH = () => (ROT.on ? innerWidth : innerHeight);
+const toStage = (cx, cy) => (ROT.on ? { x: cy, y: innerWidth - cx } : { x: cx, y: cy });
+let FPS_CAP = 0;
+try { const f = +localStorage.getItem('3dame-fps'); if (f === 30 || f === 60) FPS_CAP = f; } catch (e) { /* なし */ }
+// ---------- 描く ----------
+const canvas = $('c'), hc = $('hc'), hx = hc.getContext('2d');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = GFX() >= 2; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(SET.fov, 16 / 9, 2, 26000); scene.add(camera);
+scene.fog = new THREE.Fog(0xb8cde0, 1500, 9000);
+let HUD_DPR = 1;
+function onResize() {
+  const r = $('rot'); r.style.width = VW() + 'px'; r.style.height = VH() + 'px'; r.style.transform = ROT.on ? 'rotate(90deg) translateY(-100%)' : 'none';
+  document.documentElement.style.setProperty('--sw', VW() / 100 + 'px');
+  const g = GFX(), pr = Math.min(devicePixelRatio || 1, g >= 2 ? 2 : g === 1 ? 1.4 : 1);
+  renderer.setPixelRatio(pr); renderer.setSize(VW(), VH(), false); camera.aspect = VW() / VH(); camera.updateProjectionMatrix();
+  HUD_DPR = Math.min(devicePixelRatio || 1, 2); hc.width = Math.round(VW() * HUD_DPR); hc.height = Math.round(VH() * HUD_DPR);
+}
+addEventListener('resize', () => setTimeout(onResize, 30));
+function cvs(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; }
+function ctex(c, o = {}) { const t = new THREE.CanvasTexture(c); t.colorSpace = o.lin ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.anisotropy = o.aniso || 8; if (o.rep !== false) t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
+function noise2(seed) {
+  const r = rng(seed), P = new Float32Array(256 * 256); for (let i = 0; i < P.length; i++) P[i] = r();
+  const at = (x, y) => P[((y & 255) << 8) | (x & 255)];
+  return (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy); return lerp(lerp(at(xi, yi), at(xi + 1, yi), u), lerp(at(xi, yi + 1), at(xi + 1, yi + 1), u), v); };
+}
+// ---------- 入力 ----------
+// pitch：+ で機首上げ、roll：+ で右にかたむく、yaw：+ で右、thr：推力を上げ下げ（またはスマホのバーの値）
+const KEYS = { up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], yawL: ['KeyQ'], yawR: ['KeyE'],
+  thrUp: ['KeyR', 'ShiftLeft', 'ShiftRight', 'PageUp'], thrDn: ['KeyF', 'ControlLeft', 'ControlRight', 'PageDown'], brake: ['KeyB', 'Space'],
+  gear: ['KeyG'], flap: ['KeyV'], cam: ['KeyC'], pause: ['Escape', 'KeyP'] };
+const IN = { pitch: 0, roll: 0, yaw: 0, thrRate: 0, thrAbs: null, brake: false, kb: new Set(), ev: [], stick: null, pad: null, padPrev: [], lastDev: IS_TOUCH ? 'touch' : 'kb', touchBrake: false, ap: null };
+const keyAct = c => { for (const k in KEYS) if (KEYS[k].includes(c)) return k; return null; };
+addEventListener('keydown', e => {
+  if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  const a = keyAct(e.code); if (a) e.preventDefault(); IN.lastDev = 'kb';
+  if (e.repeat) return; IN.kb.add(e.code);
+  if (a && ['gear', 'flap', 'cam', 'pause'].includes(a)) IN.ev.push(a);
+});
+addEventListener('keyup', e => IN.kb.delete(e.code));
+addEventListener('blur', () => IN.kb.clear());
+// タッチ：左でスティック、右はしのバーで推力、ボタン
+function initTouch() {
+  const st = { id: null, ox: 0, oy: 0 }, area = $('tArea'), pad = $('tStick'), knob = $('tKnob');
+  area.addEventListener('pointerdown', e => {
+    const p = toStage(e.clientX, e.clientY); IN.lastDev = 'touch';
+    if (st.id === null) { st.id = e.pointerId; st.ox = p.x; st.oy = p.y; pad.style.left = (p.x - 65) + 'px'; pad.style.top = (p.y - 65) + 'px'; pad.classList.add('on'); knob.style.transform = 'translate(0,0)'; IN.stick = [0, 0]; $('tHint').classList.add('off'); }
+    try { area.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } e.preventDefault();
+  });
+  area.addEventListener('pointermove', e => {
+    if (e.pointerId !== st.id) return; const p = toStage(e.clientX, e.clientY);
+    let dx = p.x - st.ox, dy = p.y - st.oy; const l = Math.hypot(dx, dy), R = 56; if (l > R) { dx *= R / l; dy *= R / l; } IN.stick = [dx / R, dy / R]; knob.style.transform = `translate(${dx}px,${dy}px)`;
+  });
+  const end = e => { if (e.pointerId === st.id) { st.id = null; IN.stick = null; pad.classList.remove('on'); } };
+  area.addEventListener('pointerup', end); area.addEventListener('pointercancel', end);
+  // 推力のバー
+  const thr = $('tThr'); let tid = null;
+  const setThr = e => { const r = thr.getBoundingClientRect(), p = toStage(e.clientX, e.clientY), q = toStage(r.left, r.top), q2 = toStage(r.right, r.bottom), top = Math.min(q.y, q2.y), bot = Math.max(q.y, q2.y); IN.thrAbs = clamp(1 - (p.y - top - 8) / (bot - top - 16), 0, 1); };
+  thr.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); tid = e.pointerId; setThr(e); try { thr.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } IN.lastDev = 'touch'; });
+  thr.addEventListener('pointermove', e => { if (e.pointerId === tid) setThr(e); });
+  const tend = e => { if (e.pointerId === tid) tid = null; }; thr.addEventListener('pointerup', tend); thr.addEventListener('pointercancel', tend);
+  document.querySelectorAll('.tb[data-b]').forEach(el => {
+    const b = el.dataset.b;
+    el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); el.classList.add('on'); IN.lastDev = 'touch'; if (b === 'brake') IN.touchBrake = true; else IN.ev.push(b); });
+    const up = () => { el.classList.remove('on'); if (b === 'brake') IN.touchBrake = false; };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  });
+}
+function readInput() {
+  const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(g => g && g.connected) : null; IN.pad = gp;
+  const k = c => KEYS[c].some(code => IN.kb.has(code));
+  let x = 0, y = 0, yaw = 0, tr = 0;
+  if (k('left')) x -= 1; if (k('right')) x += 1; if (k('up')) y += 1; if (k('down')) y -= 1;
+  if (k('yawL')) yaw -= 1; if (k('yawR')) yaw += 1; if (k('thrUp')) tr += 1; if (k('thrDn')) tr -= 1;
+  if (IN.stick) { x = IN.stick[0]; y = -IN.stick[1]; }
+  let brake = k('brake') || IN.touchBrake;
+  if (gp) {
+    const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0; if (Math.abs(ax) > .12 || Math.abs(ay) > .12) { x = Math.abs(ax) > .12 ? ax : 0; y = Math.abs(ay) > .12 ? -ay : 0; IN.lastDev = 'pad'; }
+    const b = i => gp.buttons[i] && gp.buttons[i].pressed, bv = i => (gp.buttons[i] ? gp.buttons[i].value : 0);
+    tr += bv(7) - bv(6); if (b(4)) yaw -= 1; if (b(5)) yaw += 1; brake = brake || b(1);
+    if (b(0) && !IN.padPrev[0]) IN.ev.push('gear'); if (b(2) && !IN.padPrev[2]) IN.ev.push('flap'); if (b(3) && !IN.padPrev[3]) IN.ev.push('cam'); if (b(9) && !IN.padPrev[9]) IN.ev.push('pause');
+    gp.buttons.forEach((bb, i) => (IN.padPrev[i] = bb.pressed));
+  }
+  // スティックはまん中ほど細かく
+  const cur = v => Math.sign(v) * Math.pow(Math.abs(v), 1.35);
+  IN.roll = clamp(cur(x), -1, 1); IN.pitch = clamp(cur(y), -1, 1) * (SET.inv ? -1 : 1); IN.yaw = clamp(yaw, -1, 1); IN.thrRate = clamp(tr, -1, 1); IN.brake = brake;
+}
+// =========================================================================================
+//  街のつくり（数字）とコース。x＝東、z＝南、y＝上（m）。北は -z
+// =========================================================================================
+const AV_X = [-780, -520, -260, 0, 260, 520, 780], AV_W = [50, 50, 50, 96, 50, 50, 50];   // 南北の大通り（まん中は並木のある広い大通り）
+const ST_STEP = 80, ST_W = 22, ST_WM = 44;   // 東西の通り（10本ごとに広い通り）
+const ISL = { zN: -3700, zTip: 3750, hw: 920, gy: 3 };   // 島
+const PARK = { x0: -495, x1: 495, z0: -3120, z1: -1320 };   // 中央公園
+const RIVER_E = 1520, RIVER_W = -2200;   // 東の川の向こう岸、西の川の向こう岸
+const AIRPORT = { x: 2300, z0: -1500, z1: 1500, w: 60, gy: 4, area: { x0: 1900, x1: 3250, z0: -1950, z1: 2700 } };   // 滑走路は南北（北向きに着陸）
+const TDZ = 1200;   // 着地のめやす（滑走路の南のはしから 300m）
+function islandHW(z) {   // 島の東西の半分のはば
+  if (z < ISL.zN || z > ISL.zTip) return 0;
+  let w = ISL.hw + 16 * Math.sin(z * .0021) + 9 * Math.sin(z * .0057 + 1);
+  if (z > 1700) w *= Math.sqrt(Math.max(0, 1 - ((z - 1700) / (ISL.zTip - 1700)) ** 2));
+  return w;
+}
+const eastShore = z => RIVER_E + 22 * Math.sin(z * .0017 + 2) + 10 * Math.sin(z * .0049);
+const westShore = z => RIVER_W + 30 * Math.sin(z * .0013) + 12 * Math.sin(z * .0041 + 2);
+const stW = k => (k % 10 === 0 ? ST_WM : ST_W);
+// 橋（つり橋）：z の位置、デッキの高さ、塔の高さ
+const BRIDGES = [
+  { z: 2400, side: 'E', deck: 45, tower: 118 }, { z: 1600, side: 'E', deck: 45, tower: 112 }, { z: -2400, side: 'E', deck: 45, tower: 115 },
+  { z: -800, side: 'W', deck: 60, tower: 175 },
+];
+// 目印になる高いビル（段で細くなる）。t：[はばx, はばz, 上の高さ]、st：見た目、mast：アンテナのてっぺん
+const LANDMARKS = [
+  { x: 130, z: -570, st: 1, col: [.86, .84, .8], t: [[60, 58, 90], [46, 44, 250], [36, 34, 330], [28, 26, 372], [18, 18, 392], [11, 11, 404]], mast: 443 },
+  { x: -390, z: -330, st: 1, col: [.9, .82, .7], t: [[58, 56, 110], [44, 44, 230], [34, 34, 280], [26, 26, 300], [16, 16, 312]], mast: 330 },
+  { x: 850, z: -500, st: 0, col: [.8, .95, .9], t: [[26, 90, 155]] },
+  { x: 390, z: -1250, st: 2, col: [1, 1, 1], t: [[24, 24, 425], [18, 18, 440]] },
+  { x: 400, z: -650, st: 0, col: [.9, .95, 1], t: [[24, 24, 400], [16, 16, 410]] },
+  { x: 380, z: -50, st: 1, col: [.95, .9, .85], t: [[26, 26, 380], [20, 20, 450], [12, 12, 470]] },
+  { x: 395, z: 550, st: 2, col: [1, .95, .9], t: [[24, 24, 380]], mast: 400 },
+  { x: 385, z: 1150, st: 0, col: [.85, .9, 1], t: [[24, 24, 400], [16, 16, 420]] },
+  { x: 150, z: 3050, st: 0, col: [.85, .92, 1], t: [[70, 70, 180], [56, 56, 330], [42, 42, 380], [26, 26, 395]], mast: 430 },
+  { x: -300, z: 2750, st: 2, col: [1, 1, 1], t: [[50, 50, 240], [40, 40, 300]] },
+  { x: -180, z: 2280, st: 3, col: [1, 1, 1], t: [[44, 60, 210]] },
+];
+// コース：リング [x, y, z, 半径]。start：位置・向き（0＝北、π＝南）・速さ・推力・ギア・フラップ・地上か。land：最後に着陸
+const tdzY = z => AIRPORT.gy + 15 + (z - AIRPORT.z1) * Math.tan(3 * D2R);   // 3°の進入の高さ
+const COURSES = [
+  { id: 'c1', name: 'はじめての離陸', desc: '滑走路から離陸して、島をぐるっと一周', tod: 0, start: { p: [AIRPORT.x, 0, 1380], hdg: 0, v: 0, thr: 0, gear: 1, flap: 1, ground: true },
+    rings: [[2300, 70, -300, 46], [2300, 160, -1600, 46], [1900, 240, -2600, 50], [1215, 260, -3050, 50], [0, 280, -2700, 50], [-1300, 300, -2000, 50], [-1520, 300, -200, 50], [-1450, 280, 1800, 50], [-300, 260, 4300, 50], [1300, 240, 3600, 50], [2300, 200, 2700, 50], [2300, 130, 1500, 46]] },
+  { id: 'c2', name: '大通り 低空飛行', desc: '並木の大通りを、ビルの谷間すれすれに', tod: 0, start: { p: [0, 290, -3650], hdg: Math.PI, v: 80, thr: .55, gear: 0, flap: 1 },
+    rings: [[0, 210, -3050, 46], [0, 130, -2450, 42], [0, 75, -1750, 36], [0, 52, -1150, 26], [0, 50, -700, 26], [0, 55, -250, 26], [0, 58, 200, 26], [0, 66, 700, 30], [0, 62, 1500, 30], [0, 56, 2300, 26], [0, 56, 2900, 26], [0, 70, 3500, 30], [0, 130, 4250, 46]] },
+  { id: 'c3', name: '摩天楼スラローム', desc: '5本の高い塔を、右・左とぬって飛ぶ（夕方）', tod: 1, start: { p: [390, 270, -2250], hdg: Math.PI, v: 82, thr: .55, gear: 0, flap: 0 },
+    rings: [[390, 255, -1800, 42], [470, 250, -1250, 32], [320, 250, -650, 32], [460, 250, -50, 32], [315, 250, 550, 32], [465, 250, 1150, 32], [390, 270, 1750, 42]] },
+  { id: 'c4', name: '橋くぐり', desc: '東の川の3つの橋と、西の大きな橋の下をくぐる', tod: 0, start: { p: [1200, 130, 4250], hdg: 0, v: 78, thr: .5, gear: 0, flap: 1 },
+    rings: [[1200, 80, 3300, 40], [1195, 21, 2400, 14], [1215, 32, 2000, 30], [1220, 21, 1600, 14], [1225, 60, 400, 40], [1225, 60, -1000, 40], [1220, 21, -2400, 14], [800, 160, -3550, 45], [-600, 160, -3650, 45], [-1520, 120, -2650, 45], [-1560, 60, -1550, 40], [-1560, 28, -800, 18], [-1540, 80, 300, 40], [-1460, 120, 1500, 45]] },
+  { id: 'c5', name: '夜景遊覧と着陸', desc: '夜の摩天楼の上をめぐって、空港に着陸', tod: 2, land: true, start: { p: [-1500, 420, 4000], hdg: 0, v: 82, thr: .5, gear: 0, flap: 0 },
+    rings: [[-1500, 410, 2500, 50], [-1300, 450, 800, 50], [-700, 500, -400, 50], [300, 515, -1700, 50], [1300, 440, -2300, 50], [2500, 400, -2400, 50], [3300, 360, -1600, 50], [3400, 330, 400, 50], [3250, 280, 2600, 50], [2750, 185, 4050, 46], [2300, tdzY(3300), 3300, 36], [2300, tdzY(2400), 2400, 28], [2300, tdzY(1800), 1800, 22]] },
+  { id: 'c6', name: '着陸チャレンジ', desc: 'まっすぐ進入して、滑走路にやさしく着陸（夕方）', tod: 1, land: true, score: true, start: { p: [2300, tdzY(5500), 5500], hdg: 0, v: 84, thr: .42, gear: 0, flap: 0 },
+    rings: [[2300, tdzY(4200), 4200, 44], [2300, tdzY(3200), 3200, 38], [2300, tdzY(2300), 2300, 30]] },
+];
+// =========================================================================================
+//  街：碁盤の目の島（南北の大通り・東西の通り）、高いビル、中央公園、東と西の川、つり橋、対岸の街、空港
+//  ビルは形ごとに InstancedMesh。窓の模様は世界の位置から（窓の大きさがそろう）。夜は窓が光る
+// =========================================================================================
+const CITY = { U: { uNight: { value: 0 }, uCrown: { value: 0 } }, boxes: [], grid: new Map(), cables: [], mats: {}, lights: {}, cars: null, grp: new THREE.Group(), papi: [], rabbit: [], beacons: null, wins: [] };
+const CELL = 50;
+const gkey = (ix, iz) => (ix + 1024) * 4096 + (iz + 1024);
+function addBox(x0, x1, y0, y1, z0, z1, kind = 1) {   // ぶつかる箱
+  const i = CITY.boxes.length; CITY.boxes.push([x0, x1, y0, y1, z0, z1, kind]);
+  for (let ix = Math.floor(x0 / CELL); ix <= Math.floor(x1 / CELL); ix++) for (let iz = Math.floor(z0 / CELL); iz <= Math.floor(z1 / CELL); iz++) { const k = gkey(ix, iz); let L = CITY.grid.get(k); if (!L) CITY.grid.set(k, (L = [])); L.push(i); }
+}
+// 地面の高さ（水は 0）
+function groundAt(x, z) {
+  if (z >= ISL.zN && z <= ISL.zTip) { const w = islandHW(z); if (Math.abs(x) <= w) return ISL.gy; }
+  if (x <= westShore(z)) return 45;
+  if (x >= eastShore(z) && z <= 2700) return AIRPORT.gy;
+  if (z < -3900 && x > westShore(z) && x < eastShore(z)) return AIRPORT.gy;
+  if (Math.hypot(x + 700, z - 5200) < 120) return 6;
+  return 0;
+}
+const onRunway = (x, z) => Math.abs(x - AIRPORT.x) < AIRPORT.w / 2 + 4 && z > AIRPORT.z0 - 30 && z < AIRPORT.z1 + 30;
+const onPaved = (x, z) => onRunway(x, z) || (x > AIRPORT.x + 30 && x < 2620 && z > AIRPORT.z0 - 60 && z < AIRPORT.z1 + 60);   // 誘導路・エプロン
+// 点がなにかにふれているか：null／'ground'／'water'／'building'／'bridge'
+function hitAt(x, y, z) {
+  const g = groundAt(x, z); if (y < g) return g <= .01 ? 'water' : 'ground';
+  const L = CITY.grid.get(gkey(Math.floor(x / CELL), Math.floor(z / CELL)));
+  if (L) for (const i of L) { const b = CITY.boxes[i]; if (x >= b[0] && x <= b[1] && y >= b[2] && y <= b[3] && z >= b[4] && z <= b[5]) return b[6] === 2 ? 'bridge' : 'building'; }
+  for (const C of CITY.cables) { if (Math.abs(z - C.z) > 4 || x < C.x0 - 5 || x > C.x1 + 5) continue; const P = C.pts; for (let i = 0; i < P.length - 1; i++) { const a = P[i], b = P[i + 1]; if (x < Math.min(a[0], b[0]) - 3 || x > Math.max(a[0], b[0]) + 3) continue; const t = clamp((x - a[0]) / ((b[0] - a[0]) || 1), 0, 1), cy = lerp(a[1], b[1], t); if (Math.abs(y - cy) < 2.2) return 'bridge'; } }
+  return null;
+}
+// その場所でいちばん高い所（屋上・地面）
+function topAt(x, z) {
+  let h = groundAt(x, z); const L = CITY.grid.get(gkey(Math.floor(x / CELL), Math.floor(z / CELL)));
+  if (L) for (const i of L) { const b = CITY.boxes[i]; if (x >= b[0] && x <= b[1] && z >= b[4] && z <= b[5] && b[3] > h) h = b[3]; }
+  return h;
+}
+// ---------- テクスチャ ----------
+const TEX = {};
+function facadeTex(style, seed) {
+  const r = rng(seed), N = 256, C = 32;
+  const [cm, gm] = cvs(N, N), [ce, ge] = cvs(N, N), [co, go] = cvs(N, N);
+  const orm = (x, y, w, h, rough, metal) => { go.fillStyle = `rgb(255,${rough},${metal})`; go.fillRect(x, y, w, h); };
+  ge.fillStyle = '#000'; ge.fillRect(0, 0, N, N);
+  const lit = (x, y, w, h, p, warm) => { if (r() > p) { ge.fillStyle = `rgb(${8 + r() * 10 | 0},${8 + r() * 10 | 0},${10 + r() * 12 | 0})`; ge.fillRect(x, y, w, h); return; } const k = .55 + r() * .45, wc = r() < warm; ge.fillStyle = wc ? `rgb(${255 * k | 0},${200 * k | 0},${120 * k | 0})` : `rgb(${215 * k | 0},${228 * k | 0},${255 * k | 0})`; ge.fillRect(x, y, w, h); if (r() < .3) { ge.fillStyle = 'rgba(0,0,0,.6)'; ge.fillRect(x, y, w * (.3 + r() * .5), h); } };
+  if (style === 0) {   // ガラスのカーテンウォール
+    for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) { const v = 150 + r() * 30 | 0; gm.fillStyle = `rgb(${v * .55 | 0},${v * .72 | 0},${v * .86 | 0})`; gm.fillRect(i * C, j * C, C, C); }
+    orm(0, 0, N, N, 34, 210);
+    for (let j = 0; j < 8; j++) { gm.fillStyle = '#3e4c5a'; gm.fillRect(0, j * C + 26, N, 6); orm(0, j * C + 26, N, 6, 120, 140); }
+    for (let i = 0; i < 16; i++) { gm.fillStyle = '#a8b4c0'; gm.fillRect(i * 16, 0, 2, N); orm(i * 16, 0, 2, N, 80, 230); }
+    for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) lit(i * C + 2, j * C + 2, C - 3, 23, .42, .55);
+  } else if (style === 1) {   // 石・レンガと四角い窓
+    gm.fillStyle = '#e2dccf'; gm.fillRect(0, 0, N, N); orm(0, 0, N, N, 235, 0);
+    for (let i = 0; i < 2600; i++) { const v = 200 + r() * 40 | 0; gm.fillStyle = `rgba(${v},${v - 6},${v - 14},.5)`; gm.fillRect(r() * N | 0, r() * N | 0, 2, 1); }
+    for (let j = 0; j < 8; j++) { gm.fillStyle = 'rgba(90,80,70,.35)'; gm.fillRect(0, j * C + 29, N, 2); }
+    for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) { const x = i * C + 9, y = j * C + 6; gm.fillStyle = '#f2eee6'; gm.fillRect(x - 2, y - 2, 18, 22); gm.fillStyle = '#28303a'; gm.fillRect(x, y, 14, 18); gm.fillStyle = '#4a5664'; gm.fillRect(x, y + 8, 14, 1); orm(x, y, 14, 18, 50, 110); lit(x, y, 14, 18, .5, .85); }
+  } else if (style === 2) {   // 黒いガラスとブロンズのたてのひれ
+    gm.fillStyle = '#1d2228'; gm.fillRect(0, 0, N, N); orm(0, 0, N, N, 26, 230);
+    for (let j = 0; j < 8; j++) { gm.fillStyle = '#2c3036'; gm.fillRect(0, j * C + 28, N, 4); }
+    for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) lit(i * C + 1, j * C + 2, C - 2, 25, .36, .3);
+    for (let i = 0; i < 32; i++) { gm.fillStyle = '#7a6448'; gm.fillRect(i * 8, 0, 2, N); orm(i * 8, 0, 2, N, 90, 200); ge.fillStyle = '#000'; ge.fillRect(i * 8, 0, 2, N); }
+  } else {   // 白いコンクリートと横長の窓
+    gm.fillStyle = '#e6e3dc'; gm.fillRect(0, 0, N, N); orm(0, 0, N, N, 220, 0);
+    for (let j = 0; j < 8; j++) { gm.fillStyle = '#3c4854'; gm.fillRect(0, j * C + 9, N, 15); orm(0, j * C + 9, N, 15, 45, 150); for (let i = 0; i < 32; i++) { gm.fillStyle = '#c4c8cc'; gm.fillRect(i * 8, j * C + 9, 1, 15); } for (let i = 0; i < 4; i++) lit(i * 64, j * C + 10, 64, 13, .45, .5); }
+  }
+  return { map: ctex(cm), emi: ctex(ce), orm: ctex(co, { lin: true }) };
+}
+function makeTextures() {
+  for (let s = 0; s < 4; s++) TEX['f' + s] = facadeTex(s, 101 + s * 7);
+  const n = noise2(7);
+  { const [c, g] = cvs(256, 256), d = g.createImageData(256, 256); for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) { const v = 150 + n(x / 9, y / 9) * 40 + Math.random() * 18 | 0, o = (y * 256 + x) * 4; d.data[o] = v; d.data[o + 1] = v - 2; d.data[o + 2] = v - 6; d.data[o + 3] = 255; } g.putImageData(d, 0, 0); TEX.conc = ctex(c); }
+  { const [c, g] = cvs(256, 256), d = g.createImageData(256, 256); for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) { const k = n(x / 14 + 40, y / 14) * .6 + n(x / 4, y / 4 + 9) * .4, o = (y * 256 + x) * 4; d.data[o] = 58 + k * 40 | 0; d.data[o + 1] = 98 + k * 50 | 0; d.data[o + 2] = 42 + k * 26 | 0; d.data[o + 3] = 255; } g.putImageData(d, 0, 0); TEX.grass = ctex(c); }
+  // 道：たてに車線
+  { const [c, g] = cvs(128, 256); g.fillStyle = '#3a3c40'; g.fillRect(0, 0, 128, 256); for (let i = 0; i < 1800; i++) { const v = 50 + Math.random() * 30 | 0; g.fillStyle = `rgba(${v},${v},${v + 4},.5)`; g.fillRect(Math.random() * 128 | 0, Math.random() * 256 | 0, 2, 2); }
+    g.fillStyle = '#d8d8d0'; g.fillRect(3, 0, 2, 256); g.fillRect(123, 0, 2, 256); for (const x of [32, 96]) for (let y = 0; y < 256; y += 64) g.fillRect(x - 1, y, 2, 30); g.fillStyle = '#e0b830'; g.fillRect(62, 0, 2, 256); g.fillRect(65, 0, 2, 256); TEX.road = ctex(c); }
+  // 滑走路
+  { const [c, g] = cvs(128, 256); g.fillStyle = '#3c3e42'; g.fillRect(0, 0, 128, 256); for (let i = 0; i < 2500; i++) { const v = 52 + Math.random() * 34 | 0; g.fillStyle = `rgba(${v},${v},${v},.6)`; g.fillRect(Math.random() * 128 | 0, Math.random() * 256 | 0, 2, 2); }
+    g.fillStyle = 'rgba(25,25,28,.5)'; g.fillRect(52, 0, 24, 256); g.fillStyle = '#ececec'; g.fillRect(4, 0, 3, 256); g.fillRect(121, 0, 3, 256); g.fillRect(62, 20, 4, 110); TEX.rwy = ctex(c); }
+  for (const num of ['36', '18']) { const [c, g] = cvs(256, 512); g.fillStyle = '#3c3e42'; g.fillRect(0, 0, 256, 512); g.fillStyle = '#ececec';   // 滑走路のはし：しま・番号・めじるし（下が手前）
+    for (let i = 0; i < 8; i++) { g.fillRect(14 + i * 13, 386, 8, 118); g.fillRect(256 - 22 - i * 13, 386, 8, 118); }
+    g.font = 'bold 96px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(num, 128, 300);
+    g.fillRect(70, 30, 26, 110); g.fillRect(160, 30, 26, 110); for (const y of [170, 205]) { g.fillRect(40, y, 10, 26); g.fillRect(60, y, 10, 26); g.fillRect(186, y, 10, 26); g.fillRect(206, y, 10, 26); }
+    g.fillRect(8, 0, 6, 512); g.fillRect(242, 0, 6, 512); g.fillRect(124, 222, 8, 40); TEX['thr' + num] = ctex(c, { rep: false }); }
+  { const [c, g] = cvs(256, 256); g.fillStyle = '#9aa0a4'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 2600; i++) { const v = 140 + Math.random() * 40 | 0; g.fillStyle = `rgba(${v},${v},${v},.5)`; g.fillRect(Math.random() * 256 | 0, Math.random() * 256 | 0, 3, 3); } g.strokeStyle = 'rgba(60,60,60,.5)'; for (let i = 0; i <= 256; i += 64) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, 256); g.moveTo(0, i); g.lineTo(256, i); g.stroke(); } TEX.apron = ctex(c); }
+  // 対岸の街（上から見た道と区画）
+  { const [c, g] = cvs(256, 256); g.fillStyle = '#7d7f7a'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 40; i++) { g.fillStyle = Math.random() < .4 ? '#5e7a4a' : `rgb(${110 + Math.random() * 40 | 0},${104 + Math.random() * 36 | 0},${96 + Math.random() * 30 | 0})`; g.fillRect(Math.random() * 256, Math.random() * 256, 30 + Math.random() * 60, 30 + Math.random() * 60); }
+    g.fillStyle = '#45474b'; g.fillRect(0, 0, 256, 14); g.fillRect(0, 0, 14, 256); g.fillRect(0, 128, 256, 8); g.fillRect(128, 0, 8, 256); TEX.urban = ctex(c); }
+  // 水のさざ波（法線）
+  { const N = 256, [c, g] = cvs(N, N), d = g.createImageData(N, N), h = new Float32Array(N * N), m = noise2(33); for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) h[y * N + x] = m(x / 10, y / 6) * .6 + m(x / 4 + 50, y / 3) * .4;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const dx = h[y * N + (x + 1) % N] - h[y * N + (x + N - 1) % N], dy = h[((y + 1) % N) * N + x] - h[((y + N - 1) % N) * N + x], o = (y * N + x) * 4; d.data[o] = 128 + dx * 300; d.data[o + 1] = 128 + dy * 300; d.data[o + 2] = 255; d.data[o + 3] = 255; }
+    g.putImageData(d, 0, 0); TEX.waterN = ctex(c, { lin: true }); TEX.waterN.repeat.set(1, 1); }
+  // 光の点
+  { const [c, g] = cvs(64, 64), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.18, 'rgba(255,255,255,.85)'); gr.addColorStop(.45, 'rgba(255,255,255,.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); TEX.glow = ctex(c, { rep: false }); }
+}
+// ---------- 材質 ----------
+function bldMat(s) {
+  const T = TEX['f' + s], m = new THREE.MeshStandardMaterial({ map: T.map, emissiveMap: T.emi, emissive: 0xffffff, emissiveIntensity: 1, roughnessMap: T.orm, metalnessMap: T.orm, roughness: 1, metalness: 1, envMapIntensity: s === 1 || s === 3 ? .6 : 1.1 });
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uNight = CITY.U.uNight; sh.uniforms.uCrown = CITY.U.uCrown;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aK; varying float vRoof; varying float vWY; varying float vHs; varying vec2 vK;').replace('#include <uv_vertex>', `#include <uv_vertex>
+    { vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.); vec3 wn = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal); vec3 o = (modelMatrix * instanceMatrix * vec4(0., 0., 0., 1.)).xyz;
+      float hs = fract(sin(dot(floor(o.xz * .37), vec2(12.9898, 78.233))) * 43758.5453);
+      vec2 t = normalize(vec2(-wn.z, wn.x) + 1e-5);
+      vec2 u = vec2(dot(wp.xz, t) / 25.6 + floor(hs * 8.) / 8., (wp.y - 3.) / 30.4 + floor(fract(hs * 7.3) * 8.) / 8.);
+      vMapUv = u; vEmissiveMapUv = u; vRoughnessMapUv = u; vMetalnessMapUv = u;
+      vRoof = abs(wn.y) > .5 ? 1. : 0.; vWY = wp.y; vHs = fract(hs * 13.7); vK = aK; }`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uNight; uniform float uCrown; varying float vRoof; varying float vWY; varying float vHs; varying vec2 vK;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+      if (vRoof > .5) diffuseColor.rgb = vec3(.36, .36, .35) * (.8 + vHs * .4);
+      diffuseColor.rgb *= .55 + .45 * smoothstep(3., 50., vWY);`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nif (vRoof > .5) roughnessFactor = .95;')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nif (vRoof > .5) metalnessFactor = 0.;')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      totalEmissiveRadiance *= (vHs < .08 ? .15 : .45 + vHs * 1.1) * (1. - vRoof);
+      if (vWY < 8.5 && vRoof < .5) totalEmissiveRadiance = vec3(1., .82, .55) * uNight * .9;
+      if (vK.x > 0. && vWY > vK.x && vRoof < .5) totalEmissiveRadiance += (vK.y < .5 ? vec3(1., .72, .36) : vK.y < 1.5 ? vec3(.7, .8, 1.) : vec3(.45, .65, 1.)) * uCrown * (.25 + .75 * dot(diffuseColor.rgb, vec3(.4))) * mix(1., .25, smoothstep(vK.x, vK.x + 40., vWY));`);
+  };
+  m.customProgramCacheKey = () => 'bld' + s; return m;
+}
+function makeMats() {
+  const L = o => new THREE.MeshLambertMaterial(o), S = o => new THREE.MeshStandardMaterial(o);
+  for (let s = 0; s < 4; s++) CITY.mats['b' + s] = bldMat(s);
+  const po = (m, f) => { m.polygonOffset = true; m.polygonOffsetFactor = f; m.polygonOffsetUnits = f * 2; return m; };
+  Object.assign(CITY.mats, {
+    conc: L({ map: TEX.conc, color: 0xc8c6c0 }), road: po(L({ map: TEX.road }), -2), road2: po(L({ map: TEX.road }), -4), grass: po(L({ map: TEX.grass }), -2), grassB: L({ map: TEX.grass }),
+    water: S({ color: 0x1f5068, roughness: .1, metalness: 0, normalMap: TEX.waterN, normalScale: new THREE.Vector2(.35, .35), envMapIntensity: 1.2 }),
+    urban: L({ map: TEX.urban }), cliff: L({ color: 0x9a8e7a }), rwy: po(L({ map: TEX.rwy }), -2), thr36: po(L({ map: TEX.thr36 }), -4), thr18: po(L({ map: TEX.thr18 }), -4), apron: po(L({ map: TEX.apron }), -1),
+    tree: L({ color: 0xffffff }), steelE: S({ color: 0x7a8c9a, roughness: .5, metalness: .6 }), steelW: S({ color: 0xa0a6aa, roughness: .45, metalness: .6 }), deck: S({ color: 0x6c6e72, roughness: .8, metalness: .2 }),
+    roofBox: L({ color: 0x9a9a98 }), wood: L({ color: 0x8a6448 }), dark: L({ color: 0x2a2c30 }), cable: new THREE.LineBasicMaterial({ color: 0x9aa4ac, transparent: true, opacity: .55, fog: true }),
+    car: S({ color: 0xffffff, roughness: .35, metalness: .5 }),
+  });
+  CITY.mats.water.normalMap.repeat.set(1, 1);
+}
+// ---------- まとめて作る道具 ----------
+function geoBuilder() {
+  const B = { pos: [], uv: [], idx: [] };
+  B.quad = (a, b, c, d, uvs = [[0, 0], [1, 0], [1, 1], [0, 1]]) => { const o = B.pos.length / 3; for (const p of [a, b, c, d]) B.pos.push(p[0], p[1], p[2]); for (const t of uvs) B.uv.push(t[0], t[1]); B.idx.push(o, o + 1, o + 2, o, o + 2, o + 3); };
+  // 地面にねかせた長方形（x0..x1, z0..z1、高さ y）。uv は u が横、v が長さ方向（m/len）
+  B.rectX = (x0, x1, z0, z1, y, len) => B.quad([x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], [[0, 0], [(x1 - x0) / len, 0], [(x1 - x0) / len, 1], [0, 1]]);   // 東西に長い
+  B.rectZ = (x0, x1, z0, z1, y, len) => B.quad([x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], [[0, 0], [1, 0], [1, (z1 - z0) / len], [0, (z1 - z0) / len]]);   // 南北に長い
+  B.build = () => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2)); g.setIndex(B.idx); g.computeVertexNormals(); return g; };
+  return B;
+}
+function shapeMesh(pts, y, mat, uvScale, holes) {   // 多角形の地面（pts は [x, z]）
+  const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1])));
+  if (holes) for (const h of holes) sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], -p[1]))));
+  const g = new THREE.ShapeGeometry(sh, 2); g.rotateX(-Math.PI / 2); g.translate(0, y, 0);
+  const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / uvScale, p.getZ(i) / uvScale);
+  const m = new THREE.Mesh(g, mat); m.receiveShadow = true; return m;
+}
+// ---------- ビルの配置 ----------
+const BLD = [[], [], [], []];   // 形ごと：[cx, cy, cz, sx, sy, sz, r, g, b, crownY, crownCol]
+const ROOF = { box: [], wt: [], mast: [], red: [] };
+function corridorCap(x0, x1, z0, z1) {   // コースの通り道の近くは、ビルを低くする
+  let cap = 1e9;
+  for (const C of COURSES) {
+    const P = [C.start.p.slice(), ...C.rings]; if (C.start.ground) P[0][1] = 300;
+    for (let i = 0; i < P.length - 1; i++) {
+      const a = P[i], b = P[i + 1], rr2 = Math.max(a[3] || 50, b[3] || 50), rc = rr2 <= 30 ? rr2 + 12 : clamp(rr2 * 3, 90, 140);
+      const dx = b[0] - a[0], dz = b[2] - a[2], L2 = dx * dx + dz * dz || 1;
+      // 長方形の中心から線分へ、いちばん近い所
+      const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, t = clamp(((cx - a[0]) * dx + (cz - a[2]) * dz) / L2, 0, 1), px = a[0] + dx * t, pz = a[2] + dz * t;
+      const ex = Math.max(x0 - px, 0, px - x1), ez = Math.max(z0 - pz, 0, pz - z1);
+      if (Math.hypot(ex, ez) < rc) cap = Math.min(cap, lerp(a[1], b[1], t) - 50);
+    }
+  }
+  return cap;
+}
+const LM_RECT = LANDMARKS.map(L => [L.x - L.t[0][0] / 2 - 8, L.x + L.t[0][0] / 2 + 8, L.z - L.t[0][1] / 2 - 8, L.z + L.t[0][1] / 2 + 8]);
+const hitsLM = (x0, x1, z0, z1) => LM_RECT.some(R => x0 < R[1] && x1 > R[0] && z0 < R[3] && z1 > R[2]);
+const BRICK = [[.74, .44, .34], [.64, .38, .3], [.88, .8, .66], [.8, .78, .74], [.58, .44, .34], [.93, .9, .85], [.7, .6, .5], [.82, .7, .58]];
+function putBox(st, cx, cz, sx, sz, y0, y1, col, crown = [0, 0], solid = true) {
+  BLD[st].push([cx, (y0 + y1) / 2, cz, sx, y1 - y0, sz, col[0], col[1], col[2], crown[0], crown[1]]);
+  if (solid) addBox(cx - sx / 2, cx + sx / 2, y0, y1, cz - sz / 2, cz + sz / 2);
+}
+function building(r, cx, cz, sx, sz, h, st, col, opt = {}) {
+  const gy = opt.gy ?? ISL.gy, top = gy + h;
+  if (h > 100 && (st === 1 || r() < .3) && !opt.plain) {   // 段で細くなる
+    const k1 = .3 + r() * .15, k2 = .68 + r() * .12, s1 = .78 + r() * .08, s2 = .58 + r() * .1;
+    putBox(st, cx, cz, sx, sz, gy, gy + h * k1, col);
+    putBox(st, cx, cz, sx * s1, sz * s1, gy + h * k1, gy + h * k2, col);
+    putBox(st, cx, cz, sx * s2, sz * s2, gy + h * k2, top, col, h > 200 && r() < .5 ? [gy + h * .92, r() * 3 | 0] : [0, 0]);
+    sx *= s2; sz *= s2;
+  } else putBox(st, cx, cz, sx, sz, gy, top, col, h > 180 && r() < .35 ? [top - 14, r() * 3 | 0] : [0, 0]);
+  // 屋上
+  if (sx > 14 && sz > 14 && !opt.far) {
+    const n = 1 + (r() * 3 | 0); for (let i = 0; i < n; i++) { const w = 3 + r() * Math.min(10, sx * .3), d = 3 + r() * Math.min(10, sz * .3), hh = 1.5 + r() * 4; ROOF.box.push([cx + (r() - .5) * (sx - w - 2), top + hh / 2, cz + (r() - .5) * (sz - d - 2), w, hh, d]); }
+    if (h < 75 && st === 1 && r() < .45) ROOF.wt.push([cx + (r() - .5) * (sx - 8), top, cz + (r() - .5) * (sz - 8), 2.2 + r() * 1.2]);
+  }
+  if (h > 150 && !opt.far) { const mh = 12 + r() * 30; if (r() < .6) { ROOF.mast.push([cx, top, cz, mh]); addBox(cx - .8, cx + .8, top, top + mh, cz - .8, cz + .8); ROOF.red.push([cx, top + mh, cz]); } else ROOF.red.push([cx, top + 2, cz]); }
+}
+function heightBase(x, z) {
+  const g1 = Math.exp(-((x / 1150) ** 2 + ((z + 700) / 800) ** 2)), g2 = Math.exp(-(((x - 80) / 700) ** 2 + ((z - 2950) / 560) ** 2));
+  let b = 26 + 230 * g1 + 250 * g2; if (z < PARK.z1 + 40) b = Math.max(b, 46);
+  return b;
+}
+function genIsland() {
+  const r = rng(2024);
+  for (let k = -47; k <= 46; k++) {
+    const z0 = k * ST_STEP + stW(k) / 2, z1 = (k + 1) * ST_STEP - stW(k + 1) / 2; if (z1 < ISL.zN + 10 || z0 > ISL.zTip - 10) continue;
+    const zc = (z0 + z1) / 2, hw = Math.min(islandHW(Math.max(z0, ISL.zN + 1)), islandHW(Math.min(z1, ISL.zTip - 1))) - 16; if (hw < 30) continue;
+    for (let c = 0; c <= AV_X.length; c++) {
+      let x0 = c === 0 ? -hw : AV_X[c - 1] + AV_W[c - 1] / 2, x1 = c === AV_X.length ? hw : AV_X[c] - AV_W[c] / 2;
+      x0 = Math.max(x0, -hw); x1 = Math.min(x1, hw); if (x1 - x0 < 14) continue;
+      if (zc > PARK.z0 && zc < PARK.z1 && x0 >= PARK.x0 - 1 && x1 <= PARK.x1 + 1) continue;
+      const base = heightBase((x0 + x1) / 2, zc), parkFront = (zc > PARK.z0 - 60 && zc < PARK.z1 + 60 && (x1 > PARK.x0 - 300 && x0 < PARK.x1 + 300));
+      let x = x0 + 1;
+      while (x1 - x > 10) {
+        let w = base > 120 ? 30 + r() * 40 : 16 + r() * 28; if (x1 - x - w < 14) w = x1 - x - 1;
+        const lx0 = x, lx1 = x + w; x += w + (base > 90 ? 2 + r() * 4 : .6);
+        if (hitsLM(lx0, lx1, z0, z1)) continue;
+        let h = clamp(base * (.38 + 1.25 * Math.pow(r(), 1.8)), 11, 320); if (parkFront && r() < .6) h = Math.max(h, 70 + r() * 130);
+        const rows = h < 55 && r() < .65 ? 2 : 1, dz = (z1 - z0) / rows;
+        for (let q = 0; q < rows; q++) {
+          const bz0 = z0 + q * dz + (rows > 1 ? .4 : 1), bz1 = z0 + (q + 1) * dz - (rows > 1 ? .4 : 1);
+          let hh = rows > 1 ? h * (.75 + r() * .5) : h; hh = Math.min(hh, corridorCap(lx0, lx1, bz0, bz1)); if (hh < 9) hh = 9;
+          const st = hh < 45 ? (r() < .82 ? 1 : 3) : hh < 120 ? [1, 1, 3, 0, 3, 1][r() * 6 | 0] : [0, 0, 2, 2, 1, 3, 0][r() * 7 | 0];
+          const col = st === 1 ? BRICK[r() * BRICK.length | 0] : st === 0 ? [.78 + r() * .2, .88 + r() * .12, .92 + r() * .08] : st === 2 ? [1, 1, 1] : [.94 + r() * .06, .93 + r() * .06, .9 + r() * .06];
+          building(r, (lx0 + lx1) / 2, (bz0 + bz1) / 2, lx1 - lx0, bz1 - bz0, hh, st, col);
+        }
+      }
+    }
+  }
+  for (const L of LANDMARKS) {   // 目印のビル
+    let y = ISL.gy; L.t.forEach((t, i) => { putBox(L.st, L.x, L.z, t[0], t[1], y, t[2], L.col, i === L.t.length - 1 ? [Math.max(y, t[2] - (L.t.length > 2 ? 60 : 30)), i % 3] : [0, 0]); y = t[2]; });
+    if (L.mast) { ROOF.mast.push([L.x, y, L.z, L.mast - y]); addBox(L.x - 1, L.x + 1, y, L.mast, L.z - 1, L.z + 1); }
+    ROOF.red.push([L.x, (L.mast || y) + 1, L.z]);
+  }
+}
+function genFar() {   // 対岸・北の街（低い）
+  const r = rng(77);
+  const ok = (x, z) => { const g = groundAt(x, z); if (g < 1) return -1; if (z > ISL.zN - 60 && z < ISL.zTip + 60 && Math.abs(x) < islandHW(clamp(z, ISL.zN, ISL.zTip)) + 60) return -1; if (Math.hypot(x + 700, z - 5200) < 200) return -1; const A = AIRPORT.area; if (x > A.x0 && x < A.x1 && z > A.z0 && z < A.z1) return -1; for (const b of BRIDGES) if (Math.abs(z - b.z) < 40 && Math.abs(x) < 3000) return -1; return g; };
+  for (let gx = -6200; gx < 6200; gx += 80) for (let gz = -7600; gz < 4400; gz += 80) {
+    const d = Math.max(0, Math.abs(gx) > 2400 ? Math.abs(gx) - 2400 : 0, gz < -3900 ? -3900 - gz : 0); if (r() > .42 - d / 7000) continue;
+    const x = gx + r() * 20, z = gz + r() * 20, g = ok(x, z); if (g < 0 || ok(x + 25, z + 25) < 0 || ok(x - 25, z - 25) < 0) continue;
+    const near = Math.max(0, 1 - d / 2500), h = 8 + Math.pow(r(), 2) * (30 + 60 * near), st = h > 40 ? (r() < .5 ? 3 : 0) : (r() < .7 ? 1 : 3);
+    building(r, x, z, 20 + r() * 26, 20 + r() * 26, h, st, st === 1 ? BRICK[r() * BRICK.length | 0] : [.92, .92, .9], { gy: g, far: true, plain: true });
+  }
+}
+function buildingMeshes() {
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = V3(), s = V3(), c = new THREE.Color();
+  for (let st = 0; st < 4; st++) {
+    const L = BLD[st]; if (!L.length) continue; const g = new THREE.BoxGeometry(1, 1, 1), aK = new Float32Array(L.length * 2);
+    const m = new THREE.InstancedMesh(g, CITY.mats['b' + st], L.length);
+    L.forEach((b, i) => { m.setMatrixAt(i, m4.compose(p.set(b[0], b[1], b[2]), q, s.set(b[3], b[4], b[5]))); m.setColorAt(i, c.setRGB(b[6], b[7], b[8])); aK[i * 2] = b[9]; aK[i * 2 + 1] = b[10]; });
+    g.setAttribute('aK', new THREE.InstancedBufferAttribute(aK, 2)); m.castShadow = m.receiveShadow = true; m.computeBoundingSphere(); CITY.grp.add(m);
+  }
+  const inst = (list, geo, mat, fn) => { if (!list.length) return null; const m = new THREE.InstancedMesh(geo, mat, list.length); list.forEach((b, i) => m.setMatrixAt(i, fn(b))); m.castShadow = true; m.receiveShadow = true; m.computeBoundingSphere(); CITY.grp.add(m); return m; };
+  inst(ROOF.box, new THREE.BoxGeometry(1, 1, 1), CITY.mats.roofBox, b => m4.compose(p.set(b[0], b[1], b[2]), q.identity(), s.set(b[3], b[4], b[5])));
+  const wt = mergeGeometries([new THREE.CylinderGeometry(1, 1, 1.6, 10).translate(0, 1.6, 0), new THREE.ConeGeometry(1.08, .7, 10).translate(0, 2.75, 0), new THREE.BoxGeometry(1.6, .8, 1.6).translate(0, .4, 0)]);
+  inst(ROOF.wt, wt, CITY.mats.wood, b => m4.compose(p.set(b[0], b[1], b[2]), q.identity(), s.set(b[3], b[3], b[3])));
+  inst(ROOF.mast, new THREE.CylinderGeometry(.35, .9, 1, 6).translate(0, .5, 0), CITY.mats.steelW, b => m4.compose(p.set(b[0], b[1], b[2]), q.identity(), s.set(1, b[3], 1)));
+}
+// ---------- 地面・道・公園・水 ----------
+function genGround() {
+  const G = CITY.grp, M = CITY.mats;
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(60000, 60000).rotateX(-Math.PI / 2), M.water); water.receiveShadow = true;
+  { const uv = water.geometry.attributes.uv, P = water.geometry.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, P.getX(i) / 70, P.getZ(i) / 50); }
+  G.add(water); CITY.water = water;
+  // 島
+  const isl = []; for (let z = ISL.zN; z <= ISL.zTip; z += 20) isl.push([islandHW(z), z]); for (let z = ISL.zTip; z >= ISL.zN; z -= 20) isl.push([-islandHW(z), z]);
+  const hole = []; for (let i = 0; i < 40; i++) { const a = i / 40 * TAU; hole.push([Math.cos(a) * 270, -2480 + Math.sin(a) * 170]); }
+  G.add(shapeMesh(isl, ISL.gy, M.conc, 40));
+  // 護岸（島のまわりの壁）
+  { const B = geoBuilder(); for (let i = 0; i < isl.length; i++) { const a = isl[i], b = isl[(i + 1) % isl.length]; B.quad([a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], ISL.gy, b[1]], [a[0], ISL.gy, a[1]]); } const m = new THREE.Mesh(B.build(), M.cliff); m.material.side = THREE.DoubleSide; G.add(m); }
+  // 対岸
+  const east = []; for (let z = -9000; z <= 2700; z += 50) east.push([eastShore(z), z]); east.push([9000, 2700], [9000, -9000]);
+  G.add(shapeMesh(east, AIRPORT.gy, M.urban, 260));
+  const west = []; for (let z = -9000; z <= 9000; z += 50) west.push([westShore(z), z]); west.push([-9000, 9000], [-9000, -9000]);
+  G.add(shapeMesh(west, 45, M.urban, 260));
+  { const B = geoBuilder(); for (let z = -9000; z < 9000; z += 50) { const a = westShore(z), b = westShore(z + 50); B.quad([a, 0, z], [b, 0, z + 50], [b, 45, z + 50], [a, 45, z]); } const m = new THREE.Mesh(B.build(), M.cliff); m.material.side = THREE.DoubleSide; G.add(m); }
+  const north = [[westShore(-3900), -3900], [eastShore(-3900), -3900], [eastShore(-9000), -9000], [westShore(-9000), -9000]];
+  G.add(shapeMesh(north, AIRPORT.gy, M.urban, 260));
+  { const pts = []; for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; pts.push([-700 + Math.cos(a) * 120, 5200 + Math.sin(a) * 120]); } G.add(shapeMesh(pts, 6, M.grassB, 30)); }
+  // 道
+  const B = geoBuilder(), B2 = geoBuilder(), y = ISL.gy + .05;
+  for (let i = 0; i < AV_X.length; i++) {
+    const x = AV_X[i], w = AV_W[i]; let zs = ISL.zN, ze = ISL.zTip;
+    const segs = []; if (Math.abs(x) < PARK.x1) { segs.push([zs, PARK.z0], [PARK.z1, ze]); } else segs.push([zs, ze]);
+    for (const [a, b] of segs) { let z0 = a, z1 = b; while (z0 < z1 && islandHW(z0) < Math.abs(x) + w / 2) z0 += 10; while (z1 > z0 && islandHW(z1) < Math.abs(x) + w / 2) z1 -= 10; if (z1 - z0 < 20) continue;
+      if (w > 60) { B2.rectZ(x - 48, x - 10, z0, z1, y + .03, 40); B2.rectZ(x + 10, x + 48, z0, z1, y + .03, 40); } else B2.rectZ(x - w / 2, x + w / 2, z0, z1, y + .03, w * .8); }
+  }
+  for (let k = -47; k <= 47; k++) {
+    const z = k * ST_STEP, w = stW(k), hw = Math.min(islandHW(z - w / 2), islandHW(z + w / 2)) - 4; if (hw < 30) continue;
+    const inPark = z > PARK.z0 && z < PARK.z1;
+    const put = (x0, x1) => { if (x1 - x0 > 4) B.rectX(x0, x1, z - w / 2, z + w / 2, y, w * .8); };
+    if (inPark) { put(-hw, PARK.x0); put(PARK.x1, hw); } else put(-hw, hw);
+  }
+  const roads = new THREE.Mesh(B.build(), M.road), roads2 = new THREE.Mesh(B2.build(), M.road2); roads.receiveShadow = roads2.receiveShadow = true;
+  { const uv = roads.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i), uv.getX(i)); }   // 東西の道は uv を入れかえ（線を道にそわせる）
+  G.add(roads, roads2);
+  // 公園
+  const park = [[PARK.x0, PARK.z0], [PARK.x1, PARK.z0], [PARK.x1, PARK.z1], [PARK.x0, PARK.z1]];
+  G.add(shapeMesh(park, ISL.gy + .06, M.grass, 30, [hole]));
+  { const lake = shapeMesh(hole, ISL.gy - .8, M.water, 50); G.add(lake); }
+  // まん中の大通りの並木（緑の帯）
+  { const Bm = geoBuilder(); for (const [a, b] of [[ISL.zN + 20, PARK.z0], [PARK.z1, ISL.zTip - 280]]) Bm.rectZ(-10, 10, a, b, y + .1, 20); G.add(new THREE.Mesh(Bm.build(), M.grass)); }
+  // 木
+  const r = rng(5), T = [];
+  for (let i = 0; i < 2300; i++) { const x = lerp(PARK.x0 + 8, PARK.x1 - 8, r()), z = lerp(PARK.z0 + 8, PARK.z1 - 8, r()); if (((x / 290) ** 2 + ((z + 2480) / 190) ** 2) < 1) continue; if (Math.abs(z + 1800) < 120 && Math.abs(x) < 300 && r() < .8) continue; T.push([x, z, 3 + r() * 2.6]); }
+  for (let z = ISL.zN + 30; z < ISL.zTip - 290; z += 13) if (z < PARK.z0 || z > PARK.z1) T.push([0, z, 3.6 + r()]);
+  { const m = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), M.tree, T.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
+    T.forEach((t, i) => { m.setMatrixAt(i, m4.compose(V3(t[0], ISL.gy + t[2] * 1.2, t[1]), q, V3(t[2], t[2] * 1.1, t[2]))); m.setColorAt(i, c.setRGB(.2 + r() * .12, .36 + r() * .16, .16 + r() * .08)); });
+    m.castShadow = true; m.receiveShadow = true; m.computeBoundingSphere(); G.add(m); }
+  // 桟橋（西岸）
+  for (let z = -3000; z <= 1500; z += 170) { const x = -islandHW(z); putBox(3, x - 62, z, 120, 22, 0, ISL.gy, [.8, .78, .74], [0, 0], true); }
+}
+// ---------- つり橋 ----------
+function genBridges() {
+  const G = CITY.grp, M = CITY.mats;
+  for (const b of BRIDGES) {
+    const E = b.side === 'E', z = b.z, xa = E ? islandHW(z) : westShore(z), xb = E ? eastShore(z) : -islandHW(z), mat = E ? M.steelE : M.steelW;
+    const t1 = xa + (E ? 70 : 80), t2 = xb - (E ? 70 : 80), d = b.deck, T = b.tower;
+    // デッキ（橋げた）とスロープ
+    const deck = (x0, x1, y0, y1) => { const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, 30), M.deck); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, z); m.castShadow = m.receiveShadow = true; G.add(m); addBox(x0, x1, y0, y1, z - 15, z + 15, 2); };
+    deck(xa - 30, xb + 30, d - 4, d);
+    for (const [x0, dir] of [[xa - 30, -1], [xb + 30, 1]]) { const gy = groundAt(x0 + dir * 60, z); for (let i = 0; i < 6; i++) { const yA = lerp(d, gy, i / 6), yB = lerp(d, gy, (i + 1) / 6), xs = x0 + dir * i * 60, xe = x0 + dir * (i + 1) * 60; deck(Math.min(xs, xe), Math.max(xs, xe), Math.max(gy, Math.min(yA, yB) - 4), Math.max(yA, yB)); } }
+    // 塔
+    for (const tx of [t1, t2]) {
+      for (const sz of [-14, 14]) { const m = new THREE.Mesh(new THREE.BoxGeometry(7, T, 7), mat); m.position.set(tx, T / 2, z + sz); m.castShadow = true; G.add(m); addBox(tx - 3.5, tx + 3.5, 0, T, z + sz - 3.5, z + sz + 3.5, 2); }
+      for (const by of [d - 8, (d + T) / 2, T - 4]) { const m = new THREE.Mesh(new THREE.BoxGeometry(6, 5, 28), mat); m.position.set(tx, by, z); G.add(m); addBox(tx - 3, tx + 3, by - 2.5, by + 2.5, z - 14, z + 14, 2); }
+      ROOF.red.push([tx, T + 1, z - 14], [tx, T + 1, z + 14]);
+    }
+    // 主ケーブル（放物線）とつり下げ
+    const ptsFor = () => { const P = []; const n1 = 8, n2 = 24; for (let i = 0; i <= n1; i++) { const x = lerp(xa - 30, t1, i / n1); P.push([x, lerp(d + 1, T, Math.pow(i / n1, 1.6))]); } for (let i = 1; i <= n2; i++) { const u = i / n2, x = lerp(t1, t2, u); P.push([x, d + 4 + (T - d - 4) * (2 * u - 1) ** 2]); } for (let i = 1; i <= n1; i++) { const x = lerp(t2, xb + 30, i / n1); P.push([x, lerp(T, d + 1, 1 - Math.pow(1 - i / n1, 1.6))]); } return P; };
+    const lines = [];
+    for (const sz of [-14, 14]) {
+      const P = ptsFor(); CITY.cables.push({ z: z + sz, x0: xa - 30, x1: xb + 30, pts: P });
+      const curve = new THREE.CatmullRomCurve3(P.map(p => V3(p[0], p[1], z + sz)));
+      const m = new THREE.Mesh(new THREE.TubeGeometry(curve, P.length * 3, .9, 5, false), mat); G.add(m);
+      for (let x = t1 + 12; x < t2; x += 14) { const u = (x - t1) / (t2 - t1), yc = d + 4 + (T - d - 4) * (2 * u - 1) ** 2; lines.push(x, d, z + sz, x, yc, z + sz); }
+      for (let i = 0; i < P.length; i += 2) CITY.wins.push([P[i][0], P[i][1] + 1.2, z + sz]);
+    }
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3)); G.add(new THREE.LineSegments(lg, M.cable));
+  }
+}
+// ---------- 空港 ----------
+function genAirport() {
+  const G = CITY.grp, M = CITY.mats, A = AIRPORT, y = A.gy + .04, B = geoBuilder();
+  B.rectZ(A.x - A.w / 2, A.x + A.w / 2, A.z0 + 240, A.z1 - 240, y, 120);
+  const rw = new THREE.Mesh(B.build(), M.rwy); rw.receiveShadow = true; G.add(rw);
+  for (const [zA, rot] of [[A.z1, 0], [A.z0, Math.PI]]) { const g = new THREE.PlaneGeometry(A.w, 240).rotateX(-Math.PI / 2); const m = new THREE.Mesh(g, rot ? M.thr18 : M.thr36); m.rotation.y = rot; m.position.set(A.x, y + .02, zA + (rot ? 120 : -120)); m.receiveShadow = true; G.add(m); }
+  const Bp = geoBuilder(), tx = A.x + 120;
+  Bp.rectZ(tx - 12, tx + 12, A.z0, A.z1, y - .01, 40);
+  for (const z of [A.z0 + 15, -700, 0, 700, A.z1 - 15]) Bp.rectX(A.x + 28, tx, z - 12, z + 12, y - .01, 40);
+  Bp.rectZ(tx + 12, 2610, -900, 900, y - .02, 40);
+  const ap = new THREE.Mesh(Bp.build(), M.apron); ap.receiveShadow = true; G.add(ap);
+  // ターミナル・管制塔・格納庫
+  const r = rng(9); putBox(0, 2640, 0, 60, 1500, A.gy, A.gy + 22, [.85, .92, 1], [0, 0]);
+  for (const z of [-600, -200, 200, 600]) putBox(3, 2600, z, 20, 16, A.gy, A.gy + 10, [.95, .95, .95]);
+  for (const z of [-1500, -1350, 1250]) putBox(3, 2560, z, 70, 90, A.gy, A.gy + 26, [.9, .9, .88]);
+  { const g = mergeGeometries([new THREE.CylinderGeometry(4, 6, 58, 12).translate(0, 29, 0), new THREE.CylinderGeometry(9, 7, 8, 12).translate(0, 62, 0), new THREE.CylinderGeometry(9.5, 9.5, 1, 12).translate(0, 66.5, 0)]);
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xd8dade, roughness: .5, metalness: .3 })); m.position.set(2560, A.gy, 1000); m.castShadow = true; G.add(m); addBox(2550, 2570, A.gy, A.gy + 67, 990, 1010); ROOF.red.push([2560, A.gy + 69, 1000]); CITY.tower = m; }
+  // 灯火：滑走路のふち（白）・中心線・南のはし（緑）・北のはし（赤）・進入灯（白、流れる光）・PAPI
+  const L = { white: [], green: [], red: [], amber: [] };
+  for (let z = A.z0; z <= A.z1; z += 60) for (const s of [-1, 1]) L.white.push([A.x + s * (A.w / 2 + 1), y + .4, z]);
+  for (let z = A.z0 + 15; z < A.z1; z += 30) L.white.push([A.x, y + .2, z]);
+  for (let i = -6; i <= 6; i++) { L.green.push([A.x + i * 4.6, y + .4, A.z1 + 2]); L.red.push([A.x + i * 4.6, y + .4, A.z0 - 2]); }
+  for (let z = A.z1 + 60; z <= A.z1 + 900; z += 30) { for (let i = -2; i <= 2; i++) L.white.push([A.x + i * 1.6, y + .6, z]); if (Math.abs(z - (A.z1 + 300)) < 1) for (let i = -10; i <= 10; i++) if (Math.abs(i) > 2) L.white.push([A.x + i * 2.2, y + .6, z]); CITY.rabbit.push([A.x, y + 1.6, z]); }
+  for (const z of [-700, 0, 700]) for (let x = A.x + 34; x < tx; x += 15) L.amber.push([x, y + .3, z]);
+  CITY.rwyL = L;
+  for (let i = 0; i < 4; i++) CITY.papi.push([A.x - A.w / 2 - 20 - i * 10, y + 1.2, TDZ]);
+  for (const p of CITY.papi) { const m = new THREE.Mesh(new THREE.BoxGeometry(3, 1.4, 1.4), M.dark); m.position.set(p[0], p[1] - .5, p[2]); G.add(m); }
+}
+// ---------- 光の点（夜の街灯・窓の点・障害灯・空港の灯火） ----------
+function pointsMesh(list, color, size, o = {}) {
+  const pos = new Float32Array(list.length * 3); list.forEach((p, i) => { pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2]; });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  if (o.colors) g.setAttribute('color', new THREE.BufferAttribute(o.colors, 3));
+  const m = new THREE.PointsMaterial({ color, size, map: TEX.glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true, vertexColors: !!o.colors, fog: o.fog !== false });
+  const P = new THREE.Points(g, m); P.frustumCulled = false; CITY.grp.add(P); return P;
+}
+function genLights() {
+  const S = [], y = ISL.gy + 9, r = rng(4);
+  for (let i = 0; i < AV_X.length; i++) for (let z = ISL.zN + 20; z < ISL.zTip; z += 36) { if (Math.abs(AV_X[i]) < PARK.x1 && z > PARK.z0 && z < PARK.z1) continue; for (const s of [-1, 1]) { const x = AV_X[i] + s * (AV_W[i] / 2 - 2); if (Math.abs(x) < islandHW(z) - 8) S.push([x, y, z]); } }
+  for (let k = -46; k <= 46; k++) { const z = k * ST_STEP, hw = islandHW(z) - 10; for (let x = -hw; x < hw; x += 46) { if (z > PARK.z0 && z < PARK.z1 && x > PARK.x0 && x < PARK.x1) continue; S.push([x, y, z - stW(k) / 2 + 2]); } }
+  for (let x = 1600; x < 6000; x += 70) for (let z = -7000; z < 2600; z += 70) if (r() < .5 && groundAt(x, z) > 1 && !(x > AIRPORT.area.x0 && x < AIRPORT.area.x1 && z > AIRPORT.area.z0 && z < AIRPORT.area.z1)) S.push([x, AIRPORT.gy + 8, z]);
+  for (let x = -6000; x < -2300; x += 70) for (let z = -7000; z < 5000; z += 70) if (r() < .45) S.push([x, 53, z]);
+  CITY.lights.street = pointsMesh(S, 0xffc27a, 9);
+  CITY.lights.neck = pointsMesh(CITY.wins, 0xeaf2ff, 7);
+  CITY.lights.red = pointsMesh(ROOF.red, 0xff2a1a, 14, { fog: false });
+  const L = CITY.rwyL;
+  CITY.lights.rw = pointsMesh(L.white, 0xfff4dc, 6); CITY.lights.rg = pointsMesh(L.green, 0x30ff70, 7); CITY.lights.rr = pointsMesh(L.red, 0xff3020, 7); CITY.lights.ra = pointsMesh(L.amber, 0x6aa8ff, 4);
+  CITY.lights.rabbit = pointsMesh(CITY.rabbit, 0xffffff, 16);
+  const pc = new Float32Array(12); CITY.lights.papi = pointsMesh(CITY.papi, 0xffffff, 9, { colors: pc, fog: false });
+}
+// ---------- 車（大通りを走る） ----------
+function genCars() {
+  const r = rng(12), list = [];
+  for (let i = 0; i < AV_X.length; i++) { const w = AV_W[i], lanes = w > 60 ? [-38, -28, -18, 18, 28, 38] : [-18, -9, 9, 18]; for (const lx of lanes) for (let n = 0; n < 9; n++) list.push({ x: AV_X[i] + lx + (r() - .5) * 2, z: ISL.zN + r() * (ISL.zTip - ISL.zN), dir: lx > 0 ? 1 : -1, v: 9 + r() * 6, taxi: r() < .45 }); }
+  const g = new THREE.BoxGeometry(2, 1.5, 4.6).translate(0, .75 + ISL.gy, 0), m = new THREE.InstancedMesh(g, CITY.mats.car, list.length), c = new THREE.Color();
+  list.forEach((o, i) => m.setColorAt(i, o.taxi ? c.setRGB(1, .74, .08) : c.setHSL(r(), .15 + r() * .3, .2 + r() * .55)));
+  m.frustumCulled = false; CITY.grp.add(m); CITY.cars = { list, m };
+  const hl = new Float32Array(list.length * 2 * 3), col = new Float32Array(list.length * 2 * 3); for (let i = 0; i < list.length; i++) { col.set([1, .95, .8], i * 6); col.set([1, .1, .05], i * 6 + 3); }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(hl, 3)); pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const P = new THREE.Points(pg, new THREE.PointsMaterial({ size: 5, map: TEX.glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true })); P.frustumCulled = false; CITY.grp.add(P); CITY.cars.pts = P;
+}
+const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = V3(), _s = V3(1, 1, 1), _qs = new THREE.Quaternion().setFromAxisAngle(V3(0, 1, 0), Math.PI);
+function updateCity(dt, t, P) {
+  const W = CITY.mats.water.normalMap; W.offset.x = (t * .012) % 1; W.offset.y = (t * .02) % 1;
+  // 車
+  const C = CITY.cars; if (C) { const pos = C.pts.geometry.attributes.position.array; C.list.forEach((o, i) => { o.z += o.dir * o.v * dt; if (o.z > ISL.zTip) o.z = ISL.zN; if (o.z < ISL.zN) o.z = ISL.zTip; let hide = Math.abs(o.x) > islandHW(o.z) - 6 || (Math.abs(o.x) < PARK.x1 && o.z > PARK.z0 && o.z < PARK.z1);
+    C.m.setMatrixAt(i, _m4.compose(_p.set(o.x, hide ? -50 : 0, o.z), o.dir > 0 ? _qs : _q, _s)); const f = -o.dir * 2.4; pos[i * 6] = o.x; pos[i * 6 + 1] = hide ? -50 : ISL.gy + .9; pos[i * 6 + 2] = o.z - f; pos[i * 6 + 3] = o.x; pos[i * 6 + 4] = hide ? -50 : ISL.gy + .9; pos[i * 6 + 5] = o.z + f; });
+    C.m.instanceMatrix.needsUpdate = true; C.pts.geometry.attributes.position.needsUpdate = true; }
+  // 障害灯の点滅、進入灯の流れる光
+  const L = CITY.lights; L.red.material.opacity = (t % 1.6) < .9 ? 1 : .15;
+  const rb = L.rabbit.geometry.attributes.position.array, n = CITY.rabbit.length, k = Math.floor((t * 2 % 1) * n * 1.4); for (let i = 0; i < n; i++) rb[i * 3 + 1] = (n - 1 - i) === k ? CITY.rabbit[i][1] : -60; L.rabbit.geometry.attributes.position.needsUpdate = true;
+  // PAPI：飛行機から見た角度で白／赤
+  if (P) { const cc = L.papi.geometry.attributes.color.array; CITY.papi.forEach((q, i) => { const dz = P.p.z - q[2], ang = Math.atan2(P.p.y - q[1], Math.max(1, dz)) / D2R, th = [3.5, 3.17, 2.83, 2.5][i], wht = dz > 0 && ang > th; cc.set(wht ? [1, 1, 1] : [1, .08, .05], i * 3); }); L.papi.geometry.attributes.color.needsUpdate = true; }
+}
+function setCityNight(n, dusk) {   // n：0 昼〜1 夜
+  CITY.U.uNight.value = n; CITY.U.uCrown.value = n * .9;
+  for (let s = 0; s < 4; s++) CITY.mats['b' + s].emissiveIntensity = n * 1.25 + dusk * .25;
+  const L = CITY.lights; L.street.visible = n > .3; L.street.material.opacity = n; L.neck.visible = n > .3; L.ra.visible = n > .3;
+  L.rw.material.size = n > .3 ? 6 : 3; L.rabbit.visible = n > .1; CITY.cars.pts.visible = n > .3;
+  CITY.mats.water.color.setHex(n > .5 ? 0x0a1a28 : dusk ? 0x1a3444 : 0x1f5068);
+}
+async function buildCity(say) {
+  makeTextures(); makeMats();
+  say('ビルを建てています…'); await nextFrame();
+  genIsland(); genFar();
+  say('川と橋と空港を作っています…'); await nextFrame();
+  genGround(); genBridges(); genAirport();
+  buildingMeshes(); genLights(); genCars();
+  CITY.grp.traverse(o => { if (o.isMesh && !o.isInstancedMesh) o.matrixAutoUpdate = false, o.updateMatrix(); });
+  scene.add(CITY.grp);
+}
+// =========================================================================================
+//  旅客機（オリジナルの双発機「そらライン」）：形・動く翼・車輪・ライト、飛び方（かんたん／リアル）、ぶつかり判定
+//  飛行機の向き：前が -z、上が +y、右が +x。長さ 38m・つばさのはば 34m
+// =========================================================================================
+const GEAR_H = 4.48;   // 車輪の下から機体の中心まで
+const PL = { vStall: [62, 55, 49], thrA: 4.7, maxPitch: 35 * D2R, maxBank: 68 * D2R };
+function planeTex() {
+  const [c, g] = cvs(1024, 256);
+  g.fillStyle = '#f4f6f8'; g.fillRect(0, 0, 1024, 256);
+  const bel = g.createLinearGradient(0, 0, 0, 256); bel.addColorStop(0, '#b8c0c8'); bel.addColorStop(.16, '#e8ecf0'); bel.addColorStop(.84, '#e8ecf0'); bel.addColorStop(1, '#b8c0c8'); g.fillStyle = bel; g.fillRect(0, 0, 1024, 256);
+  g.fillStyle = '#f6f8fa'; g.fillRect(0, 40, 1024, 176);
+  for (const [y0, dir] of [[72, 1], [184, -1]]) {   // 右（上半分）・左（下半分）
+    g.fillStyle = '#1f5fb8'; g.fillRect(70, y0 + dir * 14, 954, 7 * dir); g.fillStyle = '#ffb02e'; g.fillRect(140, y0 + dir * 22, 884, 3 * dir);
+    g.fillStyle = '#24303c'; for (let x = 140; x < 830; x += 13.5) { if (Math.abs(x - 300) < 10 || Math.abs(x - 700) < 10) { g.fillRect(x - 2, y0 - 7, 9, 17); continue; } g.beginPath(); g.roundRect(x, y0 - 4, 6, 8, 2.5); g.fill(); }
+    g.fillRect(118, y0 - 9, 9, 18);   // ドア
+  }
+  // 操縦席の窓（前のはし）
+  g.fillStyle = '#1c2630'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(34, 128 + s * 6); g.lineTo(52, 128 + s * 6); g.lineTo(56, 128 + s * 34); g.lineTo(40, 128 + s * 30); g.closePath(); g.fill(); } g.fillRect(34, 122, 18, 12);
+  // 文字（右と左。あとで向きを合わせる）
+  g.font = 'bold 30px Arial'; g.fillStyle = '#1f5fb8'; g.textBaseline = 'middle';
+  g.save(); g.translate(560, 50); g.scale(-1, -1); g.textAlign = 'center'; g.fillText('SORA LINE', 0, 0); g.restore();
+  g.save(); g.translate(560, 206); g.scale(1, 1); g.textAlign = 'center'; g.fillText('SORA LINE', 0, 0); g.restore();
+  g.fillStyle = '#9aa4ae'; g.font = 'bold 13px Arial'; g.save(); g.translate(930, 96); g.scale(-1, -1); g.fillText('JA35SK', 0, 0); g.restore(); g.fillText('JA35SK', 880, 160);
+  return ctex(c, { rep: false });
+}
+function finTex() {
+  const [c, g] = cvs(256, 256); const gr = g.createLinearGradient(0, 256, 256, 0); gr.addColorStop(0, '#174a96'); gr.addColorStop(1, '#2a78d8'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = '#ffb02e'; g.beginPath(); g.arc(128, 120, 46, 0, TAU); g.fill(); g.fillStyle = '#fff'; for (let i = 0; i < 3; i++) { g.beginPath(); g.ellipse(128, 160 + i * 22, 110, 8, 0, 0, TAU); g.fill(); }
+  return ctex(c, { rep: false });
+}
+// つばさ（root→tip の台形、ひし形の断面）
+function wingGeo(rootX, tipX, le0, te0, le1, te1, y0, y1, th0, th1, side = 1) {
+  const S = (x, le, te, y, th) => [[x, y, le], [x, y + th, lerp(le, te, .3)], [x, y + th * .3, te], [x, y - th * .4, lerp(le, te, .35)]];
+  const A = S(rootX * side, le0, te0, y0, th0), B = S(tipX * side, le1, te1, y1, th1), pos = [], idx = [];
+  for (const p of [...A, ...B]) pos.push(...p);
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; if (side > 0) idx.push(i, j, 4 + j, i, 4 + j, 4 + i); else idx.push(i, 4 + j, j, i, 4 + i, 4 + j); }
+  if (side > 0) idx.push(4, 5, 6, 4, 6, 7, 0, 2, 1, 0, 3, 2); else idx.push(4, 6, 5, 4, 7, 6, 0, 1, 2, 0, 2, 3);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); const n = g.toNonIndexed(); n.computeVertexNormals(); return n;
+}
+function makePlane(o = {}) {
+  const root = new THREE.Group(), M = {
+    body: new THREE.MeshStandardMaterial({ map: planeTex(), roughness: .32, metalness: .15 }),
+    wing: new THREE.MeshStandardMaterial({ color: 0xc4cad0, roughness: .4, metalness: .45, side: THREE.DoubleSide }),
+    eng: new THREE.MeshStandardMaterial({ color: 0xeef2f6, roughness: .3, metalness: .3 }), engB: new THREE.MeshStandardMaterial({ color: 0x1f5fb8, roughness: .35, metalness: .3 }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x15181c, roughness: .6, metalness: .4 }), fin: new THREE.MeshStandardMaterial({ map: finTex(), roughness: .35, metalness: .15 }),
+    gear: new THREE.MeshStandardMaterial({ color: 0x8a8f96, roughness: .5, metalness: .7 }), tire: new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: .9 }),
+  };
+  const add = (geo, mat, parent = root) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+  // 胴体（回転体）。nose が -z
+  const prof = [[0, -19], [.25, -18.95], [.9, -18.6], [1.45, -17.8], [1.82, -16.4], [2, -14.6], [2, 9], [1.9, 11.5], [1.68, 13.5], [1.3, 15.6], [.86, 17.4], [.42, 18.8], [.2, 19.1]];
+  const lg = new THREE.LatheGeometry(prof.slice().reverse().map(p => new THREE.Vector2(p[0], -p[1])), 28); lg.rotateX(-Math.PI / 2);
+  { const P = lg.attributes.position, uv = lg.attributes.uv; for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i), a = Math.atan2(x, y); uv.setXY(i, (z + 19) / 38.2, .5 + a / TAU); if (z > 8) P.setY(i, y + (z - 8) ** 2 * .011 + (y < 0 ? (z - 8) * .04 : 0)); if (z < -14 && y < 0) P.setY(i, y * (1 - (-14 - z) * .02)); } lg.computeVertexNormals(); }
+  add(lg, M.body);
+  // つばさ・ウイングレット
+  const W = {}; for (const s of [-1, 1]) {
+    add(wingGeo(1.6, 17, -3.6, 3.3, 3.4, 5.0, -1.15, .2, .75, .2, s), M.wing);
+    add(wingGeo(17, 17.4, 3.4, 5.0, 4.6, 5.4, .2, 2.4, .2, .12, s).rotateZ(0), M.wing);
+    // 水平尾翼
+    add(wingGeo(.6, 6.3, 14.4, 17.6, 17.6, 18.7, .9, 1.5, .4, .12, s), M.wing);
+    // エンジン
+    const eg = new THREE.Group(); eg.position.set(5.9 * s, -2.35, -4.6); root.add(eg);
+    const nac = add(new THREE.CylinderGeometry(1.08, .9, 4.6, 20, 1, true).rotateX(Math.PI / 2), M.eng, eg); nac.material.side = THREE.DoubleSide;
+    add(new THREE.TorusGeometry(1.02, .1, 6, 20), M.engB, eg).position.z = -2.3;
+    add(new THREE.CircleGeometry(.98, 20).rotateY(Math.PI), M.dark, eg).position.z = -2.1;
+    add(new THREE.ConeGeometry(.32, .6, 12).rotateX(-Math.PI / 2), M.wing, eg).position.z = -2.25;
+    add(new THREE.CylinderGeometry(.5, .32, 1.2, 12).rotateX(Math.PI / 2), M.dark, eg).position.z = 2.8;
+    add(new THREE.BoxGeometry(.3, 1.3, 3.2), M.wing, eg).position.set(0, 1.05, .7);
+    // 動く翼：フラップ（内側）・補助翼（外側）
+    const piv = (x0, x1, z0, z1, y, chord) => { const g = new THREE.Group(), x = (x0 + x1) / 2 * s, z = lerp(z0, z1, .5); g.position.set(x, y, z); g.rotation.y = -Math.atan2(z1 - z0, (x1 - x0)) * s; root.add(g);
+      const m = add(new THREE.BoxGeometry(Math.abs(x1 - x0), .12, chord).translate(0, 0, chord / 2), M.wing, g); return g; };
+    W['flap' + s] = piv(2.2, 10, 3.3, 4.1, -1.0, 1.5); W['ail' + s] = piv(11, 15.6, 4.2, 4.8, -.1, .9);
+    W['elev' + s] = piv(.8, 6, 17.5, 18.5, 1.2, .8);
+  }
+  // 垂直尾翼
+  { const fg = new THREE.BufferGeometry(), P = [[0, 1.4, 12.6], [0, 8.8, 17.3], [0, 8.8, 19.0], [0, 1.4, 18.6]], pos = [], uv = [];
+    for (const side of [-.16, .16]) for (const [a, b, c] of [[0, 1, 2], [0, 2, 3]]) { const tri = side > 0 ? [a, b, c] : [a, c, b]; for (const k of tri) { pos.push(side, P[k][1], P[k][2]); uv.push((P[k][2] - 12.6) / 6.4 * (side > 0 ? 1 : -1) + (side > 0 ? 0 : 1), (P[k][1] - 1.4) / 7.4); } }
+    fg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); fg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); fg.computeVertexNormals(); add(fg, M.fin);
+    const rg = new THREE.Group(); rg.position.set(0, 1.6, 18.4); rg.rotation.x = -.08; root.add(rg); add(new THREE.BoxGeometry(.25, 7, .9).translate(0, 3.5, .45), M.fin, rg); W.rud = rg; }
+  // 車輪
+  const gearG = [];
+  for (const [x, z, n, r] of [[-2.9, 1.6, 2, .58], [2.9, 1.6, 2, .58], [0, -13.6, 2, .38]]) {
+    const g = new THREE.Group(); g.position.set(x, -1.5, z); root.add(g); g.userData.nose = x === 0; g.userData.side = Math.sign(x);
+    add(new THREE.CylinderGeometry(.14, .14, 2.4, 8).translate(0, -1.2, 0), M.gear, g);
+    for (let i = 0; i < n; i++) { const w = add(new THREE.CylinderGeometry(r, r, .38, 14).rotateZ(Math.PI / 2), M.tire, g); w.position.set((i - .5) * (x === 0 ? .6 : .82), -2.98 + .58 - r, 0); }
+    gearG.push(g);
+  }
+  // ライト（点）：左の赤・右の緑・しっぽの白・せん光（白）・ビーコン（赤）・着陸灯
+  const lp = [[-17.4, 2.4, 5.2], [17.4, 2.4, 5.2], [0, 1.2, 19.2], [-17.3, 2.3, 5.4], [17.3, 2.3, 5.4], [0, 2.1, 2], [0, -2.1, 4], [-3.2, -1.4, -2.4], [3.2, -1.4, -2.4]];
+  const lc = new Float32Array(lp.length * 3), lgeo = new THREE.BufferGeometry(); lgeo.setAttribute('position', new THREE.Float32BufferAttribute(lp.flat(), 3)); lgeo.setAttribute('color', new THREE.BufferAttribute(lc, 3));
+  const lights = new THREE.Points(lgeo, new THREE.PointsMaterial({ size: 3.2, map: TEX.glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true })); lights.frustumCulled = false; root.add(lights);
+  // 着陸灯の光の円すい（夜）
+  const coneM = new THREE.MeshBasicMaterial({ color: 0xfff2d0, transparent: true, opacity: .07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true });
+  const beams = []; for (const s of [-1, 1]) { const cg = new THREE.ConeGeometry(14, 140, 16, 1, true).translate(0, -70, 0).rotateX(Math.PI / 2 - .06); const b = new THREE.Mesh(cg, coneM); b.position.set(3.2 * s, -1.4, -2.4); root.add(b); beams.push(b); b.visible = false; }
+  root.traverse(m => { if (m.isMesh) m.matrixAutoUpdate = true; });
+  return { root, W, gearG, lights, lc, beams, M };
+}
+const PLANE = { obj: null };
+const PLANE_SET = night => { PLANE.night = night; };
+// ---------- 飛び方 ----------
+function newPlane() {
+  return { p: V3(), q: new THREE.Quaternion(), v: V3(), thr: 0, thrS: 0, gear: 1, gearK: 1, flap: 0, flapK: 0, brake: false, ground: false, crashed: null, lam: 1, t: 0, ev: [], tail: 0, bank: 0, pitch: 0, hdg: 0, s: 0, inp: { pitch: 0, roll: 0, yaw: 0 } };
+}
+const _f = V3(), _u = V3(), _r = V3(), _a = V3(), _dq = new THREE.Quaternion(), _d = V3(), _tp = V3(), WUP = V3(0, 1, 0);
+function planeAxes(P) { _f.set(0, 0, -1).applyQuaternion(P.q); _u.set(0, 1, 0).applyQuaternion(P.q); _r.set(1, 0, 0).applyQuaternion(P.q); }
+function setPose(P, x, y, z, hdg, pitch = 0, bank = 0) {   // hdg：0＝北、+ で右（東）回り
+  P.p.set(x, y, z); P.q.setFromEuler(new THREE.Euler(pitch, -hdg, -bank, 'YXZ'));
+}
+const rot = (P, axis, ang) => { if (ang) { _dq.setFromAxisAngle(axis, ang); P.q.premultiply(_dq); } };
+function gearHeight(pitch) { return GEAR_H * Math.cos(pitch) + 1.6 * Math.sin(pitch); }
+// 当たりを調べる点（機体の中で）
+const HIT_PTS = [[0, 0, -18.6], [0, 8.5, 18.6], [-16.8, .3, 4.6], [16.8, .3, 4.6], [-9, -.5, 2.5], [9, -.5, 2.5], [-5.9, -2.6, -6.6], [5.9, -2.6, -6.6], [0, -2.1, -6], [0, -1.6, 12], [-6, 1.4, 17.8], [6, 1.4, 17.8], [0, 2, -6]];
+function stepPlane(P, inp, dt) {
+  P.t += dt; planeAxes(P);
+  const s = P.v.length(), easy = SET.ctl === 0;
+  P.inp = inp;
+  // 推力（エンジンはゆっくり回りだす）
+  if (inp.thrAbs != null) P.thr = inp.thrAbs; else P.thr = clamp(P.thr + inp.thrRate * dt * .5, 0, 1);
+  P.thrS = damp(P.thrS, P.thr, P.thr > P.thrS ? .9 : 1.4, dt);
+  P.gearK = damp(P.gearK, P.gear, 1.1, dt); if (Math.abs(P.gearK - P.gear) < .01) P.gearK = P.gear;
+  P.flapK = damp(P.flapK, P.flap, .9, dt);
+  const bank = Math.atan2(-_r.y, _u.y), pitch = Math.asin(clamp(_f.y, -1, 1)); P.bank = bank; P.pitch = pitch; P.hdg = Math.atan2(_f.x, -_f.z);
+  const vS = lerp(PL.vStall[0], PL.vStall[2], P.flapK / 2), ctrl = clamp((s - 12) / 48, .12, 1), sens = SET.sens;
+  if (!P.ground) {
+    // かたむき
+    let rr;
+    if (easy) { const tb = inp.roll * PL.maxBank; rr = clamp((tb - bank) * 2.4, -1.25, 1.25) * (Math.abs(inp.roll) < .04 ? 1 : sens); }
+    else rr = inp.roll * 1.5 * sens;
+    rot(P, _f, rr * ctrl * dt);
+    // 上下
+    let pr = inp.pitch * .5 * sens;
+    if (easy) { if (Math.abs(inp.pitch) < .04 && !inp.ap) pr = clamp(-pitch * .55, -.25, .25); if (pitch > PL.maxPitch && pr > 0) pr = 0; if (pitch < -PL.maxPitch && pr < 0) pr = 0; }
+    if (easy) { _a.set(-_f.z, 0, _f.x); if (_a.lengthSq() < 1e-4) _a.copy(_r); _a.normalize(); rot(P, _a, pr * ctrl * dt); }
+    else rot(P, _r, pr * ctrl * dt);
+    // かたむけると曲がる（協調旋回）
+    const vv = Math.max(s, 35); let w;
+    if (easy) w = 9.81 * Math.tan(clamp(bank, -1.25, 1.25)) / vv * 1.45; else w = 9.81 * Math.sin(bank) / vv * 1.25 * Math.max(0, Math.cos(pitch));
+    rot(P, WUP, -w * dt * clamp(s / 40, 0, 1));
+    rot(P, _u, -inp.yaw * .1 * ctrl * dt);
+    // 失速すると機首が下がる
+    if (P.lam < .9) rot(P, _r, -(1 - P.lam) * .7 * dt);
+  } else {
+    // 地上：ハンドル・機首上げ
+    const st = clamp(s / 22, .25, 1) * (s < 1 ? 0 : 1);
+    rot(P, WUP, -(inp.roll * .32 + inp.yaw * .2) * st * dt * (s > 40 ? .35 : 1));
+    const vR = vS * 1.05; let pr = 0;
+    if (s > vR * .92 && inp.pitch > .05) pr = inp.pitch * .16; else if (easy && s > vR * 1.12) pr = .1; else if (pitch > .002) pr = -Math.min(.12, pitch * 1.5); else if (pitch < -.001) pr = -pitch * 2;
+    if (pitch > 12 * D2R && pr > 0) pr = 0;
+    planeAxes(P); _a.set(-_f.z, 0, _f.x).normalize(); rot(P, _a, pr * dt);
+    // かたむきはなし
+    planeAxes(P); const b2 = Math.atan2(-_r.y, _u.y); rot(P, _f, -b2);
+  }
+  P.q.normalize(); planeAxes(P);
+  // 速さ
+  const drag = (1.9e-4 + P.flapK * .6e-4 + P.gearK * .5e-4) * s * s;
+  let acc = P.thrS * PL.thrA - drag;
+  _d.copy(P.v); if (s > .01) _d.divideScalar(s); else _d.copy(_f);
+  if (!P.ground) acc -= 9.81 * _d.y;
+  else { acc -= .12; if (inp.brake) acc -= (s > 2 ? 3.4 : 1) + (P.thr < .05 ? .9 : 0); }
+  let s2 = Math.max(0, s + acc * dt);
+  P.lam = smooth(vS * .74, vS * 1.03, s2); P.s = s2;
+  if (!P.ground) {
+    _d.lerp(_f, 1 - Math.exp(-(easy ? 2.6 : 2) * P.lam * dt)).normalize();
+    P.v.copy(_d).multiplyScalar(s2);
+    P.v.y -= 9.81 * (1 - P.lam) * dt * 1.2;
+    if (!easy) P.v.y -= 9.81 * (1 - Math.abs(Math.cos(bank))) * P.lam * dt * .8;
+  } else {
+    _d.set(_f.x, 0, _f.z).normalize(); P.v.copy(_d).multiplyScalar(s2);
+    if (P.lam > .97 && P.pitch > 3.5 * D2R) { P.ground = false; P.v.y = s2 * Math.sin(P.pitch) * .4; P.ev.push('liftoff'); }
+  }
+  P.p.addScaledVector(P.v, dt);
+  // 地面
+  const gy = groundAt(P.p.x, P.p.z), gh = gearHeight(P.pitch);
+  if (P.ground) {
+    P.p.y = gy + gh;
+    if (!onPaved(P.p.x, P.p.z)) { if (s2 > 8) return crash(P, 'overrun'); P.v.set(0, 0, 0); }
+    P.tail = clamp((P.pitch / D2R - 10) / 2, 0, 1);
+  } else {
+    const low = P.gearK > .95 ? gh : 2.2 * Math.cos(P.pitch) + Math.abs(Math.sin(P.bank)) * 3;
+    if (P.p.y - low <= gy) {
+      const vs = P.v.y;
+      if (P.gearK > .95 && onPaved(P.p.x, P.p.z) && vs > -4.3 && Math.abs(P.bank) < 12 * D2R && P.pitch > -3 * D2R && P.pitch < 14 * D2R) {
+        P.ground = true; P.p.y = gy + gh; P.v.y = 0; P.ev.push({ e: 'touch', vs, x: P.p.x, z: P.p.z, s: s2 });
+      } else return crash(P, gy < .01 ? 'water' : P.gearK > .95 && vs <= -4.3 ? 'hard' : 'ground');
+    }
+  }
+  // ビル・橋
+  for (const h of HIT_PTS) {
+    _tp.set(h[0], h[1], h[2]).applyQuaternion(P.q).add(P.p);
+    const k = hitAt(_tp.x, _tp.y, _tp.z);
+    if (k && !((k === 'ground' || k === 'water') && (P.ground || P.p.y - gh < gy + 1.5))) return crash(P, k);
+  }
+  return null;
+}
+function crash(P, why) { P.crashed = why; P.ev.push({ e: 'crash', why }); return why; }
+// 前方にぶつかる物があるか（数秒先まで）
+function obstacleAhead(P) {
+  if (P.ground || P.s < 30) return 0;
+  for (let t = .8; t <= 4.2; t += .45) { const x = P.p.x + P.v.x * t, y = P.p.y + P.v.y * t - 3, z = P.p.z + P.v.z * t, k = hitAt(x, y, z); if (k && !(onRunway(x, z) && P.gearK > .9)) return t; }
+  return 0;
+}
+// ---------- 見た目を合わせる ----------
+function posePlane(P, dt, obj = PLANE.obj) {
+  obj.root.position.copy(P.p); obj.root.quaternion.copy(P.q);
+  const W = obj.W, I = P.inp || {};
+  for (const s of [-1, 1]) {
+    W['flap' + s].rotation.x = P.flapK * .3;
+    W['ail' + s].rotation.x = clamp(-(I.roll || 0) * s * .35, -.35, .35);
+    W['elev' + s].rotation.x = clamp(-(I.pitch || 0) * .3, -.3, .3);
+  }
+  W.rud.rotation.y = -(I.yaw || 0) * .3;
+  for (const g of obj.gearG) { const k = 1 - P.gearK; if (g.userData.nose) g.rotation.x = -k * 1.55; else g.rotation.z = -g.userData.side * k * 1.5; g.visible = P.gearK > .02; }
+  // ライト
+  const t = P.t, n = PLANE.night || 0, c = obj.lc, strobe = (t % 1.2) < .08, bea = (t % 1) < .12, ld = (P.gear > .5 || P.p.y < 300) && n > .2;
+  const set = (i, r, g, b) => { c[i * 3] = r; c[i * 3 + 1] = g; c[i * 3 + 2] = b; };
+  const k = .4 + n * .9; set(0, k, .05, .03); set(1, .05, k, .2); set(2, k, k, k);
+  set(3, strobe ? 2 : 0, strobe ? 2 : 0, strobe ? 2 : 0); set(4, strobe ? 2 : 0, strobe ? 2 : 0, strobe ? 2 : 0);
+  set(5, bea ? 1.6 : 0, bea ? .1 : 0, 0); set(6, (t + .5) % 1 < .12 ? 1.6 : 0, .05, 0);
+  set(7, ld ? 2 : 0, ld ? 1.9 : 0, ld ? 1.6 : 0); set(8, ld ? 2 : 0, ld ? 1.9 : 0, ld ? 1.6 : 0);
+  obj.lights.geometry.attributes.color.needsUpdate = true; for (const b of obj.beams) b.visible = ld;
+}
+// =========================================================================================
+//  空：昼・夕方・夜。空の色・太陽（月）・霧・光・映りこみ（環境マップ）・星・雲
+// =========================================================================================
+const TODS = [
+  { name: '昼', zen: 0x3a78c8, hor: 0xbfd6ea, fog: 0xbfd2e4, fogN: 2600, fogF: 12000, sun: [-.42, .78, .46], sunC: 0xfff2dc, sunI: 2.7, hemS: 0xc4dcf4, hemG: 0x6a6050, hemI: .95, exp: 1, night: 0, dusk: 0, sunSize: .9993, cloud: 0xffffff },
+  { name: '夕方', zen: 0x26387a, hor: 0xffa070, fog: 0xd8a080, fogN: 1800, fogF: 10000, sun: [-.96, .1, .25], sunC: 0xffa868, sunI: 2.1, hemS: 0x9090c8, hemG: 0x553a30, hemI: .75, exp: 1.05, night: .32, dusk: 1, sunSize: .9990, cloud: 0xffc0a0 },
+  { name: '夜', zen: 0x040918, hor: 0x1a2848, fog: 0x141c30, fogN: 1400, fogF: 9500, sun: [.32, .55, -.77], sunC: 0x8ca4d8, sunI: .4, hemS: 0x34466c, hemG: 0x141414, hemI: .45, exp: 1.12, night: 1, dusk: 0, sunSize: .99965, cloud: 0x38425a },
+];
+const SKY = { tod: -1, U: { uZen: { value: new THREE.Color() }, uHor: { value: new THREE.Color() }, uSun: { value: V3() }, uSunC: { value: new THREE.Color() }, uSunS: { value: .999 }, uGround: { value: new THREE.Color(0x2a2e34) } } };
+const skyMat = () => new THREE.ShaderMaterial({ uniforms: SKY.U, side: THREE.BackSide, depthWrite: false, fog: false,
+  vertexShader: 'varying vec3 vD; void main() { vD = normalize(position); vec4 p = modelViewMatrix * vec4(position, 1.); gl_Position = projectionMatrix * p; gl_Position.z = gl_Position.w * .99999; }',
+  fragmentShader: `uniform vec3 uZen; uniform vec3 uHor; uniform vec3 uSun; uniform vec3 uSunC; uniform float uSunS; uniform vec3 uGround; varying vec3 vD;
+    void main() { vec3 d = normalize(vD); float h = d.y; vec3 c = mix(uHor, uZen, pow(smoothstep(-.02, .6, h), .7));
+      float s = dot(d, normalize(uSun)); c += uSunC * (pow(max(s, 0.), 8.) * .35 + pow(max(s, 0.), 64.) * .5); c = mix(c, uSunC * 1.6 + .4, smoothstep(uSunS, uSunS + .0004, s));
+      if (h < 0.) c = mix(uHor, uGround, smoothstep(0., -.25, h));
+      gl_FragColor = vec4(c, 1.);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }` });
+function makeSky() {
+  SKY.dome = new THREE.Mesh(new THREE.SphereGeometry(24000, 32, 16), skyMat()); SKY.dome.frustumCulled = false; SKY.dome.renderOrder = -10; scene.add(SKY.dome);
+  SKY.envScene = new THREE.Scene(); SKY.envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), skyMat()));
+  SKY.pm = new THREE.PMREMGenerator(renderer);
+  SKY.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1); scene.add(SKY.hemi);
+  const L = SKY.sun = new THREE.DirectionalLight(0xffffff, 2); L.castShadow = renderer.shadowMap.enabled;
+  const S = L.shadow; S.mapSize.set(GFX() >= 3 ? 4096 : 2048, GFX() >= 3 ? 4096 : 2048); S.camera.left = S.camera.bottom = -700; S.camera.right = S.camera.top = 700; S.camera.near = 50; S.camera.far = 6000; S.bias = -.0006; S.normalBias = .6;
+  scene.add(L, L.target);
+  // 星
+  const r = rng(3), pos = [], col = []; for (let i = 0; i < 2600; i++) { const a = r() * TAU, y = Math.pow(r(), .7), q = Math.sqrt(1 - y * y), k = .5 + r() * .5; pos.push(Math.cos(a) * q * 21000, y * 21000, Math.sin(a) * q * 21000); col.push(k, k, k * (.9 + r() * .2)); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  SKY.stars = new THREE.Points(g, new THREE.PointsMaterial({ size: 2, sizeAttenuation: false, vertexColors: true, fog: false, transparent: true, depthWrite: false })); SKY.stars.frustumCulled = false; scene.add(SKY.stars);
+  // 雲
+  const [c, x] = cvs(256, 128); for (let i = 0; i < 26; i++) { const cx = 40 + Math.random() * 176, cy = 70 + Math.random() * 30 - Math.abs(cx - 128) * .15, rr = 18 + Math.random() * 26, gr = x.createRadialGradient(cx, cy, 0, cx, cy, rr); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(.6, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 256, 128); }
+  const ct = ctex(c, { rep: false }); SKY.clouds = new THREE.Group(); const cm = new THREE.SpriteMaterial({ map: ct, transparent: true, depthWrite: false, fog: true, opacity: .85 });
+  for (let i = 0; i < 46; i++) { const s = new THREE.Sprite(cm); const a = r() * TAU, d = 2500 + r() * 9000; s.position.set(Math.cos(a) * d, 1300 + r() * 1100, Math.sin(a) * d); const w = 900 + r() * 1400; s.scale.set(w, w * .45, 1); SKY.clouds.add(s); }
+  SKY.cloudMat = cm; scene.add(SKY.clouds);
+}
+function setTOD(i) {
+  const T = TODS[i]; SKY.tod = i; const U = SKY.U;
+  U.uZen.value.setHex(T.zen); U.uHor.value.setHex(T.fog); U.uSun.value.set(...T.sun).normalize(); U.uSunC.value.setHex(T.sunC); U.uSunS.value = T.sunSize;
+  U.uGround.value.setHex(T.night ? 0x0a0e16 : 0x3a3e44);
+  scene.fog.color.setHex(T.fog); scene.fog.near = T.fogN; scene.fog.far = T.fogF;
+  SKY.hemi.color.setHex(T.hemS); SKY.hemi.groundColor.setHex(T.hemG); SKY.hemi.intensity = T.hemI;
+  SKY.sun.color.setHex(T.sunC); SKY.sun.intensity = T.sunI; SKY.sun.castShadow = renderer.shadowMap.enabled && !T.night;
+  renderer.toneMappingExposure = T.exp; SKY.stars.visible = T.night > .5;
+  SKY.cloudMat.color.setHex(T.cloud); SKY.cloudMat.opacity = T.night ? .35 : .85;
+  if (SKY.env) SKY.env.dispose(); SKY.env = SKY.pm.fromScene(SKY.envScene, 0, .1, 100).texture; scene.environment = SKY.env;
+  scene.environmentIntensity = T.night ? .35 : 1;
+  setCityNight(T.night, T.dusk); PLANE_SET && PLANE_SET(T.night);
+}
+const _sd = V3();
+function updateSky(focus) {
+  SKY.dome.position.copy(camera.position); SKY.stars.position.copy(camera.position);
+  // 影は飛行機のまわりだけ（ちらつかないように格子にそろえる）
+  const L = SKY.sun, k = 1400 / 2048 * 2; _sd.copy(SKY.U.uSun.value);
+  const fx = Math.round(focus.x / k) * k, fz = Math.round(focus.z / k) * k, fy = Math.max(0, Math.round(focus.y / k) * k - 40);
+  L.target.position.set(fx, fy, fz); L.position.set(fx + _sd.x * 3000, fy + _sd.y * 3000, fz + _sd.z * 3000); L.target.updateMatrixWorld();
+}
+// =========================================================================================
+//  ゲーム：コース（リング）・じゆうに飛ぶ・カメラ・計器（HUD）・地図・音・メニュー・自動操縦（タイトルの飛行と試験用）
+// =========================================================================================
+const G = { scr: 'title', paused: false, mode: 'demo', ci: 0, P: null, rings: [], ri: 0, time: 0, pen: 0, crashT: 0, cam: 0, msgT: 0, bot: false, done: false, landed: null, tod: 0, demoI: 0, fStart: 0, fTime: 0, warnT: 0, setBack: 'title', fin: null, stopT: 0, bound: false };
+const UI = { playing: () => G.scr === 'play' && !G.paused };
+const BEST_KEY = 'skyf-best';
+const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || {}; } catch (e) { return {}; } };
+const saveBest = b => { try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch (e) { /* なし */ } };
+// メダルの目安（秒）。自動操縦で飛んだ時間をもとに決めた
+const MEDAL = { c1: [220, 266, 347], c2: [99, 119, 156], c3: [50, 61, 80], c4: [194, 235, 307], c5: [232, 281, 366], c6: [85, 65, 40] };   // c6 は点数
+// ---------- 音（その場で作る） ----------
+const AU = {
+  ctx: null, ok: false,
+  init() { if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; } try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    const c = this.ctx; this.master = c.createGain(); this.master.connect(c.destination); this.setVol();
+    const n = c.sampleRate * 2, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0); let b = 0; for (let i = 0; i < n; i++) { b = .97 * b + (Math.random() * 2 - 1) * .2; d[i] = b; } this.nb = buf;
+    const wn = c.createBuffer(1, n, c.sampleRate), wd = wn.getChannelData(0); for (let i = 0; i < n; i++) wd[i] = Math.random() * 2 - 1; this.wb = wn;
+    const loop = (buffer, type, f, q) => { const s = c.createBufferSource(); s.buffer = buffer; s.loop = true; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = c.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(this.master); s.start(); return { g, f: fl }; };
+    this.rum = loop(this.nb, 'lowpass', 300, .7); this.wind = loop(this.wb, 'bandpass', 600, .5); this.roar = loop(this.wb, 'bandpass', 1400, 1.2);
+    const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 160; const of = c.createBiquadFilter(); of.type = 'bandpass'; of.frequency.value = 800; of.Q.value = 3; const og = c.createGain(); og.gain.value = 0; o.connect(of); of.connect(og); og.connect(this.master); o.start(); this.whine = { o, f: of, g: og };
+    const h = c.createOscillator(); h.type = 'sine'; h.frequency.value = 2400; const hg = c.createGain(); hg.gain.value = 0; h.connect(hg); hg.connect(this.master); h.start(); this.hi = { o: h, g: hg };
+    this.ok = true; },
+  setVol() { if (this.master) this.master.gain.setTargetAtTime(clamp(SET.vol, 0, 1) * HUB.vol, this.ctx.currentTime, .05); },
+  tone(f, dur, peak, type = 'sine', t0 = 0, f2) { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur); o.connect(g); g.connect(this.master); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + dur); o.start(t); o.stop(t + dur + .05); },
+  noise(dur, f, peak, type = 'lowpass', t0 = 0) { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, s = c.createBufferSource(); s.buffer = this.wb; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; const g = c.createGain(); s.connect(fl); fl.connect(g); g.connect(this.master); g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.start(t); s.stop(t + dur + .05); },
+  ring() { [784, 988, 1175].forEach((f, i) => this.tone(f, .45, .1, 'triangle', i * .06)); },
+  goal() { [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, .9, .1, 'triangle', i * .1)); },
+  gear() { this.noise(.9, 300, .18); this.tone(140, .8, .05, 'sawtooth', 0, 110); this.noise(.12, 200, .3, 'lowpass', .85); },
+  flap() { this.tone(330, .9, .04, 'sawtooth', 0, 300); },
+  touch(k) { this.noise(.35, 2600, .12 + k * .2, 'bandpass'); this.noise(.25, 160, .3 + k * .3); },
+  crash() { this.noise(1.2, 220, .5); this.tone(70, 1, .3, 'sine', 0, 40); },
+  beep(f = 880) { this.tone(f, .14, .07, 'square'); },
+  click() { this.tone(1200, .04, .04, 'square'); },
+  update(dt, P, cam) {
+    if (!this.ok || !P) return; const t = this.ctx.currentTime, k = clamp(P.thrS, 0, 1), s = P.s, inside = cam === 2 ? .45 : 1, on = G.scr === 'play' || G.scr === 'title' ? 1 : .25;
+    this.rum.g.gain.setTargetAtTime((.05 + k * .3) * inside * on, t, .1); this.rum.f.frequency.setTargetAtTime(160 + k * 380, t, .1);
+    this.roar.g.gain.setTargetAtTime(k * k * .07 * inside * on, t, .1); this.roar.f.frequency.setTargetAtTime(900 + k * 1400, t, .1);
+    this.whine.o.frequency.setTargetAtTime(120 + k * 330, t, .3); this.whine.f.frequency.setTargetAtTime(500 + k * 900, t, .3); this.whine.g.gain.setTargetAtTime((.012 + k * .03) * inside * on, t, .1);
+    this.hi.o.frequency.setTargetAtTime(1800 + k * 2400, t, .3); this.hi.g.gain.setTargetAtTime(k * .008 * on, t, .1);
+    const w = clamp(s / 140, 0, 1.3); this.wind.g.gain.setTargetAtTime(w * w * .16 * (cam === 2 ? 1.4 : 1) * on, t, .15); this.wind.f.frequency.setTargetAtTime(350 + s * 7, t, .15);
+  },
+};
+// ---------- リング ----------
+const RING_M = { next: new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: .95, fog: false }), later: new THREE.MeshBasicMaterial({ color: 0x8ad8ff, transparent: true, opacity: .5 }),
+  disc: new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: .1, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), goal: new THREE.MeshBasicMaterial({ color: 0x7aff9a, transparent: true, opacity: .95, fog: false }) };
+const RINGS = new THREE.Group();
+function clearRings() { for (const R of G.rings) { RINGS.remove(R.m); R.m.traverse(o => o.geometry && o.geometry.dispose()); } G.rings = []; }
+function makeRings(C) {
+  clearRings(); const L = C.rings, S = C.start.ground ? [C.start.p[0], 120, C.start.p[2]] : C.start.p;
+  L.forEach((r, i) => {
+    const c = V3(r[0], r[1], r[2]), prev = i ? V3(...L[i - 1].slice(0, 3)) : V3(...S), next = i < L.length - 1 ? V3(...L[i + 1].slice(0, 3)) : c.clone().add(c.clone().sub(prev));
+    const n = c.clone().sub(prev).normalize().add(next.clone().sub(c).normalize()).normalize(); if (i === L.length - 1 || r[3] <= 16) n.copy(c.clone().sub(prev).normalize());
+    if (C.id === 'c2' || C.id === 'c4' || r[3] <= 30) { n.y *= .3; n.normalize(); }
+    const g = new THREE.Group(), tube = Math.max(.9, r[3] * .055);
+    const tor = new THREE.Mesh(new THREE.TorusGeometry(r[3], tube, 8, 48), RING_M.later); g.add(tor);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(r[3], 36), RING_M.disc); disc.visible = false; g.add(disc);
+    g.position.copy(c); g.lookAt(c.clone().add(n)); RINGS.add(g);
+    G.rings.push({ c, n, r: r[3], m: g, tor, disc, done: false });
+  });
+  ringLook();
+}
+function ringLook() {
+  G.rings.forEach((R, i) => { R.m.visible = !R.done && i < G.ri + 4; R.tor.material = i === G.ri ? (i === G.rings.length - 1 ? RING_M.goal : RING_M.next) : RING_M.later; R.disc.visible = i === G.ri; });
+}
+const _pp = V3();
+function checkRing(prev, cur) {
+  const R = G.rings[G.ri]; if (!R) return;
+  const d0 = _pp.copy(prev).sub(R.c).dot(R.n), d1 = _pp.copy(cur).sub(R.c).dot(R.n);
+  if (d0 < 0 && d1 >= 0) { const t = d0 / (d0 - d1); _pp.copy(prev).lerp(cur, t); if (_pp.distanceTo(R.c) <= R.r + 1.5) passRing(); }
+}
+function passRing() {
+  const R = G.rings[G.ri]; R.done = true; G.ri++; AU.ring(); ringLook();
+  if (G.ri >= G.rings.length) { const C = COURSES[G.ci]; if (C.land) { msg('さいごは着陸！', '滑走路におりて、止まるまでブレーキ', 3.5); } else finishCourse(); }
+}
+// ---------- はじめる ----------
+function placeStart(C) {
+  const P = G.P = newPlane(), S = C.start;
+  if (S.ground) { setPose(P, S.p[0], groundAt(S.p[0], S.p[2]) + GEAR_H, S.p[2], S.hdg); P.ground = true; P.v.set(0, 0, 0); }
+  else { setPose(P, S.p[0], S.p[1], S.p[2], S.hdg); planeAxes(P); P.v.copy(_f).multiplyScalar(S.v); }
+  P.thr = P.thrS = S.thr; P.gear = P.gearK = S.gear; P.flap = P.flapK = S.flap; P.s = P.v.length();
+}
+function startCourse(i) {
+  AU.init(); G.ci = i; const C = COURSES[i]; G.mode = 'course'; G.done = false; G.landed = null; G.time = 0; G.pen = 0; G.ri = 0; G.crashT = 0; G.fin = null; G.stopT = 0; G.resT = 0;
+  setTOD(C.tod); G.tod = C.tod; placeStart(C); makeRings(C); G.lastSafe = null;
+  show('play'); G.paused = false; resetCam();
+  msg(C.name, C.start.ground ? '推力を上げて離陸しよう（R・Shift／右のバー）' : '黄色いリングをくぐろう', 3.2);
+}
+function startFree() {
+  AU.init(); G.mode = 'free'; G.done = false; clearRings(); G.time = 0; G.crashT = 0; G.landed = null; G.resT = 0;
+  setTOD(G.fTime); G.tod = G.fTime;
+  const S = G.fStart === 0 ? { p: [AIRPORT.x, 0, 1380], hdg: 0, v: 0, thr: 0, gear: 1, flap: 1, ground: true } : { p: [-300, 380, 4600], hdg: 0, v: 82, thr: .55, gear: 0, flap: 0 };
+  placeStart({ start: S }); show('play'); G.paused = false; resetCam();
+  msg('じゆうに飛ぶ', G.fStart === 0 ? '推力を上げて離陸しよう' : '島の上をめぐろう。空港の滑走路にも着陸できる', 3);
+}
+function finishCourse() {
+  if (G.done) return; G.done = true; const C = COURSES[G.ci], tot = G.time + G.pen, best = loadBest(), b = best[C.id] || {};
+  let medal = 0, score = null;
+  if (C.score && G.landed) { score = G.landed.score; medal = score >= MEDAL.c6[0] ? 3 : score >= MEDAL.c6[1] ? 2 : score >= MEDAL.c6[2] ? 1 : 0; }
+  else { const m = MEDAL[C.id]; medal = tot <= m[0] ? 3 : tot <= m[1] ? 2 : tot <= m[2] ? 1 : 0; }
+  const better = C.score ? (score > (b.sc ?? -1)) : (!b.t || tot < b.t);
+  if (!G.bot) { if (better) { best[C.id] = { t: C.score ? tot : tot, m: Math.max(medal, b.m || 0), sc: C.score ? score : undefined }; } else best[C.id] = Object.assign(b, { m: Math.max(medal, b.m || 0) }); saveBest(best); }
+  G.fin = { tot, medal, score, better, prev: b };
+  AU.goal(); G.resT = 2.2; msg('ゴール！', '', 2);
+}
+function showResult() {
+  if (!G.fin) return; const C = COURSES[G.ci], F = G.fin, mn = ['なし', 'ブロンズ', 'シルバー', 'ゴールド'][F.medal];
+  $('resTtl').textContent = C.name + ' ゴール！';
+  let h = `<div class="big"><span class="medal m${F.medal}"></span> ${C.score ? F.score + '点' : fmtT(F.tot)}</div>`;
+  h += `<div class="ln"><span>メダル</span><span>${mn}</span></div>`;
+  if (C.score && G.landed) h += `<div class="ln"><span>接地の速さ（下向き）</span><span>${(-G.landed.vs).toFixed(1)} m/s</span></div><div class="ln"><span>めやすの位置から</span><span>${Math.round(G.landed.dz)} m</span></div><div class="ln"><span>滑走路の中心から</span><span>${G.landed.dx.toFixed(1)} m</span></div>`;
+  h += `<div class="ln"><span>タイム</span><span>${fmtT(F.tot)}${G.pen ? `（リセット +${G.pen}秒をふくむ）` : ''}</span></div>`;
+  if (!C.score) { const m = MEDAL[C.id]; h += `<div class="ln"><span>メダルのめやす</span><span>金 ${fmtT(m[0])}・銀 ${fmtT(m[1])}・銅 ${fmtT(m[2])}</span></div>`; }
+  h += `<div class="ln"><span>${F.better ? 'ベスト更新！' : 'ベスト'}</span><span>${F.better ? '' : C.score ? (F.prev.sc ?? '-') + '点' : fmtT(F.prev.t)}</span></div>`;
+  $('resBox').innerHTML = h; $('rNext').style.display = G.ci < COURSES.length - 1 ? '' : 'none';
+  show('result');
+}
+const fmtT = t => { if (!t && t !== 0) return '-'; const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); };
+// ---------- ぶつかったとき（シミュレーターのリセット） ----------
+function onCrash(why) {
+  G.crashT = 1.7; AU.crash(); $('flash').style.transition = 'none'; $('flash').style.opacity = .92; requestAnimationFrame(() => { $('flash').style.transition = 'opacity 1.5s'; $('flash').style.opacity = 0; });
+  const W = { water: '水面にふれました', ground: '地面にふれました', building: 'ビルにふれました', bridge: '橋にふれました', hard: '強く着地しすぎました', overrun: '滑走路から出てしまいました' }[why] || 'ふれました';
+  msg('シミュレーターをリセット', W + (G.mode === 'course' ? '（+5秒）' : ''), 2.2);
+}
+function respawn() {
+  const P = G.P;
+  if (G.mode === 'course') {
+    G.pen += 5; const C = COURSES[G.ci];
+    if (G.ri === 0) { placeStart(C); return; }
+    const R = G.rings[G.ri - 1], hd = Math.atan2(R.n.x, -R.n.z), Q = G.P = newPlane();
+    setPose(Q, R.c.x, R.c.y, R.c.z, hd); planeAxes(Q); Q.v.copy(_f).multiplyScalar(Math.max(70, C.start.v || 75)); Q.thr = Q.thrS = .55; Q.gear = Q.gearK = R.c.y < 120 && C.land ? 1 : 0; Q.flap = Q.flapK = 1; Q.s = Q.v.length();
+  } else {
+    const nearAp = Math.hypot(P.p.x - AIRPORT.x, P.p.z) < 3500 && P.p.y < 250;
+    if (nearAp || G.mode === 'demo') placeStart({ start: { p: [AIRPORT.x, 0, 1380], hdg: 0, v: 0, thr: 0, gear: 1, flap: 1, ground: true } });
+    else { const Q = G.P = newPlane(), y = Math.max(320, topAt(P.p.x, P.p.z) + 200); setPose(Q, P.p.x, y, P.p.z, P.hdg); planeAxes(Q); Q.v.copy(_f).multiplyScalar(80); Q.thr = Q.thrS = .55; Q.gear = Q.gearK = 0; Q.s = 80; }
+  }
+  resetCam();
+}
+// ---------- 自動操縦（タイトル・試験用） ----------
+const AP = { pts: [[-1500, 400, 2000], [-1450, 420, -1500], [-500, 440, -3300], [1250, 420, -2700], [1300, 400, 600], [800, 380, 3900], [-700, 380, 4400]] };
+const _ad = V3();
+function apInput(P, aim, vT, opt = {}) {
+  const dx = aim.x - P.p.x, dy = aim.y - P.p.y, dz = aim.z - P.p.z, hd = Math.hypot(dx, dz);
+  const psi = Math.atan2(dx, -dz), e = angDiff(P.hdg, psi), gam = clamp(Math.atan2(dy, hd), -.42, .42), g0 = Math.asin(clamp(P.v.y / Math.max(1, P.s), -1, 1));
+  const bankT = clamp(e * 2.2, -1, 1) * (opt.maxBank || 62) * D2R;
+  const inp = { roll: clamp(bankT / PL.maxBank, -1, 1), pitch: clamp((gam - P.pitch) * 3 + (gam - g0) * 2.4, -1, 1), yaw: 0, thrAbs: clamp(.42 + (vT - P.s) * .07 + gam * 1.6, 0, 1), thrRate: 0, brake: false, ap: true };
+  return inp;
+}
+function ringAim(R, P) {   // リングの正面から入る。横からで間に合わないときは、いったん離れてまわりこむ
+  const to = _ad.copy(R.c).sub(P.p), a = to.dot(R.n), lat = to.addScaledVector(R.n, -a).length();
+  const far = () => { const e = R.c.clone().addScaledVector(R.n, -900); e.y = R.c.y; return e; };
+  if (a > 50) { if (lat > a * 1.1 + 60 && a < 900) return far(); return R.c.clone().addScaledVector(R.n, -clamp(a * .45, 0, 240)); }
+  if (a > -30 && lat < R.r * .9) return R.c.clone().addScaledVector(R.n, 80);
+  return far();
+}
+function landInput(P) {   // 進入・着地・停止
+  const A = AIRPORT, gy = A.gy, agl = P.p.y - gearHeight(P.pitch) - gy;
+  if (P.ground) return { roll: clamp((A.x - P.p.x) * .08 - angDiff(P.hdg, 0) * 3, -1, 1), pitch: 0, yaw: 0, thrAbs: 0, thrRate: 0, brake: true, ap: true };
+  const yp = z => gy + GEAR_H + (z - TDZ) * Math.tan(3 * D2R), za = P.p.z - 450, aim = V3(A.x, Math.max(gy + GEAR_H - 6, yp(za)), za), inp = apInput(P, aim, 62, { maxBank: 30 });
+  if (agl < 7.5 && Math.abs(P.p.x - A.x) < 30) { inp.thrAbs = 0; const vsT = -1.5; inp.pitch = clamp((vsT - P.v.y) * .5 + (4 * D2R - P.pitch) * 1.2, -1, 1); inp.roll = clamp((A.x - P.p.x) * .02 - P.bank * 1.5, -.3, .3); }
+  return inp;
+}
+function botInput() {
+  const P = G.P;
+  if (G.mode === 'demo') { let T = V3(...AP.pts[G.demoI]); if (Math.hypot(T.x - P.p.x, T.z - P.p.z) < 350) { G.demoI = (G.demoI + 1) % AP.pts.length; T = V3(...AP.pts[G.demoI]); } return apInput(P, T, 85); }
+  const C = COURSES[G.ci], R = G.rings[G.ri];
+  if (P.ground && !R) return landInput(P);
+  if (P.ground) { const inp = { roll: clamp((AIRPORT.x - P.p.x) * .05 - angDiff(P.hdg, 0) * 3, -1, 1), pitch: P.s > 56 ? .7 : 0, yaw: 0, thrAbs: 1, thrRate: 0, brake: false, ap: true }; return inp; }
+  if (!R) return landInput(P);
+  const vT = C.id === 'c2' ? 72 : C.id === 'c4' ? 70 : C.id === 'c3' ? 76 : C.land && G.ri >= G.rings.length - 3 ? 68 : 84;
+  const inp = apInput(P, ringAim(R, P), vT, { maxBank: C.id === 'c3' ? 66 : 60 });
+  return inp;
+}
+function botSystems(P) {   // ギア・フラップ
+  if (P.ground) return;
+  const C = COURSES[G.ci] || {}, dRw = Math.hypot(P.p.x - AIRPORT.x, P.p.z - AIRPORT.z1);
+  const app = G.mode === 'course' && C.land && G.ri >= G.rings.length - 3;
+  if (P.gear && P.p.y > 60 && !app) P.gear = 0;
+  if (app || (G.mode === 'course' && C.land && dRw < 4000 && P.p.y < 260)) { P.gear = 1; P.flap = 2; } else if (P.gear === 0) P.flap = P.s < 70 ? 1 : 0;
+}
+// ---------- 影（影を描かない画質のとき：地面・屋上に飛行機の形の影） ----------
+let BLOB = null;
+function makeBlob() {
+  const [c, g] = cvs(128, 128); g.fillStyle = '#000'; g.translate(64, 64); g.beginPath(); g.ellipse(0, 0, 4.5, 60, 0, 0, TAU); g.fill();
+  g.beginPath(); g.moveTo(-3, -6); g.lineTo(-56, 14); g.lineTo(-56, 20); g.lineTo(-3, 12); g.lineTo(3, 12); g.lineTo(56, 20); g.lineTo(56, 14); g.lineTo(3, -6); g.fill();
+  g.beginPath(); g.moveTo(-2, 44); g.lineTo(-20, 56); g.lineTo(20, 56); g.lineTo(2, 44); g.fill();
+  BLOB = new THREE.Mesh(new THREE.PlaneGeometry(36, 38).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: ctex(c, { rep: false }), transparent: true, opacity: .4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }));
+  BLOB.renderOrder = 2; scene.add(BLOB);
+}
+function updateBlob() {
+  if (!BLOB) return; const P = G.P, on = !SKY.sun.castShadow && SKY.tod !== 2; BLOB.visible = on; if (!on) return;
+  const h = topAt(P.p.x, P.p.z), alt = P.p.y - h; BLOB.visible = alt < 420; BLOB.position.set(P.p.x, h + .3, P.p.z); BLOB.rotation.y = -P.hdg; BLOB.material.opacity = .42 * (1 - alt / 420);
+}
+// ---------- カメラ ----------
+const CAM = { p: V3(), look: V3(), up: V3(0, 1, 0), orb: 0 };
+function resetCam() { const P = G.P; planeAxes(P); CAM.p.copy(P.p).addScaledVector(_f, -46).add(V3(0, 12, 0)); CAM.look.copy(P.p); CAM.up.set(0, 1, 0); }
+const _c1 = V3(), _c2 = V3(), _c3 = V3();
+function updateCam(dt) {
+  const P = G.P; planeAxes(P);
+  if (G.scr === 'title' || G.scr === 'courseSel' || G.scr === 'freeSel' || (G.scr === 'how' || G.scr === 'settings') && G.setBack === 'title') {   // タイトル：ゆっくり回る
+    CAM.orb += dt * .12; const a = CAM.orb, d = 74;
+    _c1.set(Math.sin(a) * d, 6 + Math.sin(a * .7) * 6, Math.cos(a) * d); camera.position.copy(P.p).add(_c1); camera.up.set(0, 1, 0); camera.lookAt(_c2.copy(P.p).add(_c3.set(0, 21, 0))); camera.fov = 50; camera.updateProjectionMatrix(); return;
+  }
+  camera.fov = SET.fov; camera.updateProjectionMatrix();
+  if (G.cam === 2) {   // 機首
+    _c1.set(0, 1.25, -16.2).applyQuaternion(P.q).add(P.p); camera.position.copy(_c1); camera.up.copy(_u); _c2.copy(_f).multiplyScalar(100).add(_c1); camera.lookAt(_c2); return;
+  }
+  const far = G.cam === 1, dist = far ? 95 : 44, hgt = far ? 24 : 10.5;
+  _c3.copy(_f); if (P.ground) { _c3.y = 0; _c3.normalize(); }
+  _c1.copy(P.p).addScaledVector(_c3, -dist).addScaledVector(_u, hgt * .35).add(_c2.set(0, hgt * .65, 0));
+  const k = P.crashed ? 0 : 1 - Math.exp(-6 * dt); CAM.p.lerp(_c1, k);
+  // ビルの中に入らないように
+  for (let i = 0; i < 4; i++) { if (!hitAt(CAM.p.x, CAM.p.y, CAM.p.z)) break; CAM.p.lerp(P.p, .35); }
+  CAM.look.copy(P.p).addScaledVector(_f, far ? 30 : 22);
+  CAM.up.lerp(_c2.set(0, 1, 0).lerp(_u, .25).normalize(), 1 - Math.exp(-4 * dt)).normalize();
+  camera.position.copy(CAM.p); camera.up.copy(CAM.up); camera.lookAt(CAM.look);
+}
+// ---------- 計器・地図 ----------
+let MAP = null;
+function makeMap() {
+  const N = 600, S = 30, [c, g] = cvs(N, N), d = g.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const wx = (x - N / 2) * S, wz = (y - N / 2) * S, gh = groundAt(wx, wz), o = (y * N + x) * 4, isl = Math.abs(wx) <= islandHW(wz);
+    const col = gh <= .01 ? [28, 64, 96] : isl ? [168, 168, 160] : gh > 40 ? [98, 108, 92] : [120, 124, 116]; d.data.set([...col, 230], o); }
+  g.putImageData(d, 0, 0);
+  const W = (x, z) => [x / S + N / 2, z / S + N / 2];
+  g.fillStyle = '#4c8a4a'; { const a = W(PARK.x0, PARK.z0), b = W(PARK.x1, PARK.z1); g.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); }
+  g.fillStyle = '#2a2c30'; { const a = W(AIRPORT.x - 40, AIRPORT.z0), b = W(AIRPORT.x + 40, AIRPORT.z1); g.fillRect(a[0], a[1], Math.max(2, b[0] - a[0]), b[1] - a[1]); }
+  g.strokeStyle = '#e0e0e0'; g.lineWidth = 1.5; for (const B of BRIDGES) { const xa = B.side === 'E' ? islandHW(B.z) : westShore(B.z), xb = B.side === 'E' ? eastShore(B.z) : -islandHW(B.z), a = W(xa - 60, B.z), b = W(xb + 60, B.z); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+  g.fillStyle = '#ffffff'; for (const L of LANDMARKS) { const a = W(L.x, L.z); g.fillRect(a[0] - 1, a[1] - 1, 2.5, 2.5); }
+  MAP = { c, N, S };
+}
+function drawHud() {
+  const P = G.P, w = hc.width, h = hc.height, d = HUD_DPR; hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, w, h); if (G.scr !== 'play') return;
+  hx.setTransform(d, 0, 0, d, 0, 0); const W = w / d, H = h / d;
+  const green = 'rgba(141,255,176,.92)', touch = document.body.classList.contains('touch');
+  // 方位（上）
+  { const cx = W / 2, y = touch ? 92 : 64, span = 220; hx.save(); hx.beginPath(); hx.rect(cx - span / 2, y - 16, span, 32); hx.clip(); hx.strokeStyle = green; hx.fillStyle = green; hx.font = `800 12px ${FONT}`; hx.textAlign = 'center'; hx.lineWidth = 1.5;
+    const hd = (P.hdg / D2R + 360) % 360; for (let a = Math.floor((hd - 60) / 10) * 10; a <= hd + 60; a += 10) { const x = cx + (a - hd) * 2.2, aa = (a + 360) % 360; hx.beginPath(); hx.moveTo(x, y + 10); hx.lineTo(x, y + (aa % 30 ? 5 : 2)); hx.stroke(); if (aa % 90 === 0) hx.fillText(['北', '東', '南', '西'][aa / 90], x, y - 4); else if (aa % 30 === 0) hx.fillText(aa / 10 | 0, x, y - 4); }
+    hx.restore(); hx.fillStyle = green; hx.beginPath(); hx.moveTo(cx, y + 12); hx.lineTo(cx - 5, y + 18); hx.lineTo(cx + 5, y + 18); hx.fill(); }
+  // 姿勢（機首カメラでははしご、ほかは小さな計器）
+  if (G.cam === 2) {
+    const ppd = (H / 2) / (SET.fov / 2), cx = W / 2, cy = H / 2; hx.save(); hx.translate(cx, cy); hx.rotate(-P.bank); hx.strokeStyle = green; hx.fillStyle = green; hx.lineWidth = 1.6; hx.font = `800 11px ${FONT}`;
+    for (let a = -30; a <= 30; a += 5) { const y = (P.pitch / D2R - a) * ppd; if (Math.abs(y) > H * .4) continue; const L = a === 0 ? W * .5 : 46; hx.setLineDash(a < 0 ? [6, 5] : []); hx.beginPath(); hx.moveTo(-L, y); hx.lineTo(-18, y); hx.moveTo(18, y); hx.lineTo(L, y); hx.stroke(); if (a) hx.fillText(a, L + 4, y + 4); }
+    hx.restore(); hx.setLineDash([]); hx.strokeStyle = green; hx.lineWidth = 2; hx.beginPath(); hx.moveTo(cx - 30, cy); hx.lineTo(cx - 10, cy); hx.lineTo(cx, cy + 7); hx.lineTo(cx + 10, cy); hx.lineTo(cx + 30, cy); hx.stroke();
+  } else {
+    const r = 32, cx = touch ? W / 2 : W / 2, cy = touch ? H - 54 : H - 72; hx.save(); hx.beginPath(); hx.arc(cx, cy, r, 0, TAU); hx.clip(); hx.translate(cx, cy); hx.rotate(-P.bank);
+    const off = P.pitch / D2R * 1.6; hx.fillStyle = '#3d7fd0'; hx.fillRect(-60, -60 + off, 120, 60); hx.fillStyle = '#7a5a3a'; hx.fillRect(-60, off, 120, 60); hx.strokeStyle = '#fff'; hx.lineWidth = 1; for (const a of [-20, -10, 10, 20]) { hx.beginPath(); hx.moveTo(-8, off - a * 1.6); hx.lineTo(8, off - a * 1.6); hx.stroke(); }
+    hx.restore(); hx.strokeStyle = 'rgba(255,255,255,.8)'; hx.lineWidth = 2; hx.beginPath(); hx.arc(cx, cy, r, 0, TAU); hx.stroke(); hx.strokeStyle = '#ffd23a'; hx.lineWidth = 3; hx.beginPath(); hx.moveTo(cx - 20, cy); hx.lineTo(cx - 6, cy); hx.moveTo(cx + 6, cy); hx.lineTo(cx + 20, cy); hx.stroke();
+  }
+  // 次のリングの矢印
+  const R = G.rings[G.ri]; let tgt = R ? R.c : null;
+  if (!tgt && G.mode === 'course' && COURSES[G.ci].land && !P.ground) tgt = V3(AIRPORT.x, AIRPORT.gy, TDZ);
+  if (tgt) {
+    _c1.copy(tgt).project(camera); const behind = _c1.z > 1, sx = (_c1.x * .5 + .5) * W, sy = (-_c1.y * .5 + .5) * H, dist = P.p.distanceTo(tgt);
+    hx.fillStyle = hx.strokeStyle = R ? '#ffd23a' : '#7aff9a'; hx.font = `900 13px ${FONT}`; hx.textAlign = 'center';
+    if (!behind && sx > 30 && sx < W - 30 && sy > 30 && sy < H - 30) { hx.lineWidth = 2; const b = 14; hx.beginPath(); hx.moveTo(sx - b, sy - b + 6); hx.lineTo(sx - b, sy - b); hx.lineTo(sx - b + 6, sy - b); hx.moveTo(sx + b - 6, sy - b); hx.lineTo(sx + b, sy - b); hx.lineTo(sx + b, sy - b + 6); hx.moveTo(sx + b, sy + b - 6); hx.lineTo(sx + b, sy + b); hx.lineTo(sx + b - 6, sy + b); hx.moveTo(sx - b + 6, sy + b); hx.lineTo(sx - b, sy + b); hx.lineTo(sx - b, sy + b - 6); hx.stroke(); hx.fillText(dist > 1000 ? (dist / 1000).toFixed(1) + 'km' : Math.round(dist) + 'm', sx, sy + b + 15); }
+    else { let ax = _c1.x, ay = -_c1.y; if (behind) { ax = -ax; ay = -ay; } const l = Math.hypot(ax, ay) || 1; ax /= l; ay /= l; const ex = W / 2 + ax * (W / 2 - 60), ey = H / 2 + ay * (H / 2 - 70), an = Math.atan2(ay, ax);
+      hx.save(); hx.translate(ex, ey); hx.rotate(an); hx.beginPath(); hx.moveTo(18, 0); hx.lineTo(-8, -12); hx.lineTo(-3, 0); hx.lineTo(-8, 12); hx.closePath(); hx.fill(); hx.restore(); hx.fillText(dist > 1000 ? (dist / 1000).toFixed(1) + 'km' : Math.round(dist) + 'm', ex - ax * 30, ey - ay * 30 + 4); }
+  }
+  // 地図
+  if (MAP) {
+    const S = touch ? 104 : 140, x0 = 14, y0 = touch ? 64 : H - S - 14, span = 4800, src = span / MAP.S, mx = P.p.x / MAP.S + MAP.N / 2, mz = P.p.z / MAP.S + MAP.N / 2;
+    hx.save(); hx.beginPath(); hx.roundRect(x0, y0, S, S, 12); hx.clip(); hx.fillStyle = '#1c4060'; hx.fillRect(x0, y0, S, S); hx.globalAlpha = .9; hx.drawImage(MAP.c, mx - src / 2, mz - src / 2, src, src, x0, y0, S, S); hx.globalAlpha = 1;
+    const toM = (x, z) => [x0 + S / 2 + (x - P.p.x) / span * S, y0 + S / 2 + (z - P.p.z) / span * S];
+    G.rings.forEach((Rg, i) => { if (Rg.done) return; const q = toM(Rg.c.x, Rg.c.z); hx.fillStyle = i === G.ri ? '#ffd23a' : 'rgba(140,216,255,.8)'; hx.beginPath(); hx.arc(q[0], q[1], i === G.ri ? 3.5 : 2, 0, TAU); hx.fill(); });
+    hx.translate(x0 + S / 2, y0 + S / 2); hx.rotate(P.hdg); hx.fillStyle = '#fff'; hx.strokeStyle = '#000'; hx.lineWidth = 1; hx.beginPath(); hx.moveTo(0, -7); hx.lineTo(5, 6); hx.lineTo(0, 3); hx.lineTo(-5, 6); hx.closePath(); hx.fill(); hx.stroke();
+    hx.restore(); hx.strokeStyle = 'rgba(255,255,255,.6)'; hx.lineWidth = 1.5; hx.beginPath(); hx.roundRect(x0, y0, S, S, 12); hx.stroke(); hx.fillStyle = '#fff'; hx.font = `800 10px ${FONT}`; hx.textAlign = 'center'; hx.fillText('北', x0 + S / 2, y0 + 11);
+  }
+}
+let HUDK = '';
+function updateHud(dt) {
+  const P = G.P, kt = SET.unit ? P.s * 3.6 : P.s * 1.944;
+  $('hSpdV').textContent = Math.round(kt); $('hSpdU').textContent = SET.unit ? 'km/h' : 'ノット';
+  $('hAltV').textContent = Math.round(P.p.y - GEAR_H - .1); $('hVs').textContent = (P.v.y >= 0 ? '↑' : '↓') + Math.abs(P.v.y).toFixed(1) + 'm/s';
+  $('hThrV').textContent = Math.round(P.thrS * 100); $('tThrF').style.height = `calc(${Math.round(P.thr * 100)}% - 8px)`;
+  const sg = $('sGear'); sg.className = P.gearK > .98 ? 'on' : P.gearK > .02 ? 'warn' : ''; sg.textContent = P.gearK > .98 ? 'ギア下' : P.gearK > .02 ? 'ギア…' : 'ギア上';
+  $('sFlap').className = P.flap ? 'on' : ''; $('sFlap').textContent = 'フラップ ' + P.flap; $('sBrk').className = P.inp && P.inp.brake ? 'warn' : ''; $('sBrk').style.display = P.ground ? '' : 'none'; $('sAp').style.display = G.bot ? '' : 'none';
+  if (G.mode === 'course') { $('hTime').textContent = fmtT(G.time + G.pen); $('hRing').innerHTML = G.ri < G.rings.length ? `リング <b>${G.ri + 1}</b> / ${G.rings.length}` : COURSES[G.ci].land && !G.done ? '<b>着陸して止まろう</b>' : 'ゴール'; }
+  else { $('hTime').textContent = ''; $('hRing').innerHTML = G.mode === 'free' ? 'じゆうに飛ぶ ・ ' + TODS[G.tod].name : ''; }
+  // 注意
+  let wn = '', amber = false;
+  if (!P.ground && !P.crashed) {
+    const ob = obstacleAhead(P);
+    if (P.lam < .92) wn = '失速！ 推力を上げて機首を下げて';
+    else if (ob && ob < 3.2) wn = '上げて！ ぶつかる';
+    else if (G.bound) { wn = 'この先へは行けません'; amber = true; }
+    else if (P.gearK < .5 && P.p.y - groundAt(P.p.x, P.p.z) < 110 && P.v.y < -1.2 && P.thrS < .4 && Math.abs(P.p.x - AIRPORT.x) < 400 && P.p.z > AIRPORT.z0 && P.p.z < 6000) { wn = 'ギアを出して（G）'; amber = true; }
+    else if (P.s > 170) { wn = '速すぎ'; amber = true; }
+  } else if (P.ground && P.tail > .3) { wn = 'しっぽが地面につきそう'; amber = true; }
+  const k2 = wn + amber; if (k2 !== HUDK) { HUDK = k2; $('hWarn').textContent = wn; $('hWarn').className = 'hud' + (amber ? ' amber' : ''); }
+  if (wn && !amber) { G.warnT -= dt; if (G.warnT <= 0) { G.warnT = .5; AU.beep(wn.startsWith('失速') ? 660 : 990); } }
+}
+function msg(t, sub, dur) { $('msg').textContent = t; $('sub').textContent = sub || ''; $('msg').style.opacity = 1; $('sub').style.opacity = 1; G.msgT = dur; }
+// ---------- 画面 ----------
+function show(id) { document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id === id)); G.scr = id; document.body.classList.toggle('playing', id === 'play'); }
+function pause(on) { if (on) { G.paused = true; show('pause'); } else { G.paused = false; show('play'); } }
+function seg(el, labels, get, set) { el.innerHTML = ''; labels.forEach((l, i) => { const b = document.createElement('button'); b.textContent = l; b.onclick = () => { set(i); [...el.children].forEach((c, j) => c.classList.toggle('on', j === get())); AU.click(); }; el.appendChild(b); }); [...el.children].forEach((c, j) => c.classList.toggle('on', j === get())); }
+function rng2(el, get, set) { el.value = get(); el.oninput = () => set(+el.value); }
+function applyBtn() { document.documentElement.style.setProperty('--opa', SET.opa); document.documentElement.style.setProperty('--bs', SET.bsz); }
+function openSettings(back) {
+  G.setBack = back;
+  seg($('sCtl'), ['かんたん', 'リアル'], () => SET.ctl, v => { SET.ctl = v; saveSet(); });
+  seg($('sInv'), ['ふつう（上で上昇）', '飛行機式（下で上昇）'], () => SET.inv, v => { SET.inv = v; saveSet(); });
+  rng2($('sSens'), () => SET.sens, v => { SET.sens = v; saveSet(); });
+  rng2($('sFov'), () => SET.fov, v => { SET.fov = v; saveSet(); });
+  seg($('sUnit'), ['ノット', 'km/h'], () => SET.unit, v => { SET.unit = v; saveSet(); });
+  rng2($('sVol'), () => SET.vol, v => { SET.vol = v; saveSet(); AU.setVol(); });
+  seg($('sGfx'), ['自動', '軽い', 'ふつう', 'きれい'], () => SET.gfx + 1, v => { SET.gfx = v - 1; saveSet(); });
+  rng2($('sOpa'), () => SET.opa, v => { SET.opa = v; saveSet(); applyBtn(); });
+  rng2($('sBsz'), () => SET.bsz, v => { SET.bsz = v; saveSet(); applyBtn(); });
+  show('settings');
+}
+function drawCourses() {
+  const best = loadBest(), el = $('courseList'); el.innerHTML = '';
+  COURSES.forEach((C, i) => { const b = best[C.id] || {}, md = b.m || 0, btn = document.createElement('button'); btn.className = 'btn' + (i === 0 && !best.c1 ? ' main' : '');
+    btn.innerHTML = `<div class="course"><div class="num">${i + 1}</div><div class="tx">${C.name}<small>${C.desc}${C.tod ? '' : ''}</small></div><div class="bt">${C.score ? (b.sc != null ? b.sc + '点' : '') : b.t ? fmtT(b.t) : ''}</div><div class="md"><span class="medal m${md}"></span></div></div>`;
+    btn.onclick = () => startCourse(i); el.appendChild(btn); });
+  show('courseSel');
+}
+function wireUI() {
+  const on = (id, f) => $(id).addEventListener('click', () => { AU.init(); AU.click(); f(); });
+  on('tCourse', drawCourses); on('tFree', () => { seg($('fStart'), ['滑走路から', '空から'], () => G.fStart, v => (G.fStart = v)); seg($('fTime'), ['昼', '夕方', '夜'], () => G.fTime, v => { G.fTime = v; setTOD(v); }); show('freeSel'); });
+  on('tSet', () => openSettings('title')); on('tHow', () => { G.setBack = 'title'; show('how'); });
+  on('cBack', () => show('title')); on('fBack', () => { show('title'); }); on('fGo', startFree);
+  on('pResume', () => pause(false)); on('pRetry', () => { if (G.mode === 'course') startCourse(G.ci); else startFree(); }); on('pSet', () => openSettings('pause')); on('pHow', () => { G.setBack = 'pause'; show('how'); }); on('pTitle', toTitle);
+  on('sBack', () => show(G.setBack)); on('howBack', () => show(G.setBack));
+  on('rNext', () => startCourse(Math.min(COURSES.length - 1, G.ci + 1))); on('rRetry', () => startCourse(G.ci)); on('rList', drawCourses);
+  on('rFree', () => { G.mode = 'free'; clearRings(); show('play'); G.paused = false; });
+  $('bPause').addEventListener('click', () => { if (G.scr === 'play') pause(true); });
+  initTouch(); applyBtn();
+}
+function toTitle() { G.resT = 0; G.mode = 'demo'; G.bot = false; clearRings(); setTOD(G.tod); placeStart({ start: { p: [-1500, 400, 2600], hdg: 0, v: 85, thr: .5, gear: 0, flap: 0 } }); G.demoI = 0; show('title'); G.paused = false; }
+// ---------- 1コマ ----------
+const _prev = V3();
+function gameStep(dt) {
+  const P = G.P;
+  if (G.crashT > 0) { G.crashT -= dt; if (G.crashT <= 0) respawn(); return; }
+  let inp;
+  if (G.mode === 'demo' || G.bot) { inp = botInput(); if (G.bot || G.mode === 'demo') botSystems(P); }
+  else inp = { pitch: IN.pitch, roll: IN.roll, yaw: IN.yaw, thrRate: IN.thrRate, thrAbs: IN.thrAbs, brake: IN.brake };
+  IN.thrAbs = IN.lastDev === 'touch' ? (IN.thrAbs == null ? null : IN.thrAbs) : null;
+  // 行ける範囲のはし：自動で向きを変える
+  const dc = Math.hypot(P.p.x, P.p.z * .8); G.bound = dc > 9000 && !P.ground;
+  if (G.bound) { const psi = Math.atan2(-P.p.x, P.p.z); inp.roll = clamp(angDiff(P.hdg, psi) * 2, -.8, .8); }
+  _prev.copy(P.p);
+  const n = P.s > 95 ? 2 : 1; let hit = null;
+  for (let i = 0; i < n && !hit; i++) hit = stepPlane(P, inp, dt / n);
+  for (const e of P.ev.splice(0)) {
+    if (e === 'liftoff') { if (G.mode !== 'demo') msg('離陸！', 'ギアをしまおう（G・ギアボタン）', 2.5); }
+    else if (e.e === 'touch') onTouch(e);
+    else if (e.e === 'crash') onCrash(e.why);
+  }
+  if (hit) return;
+  if (G.mode === 'course' && !G.done) { G.time += dt; checkRing(_prev, P.p); if (COURSES[G.ci].land && G.ri >= G.rings.length && P.ground && P.s < 2.5 && onRunway(P.p.x, P.p.z)) finishCourse(); }
+  if (P.ground && !G.rotHint && P.s > lerp(PL.vStall[0], PL.vStall[2], P.flapK / 2) * 1.02 && G.mode !== 'demo' && !G.bot) { G.rotHint = true; msg('いまだ！ 上にひいて離陸', IN.lastDev === 'touch' ? 'スティックを上へ' : 'W・↑', 2.2); }
+  if (!P.ground) G.rotHint = false;
+  if (G.mode === 'free' && G.landed && P.ground && P.s < 2.5 && !G.landed.stop) { G.landed.stop = true; msg('着陸成功！', '推力を上げると、また離陸できる', 3); AU.goal(); }
+  if (G.mode === 'demo' && P.p.y < 150) { P.v.y = Math.max(P.v.y, 4); }
+}
+function onTouch(e) {
+  const vs = e.vs, dz = TDZ - e.z, dx = Math.abs(e.x - AIRPORT.x), k = clamp(-vs / 4, 0, 1);
+  AU.touch(k); const score = Math.round(clamp(100 - Math.max(0, -vs - .6) * 22 - Math.max(0, Math.abs(dz) - 150) / 7 - Math.max(0, dx - 3) * 2.2, 0, 100));
+  G.landed = { vs, dz, dx, score };
+  const word = -vs < 1.2 ? 'ふんわり着陸！' : -vs < 2.4 ? 'じょうずな着陸' : 'ドスン！';
+  if (G.mode !== 'demo') msg(word, `下向き ${(-vs).toFixed(1)} m/s ・ 中心から ${dx.toFixed(1)} m${COURSES[G.ci] && COURSES[G.ci].score && G.mode === 'course' ? ` ・ ${score}点` : ''}`, 3);
+}
+function tick(dt) {
+  readInput();
+  for (const e of IN.ev.splice(0)) {
+    if (e === 'pause') { if (G.scr === 'play') pause(true); else if (G.scr === 'pause') pause(false); continue; }
+    if (G.scr !== 'play' || G.paused) continue;
+    const P = G.P;
+    if (e === 'cam') G.cam = (G.cam + 1) % 3;
+    if (e === 'gear') { if (P.ground) msg('地上ではギアを上げられません', '', 1.5); else { P.gear = P.gear ? 0 : 1; AU.gear(); } }
+    if (e === 'flap') { P.flap = (P.flap + 1) % 3; AU.flap(); msg('フラップ ' + P.flap, P.flap ? 'ゆっくり飛べる（空気のていこうが増える）' : '', 1.2); }
+  }
+  if (G.msgT > 0) { G.msgT -= dt; if (G.msgT <= 0) { $('msg').style.opacity = 0; $('sub').style.opacity = 0; } }
+  if (G.resT > 0) { G.resT -= dt; if (G.resT <= 0 && G.scr === 'play') showResult(); }
+  const run = !G.paused && (G.scr === 'play' || G.scr === 'title' || G.scr === 'courseSel' || G.scr === 'freeSel' || ((G.scr === 'settings' || G.scr === 'how') && G.setBack === 'title') || G.scr === 'result');
+  if (run && G.P) { gameStep(dt); }
+  updateCity(dt, performance.now() / 1000, G.P);
+  posePlane(G.P, dt); updateBlob(); updateCam(dt); updateSky(G.P.p);
+  if (G.scr === 'play') updateHud(dt);
+  drawHud(); AU.update(dt, G.P, G.scr === 'play' ? G.cam : 0);
+}
+// ---------- はじまり ----------
+let RUN = true, LASTT = 0;
+function frame(t) {
+  if (!RUN) return; requestAnimationFrame(frame);
+  if (FPS_CAP && t - LASTT < 1000 / FPS_CAP - 2) return;
+  const dt = Math.min(.05, Math.max(.001, (t - LASTT) / 1000)); LASTT = t;
+  tick(dt); renderer.render(scene, camera);
+}
+async function boot() {
+  const say = t => { $('loadmsg').textContent = t; };
+  if (HUB.embedded) {
+    const applyHome = S => { if (!S || typeof S !== 'object') return; if (typeof S.land === 'boolean' && S.land !== ROT.on) { ROT.on = S.land; onResize(); } if (typeof S.sound === 'boolean' || typeof S.vol === 'number') { HUB.vol = S.sound === false ? 0 : clamp(typeof S.vol === 'number' ? S.vol : HUB.vol, 0, 1); AU.setVol(); } };
+    try { applyHome(JSON.parse(localStorage.getItem('3dame-settings'))); } catch (e) { /* なし */ } addEventListener('message', e => { if (e.data && e.data.h3dSet) applyHome(e.data.h3dSet); });
+  }
+  try {
+    onResize(); say('空を作っています…'); await nextFrame();
+    await buildCity(say);
+    say('飛行機を組み立てています…'); await nextFrame();
+    makeSky(); PLANE.obj = makePlane(); scene.add(PLANE.obj.root); scene.add(RINGS);
+    for (const [z, hd] of [[-420, Math.PI / 2], [-20, Math.PI / 2], [380, Math.PI / 2]]) { const o = makePlane(); o.root.position.set(2560, AIRPORT.gy + GEAR_H, z); o.root.rotation.y = -hd; scene.add(o.root); posePlane({ p: o.root.position.clone(), q: o.root.quaternion.clone(), gearK: 1, flapK: 0, t: 0, inp: {}, gear: 1 }, 0, o); o.root.updateMatrixWorld(); addBox(2540, 2580, AIRPORT.gy, AIRPORT.gy + 17, z - 17, z + 17); }
+    makeMap(); makeBlob(); wireUI();
+    G.tod = 0; setTOD(0); toTitle();
+    for (let i = 0; i < 30; i++) gameStep(1 / 30);
+    updateCam(0); updateSky(G.P.p); renderer.compile(scene, camera); renderer.render(scene, camera);
+    $('loading').style.display = 'none'; LASTT = performance.now(); requestAnimationFrame(frame);
+    addEventListener('pointerdown', () => AU.init(), { once: true }); addEventListener('keydown', () => AU.init(), { once: true });
+  } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
+}
+window.__SF = { loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => renderer.render(scene, camera), G, IN, SET, CITY, COURSES, startCourse, startFree, toTitle, show, camera, scene, renderer, hitAt, groundAt, topAt, PL, AIRPORT, MEDAL, setTOD, BLD };
+boot();
+</script>
+</body></html>
