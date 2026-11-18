@@ -118,6 +118,10 @@ input[type=range] { width: 100%; accent-color: var(--pink); }
 #gColors { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; } #gColors button { width: 32px; height: 32px; border: 3px solid #000; box-shadow: 0 0 0 2px var(--dim); cursor: pointer; } #gColors button.on { box-shadow: 0 0 0 3px var(--ink); }
 #gCars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; } #gCars button { font: 14px var(--f); color: var(--ink); background: rgba(20,16,60,.85); border: 2px solid var(--dim); padding: 6px 4px; cursor: pointer; } #gCars button.on { border-color: var(--cyan); background: #193a5e; } #gCars button small { display: block; color: var(--amber); font-size: 12px; } #gCars button:disabled { opacity: .4; }
 .gsec { color: var(--pink); margin: 10px 0 2px; font-size: 15px; }
+#fsCars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 4px 0 8px; } #fsCars button { font: 14px var(--f); color: var(--ink); background: rgba(20,16,60,.85); border: 2px solid var(--dim); padding: 6px 2px; cursor: pointer; } #fsCars button.on { border-color: var(--cyan); background: #193a5e; } #fsCars button small { display: block; font-size: 10px; color: var(--amber); }
+#fsTune { text-align: left; border: 2px solid rgba(244,241,255,.25); padding: 6px 8px; margin: 0 0 8px; } .ftq { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--pink); } .ftq span { flex: 1; } .ftq button { font: 13px var(--f); color: var(--ink); background: #2c1e6e; border: 2px solid var(--ink); padding: 4px 8px; cursor: pointer; }
+.ftst { font-size: 12px; color: var(--dim); margin: 4px 0; } .ftst b { color: var(--amber); font-weight: 400; } .ftrow { display: flex; align-items: center; gap: 6px; } .ftrow .seg.sm { margin: 2px 0; gap: 4px; } .ftrow .seg.sm button { padding: 3px 1px; font-size: 12px; } .ftrow > span { width: 76px; flex: none; font-size: 13px; } .ftrow .seg { flex: 1; } .ftcol { display: flex; flex-wrap: wrap; gap: 4px; margin: 3px 0; } .ftcol button { width: 24px; height: 24px; border: 2px solid #000; box-shadow: 0 0 0 2px var(--dim); cursor: pointer; } .ftcol button.on { box-shadow: 0 0 0 3px var(--ink); }
+@media (max-width: 560px) { #fsCars { grid-template-columns: repeat(2, 1fr); } }
 #chat { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(70px + env(safe-area-inset-top, 0px)); display: flex; gap: 8px; align-items: center; background: rgba(9,7,32,.82); border: 2px solid var(--pink); padding: 5px 10px 5px 5px; max-width: min(400px, calc(60 * var(--sw))); font-size: 14px; line-height: 1.45; opacity: 0; transition: opacity .25s; pointer-events: none; }
 #chat.on { opacity: 1; } body:not(.battle) #chat { display: none; } #chatF { width: 44px; height: 44px; image-rendering: pixelated; flex: none; background: #000; } #chatN { display: block; color: var(--pink); font-size: 12px; font-weight: 400; }
 body.tall #chat { top: calc(150px + env(safe-area-inset-top, 0px)); } body.editing #chat { opacity: 1; }
@@ -182,6 +186,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
 <div class="screen" id="freeSet"><div class="panel px">
   <h2>フリーラン</h2>
   <div class="lab">コース</div><div id="fsStage"></div>
+  <div class="lab">車（すきな車とチューンで走れる。お金はいらない）</div><div id="fsCars"></div><div id="fsTune" hidden></div>
   <div class="lab">いっしょに走る bot</div><div class="seg" id="fsBots"><button data-v="0">なし</button><button data-v="1">1台</button><button data-v="3">3台</button><button data-v="5">5台</button><button data-v="7">7台</button></div>
   <div id="fsLvRow"><div class="lab">bot の強さ</div><div class="seg" id="fsLv"><button data-v="0">弱い</button><button data-v="1">普通</button><button data-v="2">強い</button><button data-v="3">とても強い</button></div></div>
   <div class="lab">一般車の数</div><div class="seg" id="fsTraf"><button data-v="0">少ない</button><button data-v="1">ふつう</button><button data-v="2">多い</button></div>
@@ -2214,9 +2219,11 @@ function updateCamera(c, dt, mode) {
 // ---------- ゲームの状態 ----------
 const GAME = { t: 0, scr: 'load', race: null, paused: false, view: 'orbit' };
 let PL = null, RV = null;
-function setPlayerCar() {
+// spec をわたすと、ガレージとは別の車（フリーランで自由に選んだ車）にする
+function setPlayerCar(spec) {
   const keep = PL ? { s: PL.s, x: PL.x, v: PL.v } : null; if (PL) disposeHero(PL.hero);
-  PL = newCar(SAVE.car, myCol(), myStats(), myLook()); PL.player = true; scene.add(PL.hero.grp); PL.hero.grp.add(SPOT, SPOT.target);
+  const S = spec || { id: SAVE.car, col: myCol(), st: myStats(), look: myLook() };
+  PL = newCar(S.id, S.col, S.st, S.look); PL.player = true; PL.free = !!spec; scene.add(PL.hero.grp); PL.hero.grp.add(SPOT, SPOT.target);
   SPOT.position.set(0, .72, -PL.len / 2 - .05); SPOT.target.position.set(0, -.6, -38); PL.onShift = onShift; PL.onWall = onWall; PL.onOver = () => toast('回転が高すぎて、ギアを下げられない', 1.2);
   if (keep) placeCar(PL, keep.s, keep.x, keep.v); else placeCar(PL, 40, -3.5, 30);
 }
@@ -2309,7 +2316,7 @@ function updateHud(dt) {
     setH('cash', '<small style="color:var(--dim)">bot と走る：賞金なし</small>');
   } else {
     setH('lapN', `LAP ${R.lap + 1}　${fmtT(R.lapT)}${R.best ? '<br>BEST ' + fmtT(R.best) : ''}`);
-    setH('cash', `${yen(SAVE.money)}<br><small style="color:var(--green)">+${yen(R.earn)}</small>`);
+    setH('cash', R.freeCar ? `<small style="color:var(--dim)">${CARS[PL.id].name}（自由に選んだ車）<br>賞金なし</small>` : `${yen(SAVE.money)}<br><small style="color:var(--green)">+${yen(R.earn)}</small>`);
   }
   setSt('slip', 'opacity', c.draft > .25 && c.v > 39 ? String(Math.min(1, c.draft * 1.5)) : '0');
   rivalPin(R); let nb = 0; for (const b of BOTS) { const on = R.phase !== 'end' && Math.abs(wrapD(b.s - PL.s)) < 350; carPin(b.pin, b, b.name, on, null, undefined, on && wrapD(b.s - PL.s) < 0 ? nb++ : 0); }   // 近い bot だけ。うしろの bot はずらして重ならないように
@@ -2628,7 +2635,7 @@ function refreshTitle() {
   $('tMoney').innerHTML = `${yen(SAVE.money)}　・　${CARS[SAVE.car].name}　・　${SAVE.beaten[8] ? 'ストーリー完結 ★' : `ストーリー ${n}/${RIVALS.length}`}`;
 }
 function toTitle() {
-  GAME.race = null; GAME.paused = false; document.body.classList.remove('racing', 'battle'); dropRival(); dropBots(); GAME.view = 'orbit'; AUDIO.setBgm(0); setWeather(0); setDawn(0); $('chat').classList.remove('on');
+  GAME.race = null; GAME.paused = false; document.body.classList.remove('racing', 'battle'); dropRival(); dropBots(); GAME.view = 'orbit'; AUDIO.setBgm(0); setWeather(0); setDawn(0); $('chat').classList.remove('on'); if (PL && PL.free) setPlayerCar();
   for (const id of ['msg', 'sub', 'toast', 'slip']) $(id).style.opacity = 0;
   refreshTitle(); show('title');
 }
@@ -2636,7 +2643,7 @@ function toTitle() {
 const STORY = { hard: 0 };
 function openStory() {
   if (STAGE_NOW !== 0) { loadStage(0).then(openStory); return; }   // ストーリーは夜光環状線
-  setWeather(0); setDawn(0); const box = $('rivals'); box.innerHTML = '';
+  setWeather(0); setDawn(0); if (PL.free) setPlayerCar(); const box = $('rivals'); box.innerHTML = '';
   const anyWin = SAVE.beaten.some(Boolean), all = RIVALS.every((r, i) => SAVE.beaten[i]); if (!anyWin) STORY.hard = 0;
   $('stMode').hidden = !anyWin; for (const b of $('stMode').querySelectorAll('button')) b.classList.toggle('on', +b.dataset.v === STORY.hard);
   const hard = STORY.hard === 1, list = hard ? RIVALS.map((r, i) => i) : [...RIVALS.map((r, i) => i), 8];
@@ -2679,6 +2686,28 @@ const BOTS = [];
 const FREE = { bots: 3, lv: 1, traffic: 1, stage: 0, wx: 0 };
 try { Object.assign(FREE, JSON.parse(localStorage.getItem('nhw-free')) || {}); } catch (e) { /* はじめて */ }
 const saveFree = () => { try { localStorage.setItem('nhw-free', JSON.stringify(FREE)); } catch (e) { /* なし */ } };
+// フリーランで自由に選ぶ車（お金はいらない・ガレージの記録は変えない）。FREE.car：'g'＝ガレージの車、または車の名前
+if (!FREE.tune || typeof FREE.tune !== 'object') FREE.tune = {}; if (!FREE.car || (FREE.car !== 'g' && !CARS[FREE.car])) FREE.car = 'g';
+function freeTune(id) { const T = FREE.tune[id] || (FREE.tune[id] = {}); if (!Array.isArray(T.up)) T.up = UP0.slice(); while (T.up.length < UP0.length) T.up.push(0); T.gear ??= 2; T.boost ??= 1; T.wing ??= 0; T.rim ??= 0; T.col ??= CARS[id].col; return T; }
+function freeSpec() { const id = FREE.car, T = freeTune(id); return { id, col: PAL[T.col][1], st: statsOf(id, T.up, null, T), look: { wing: T.wing, rim: T.rim, cock: true } }; }
+const useFreeCar = () => FREE.car !== 'g' && !!CARS[FREE.car];
+function showFreeCar() { if (useFreeCar()) setPlayerCar(freeSpec()); else if (PL.free) setPlayerCar(); }
+function drawFreeCar() {
+  const box = $('fsCars'); box.innerHTML = [['g', `ガレージの車<small>${CARS[SAVE.car].name}・賞金あり</small>`], ...CAR_IDS.map(k => [k, `${CARS[k].name}<small>${CARS[k].en}</small>`])].map(([k, t]) => `<button type="button" data-k="${k}" class="${FREE.car === k ? 'on' : ''}">${t}</button>`).join('');
+  for (const b of box.querySelectorAll('button')) b.onclick = () => { AUDIO.click(); FREE.car = b.dataset.k; saveFree(); showFreeCar(); drawFreeCar(); };
+  const T = $('fsTune'); if (!useFreeCar()) { T.innerHTML = ''; T.hidden = true; return; } T.hidden = false;
+  const id = FREE.car, t = freeTune(id), st = statsOf(id, t.up, null, t), segs = (k, names, cur) => `<div class="seg sm" data-k="${k}">${names.map((n, i) => `<button type="button" data-v="${i}" class="${cur === i ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+  T.innerHTML = `<div class="ftq"><span>${CARS[id].name}のチューン（自由・お金なし）</span><button type="button" data-q="0">ノーマル</button><button type="button" data-q="5">フルチューン</button></div>`
+    + `<div class="ftst">最高速 <b>${Math.round(st.topK)}km/h</b>・0-200km/h <b>${time200(st).toFixed(1)}秒</b>・グリップ <b>${st.grip.toFixed(2)}</b></div>`
+    + UPS.map((u, i) => `<div class="ftrow"><span>${u[0]}</span>${segs('u' + i, ['0', '1', '2', '3', '4', '5'], t.up[i])}</div>`).join('')
+    + `<div class="ftrow"><span>ギア比</span>${segs('gear', GEARN, t.gear)}</div><div class="ftrow"><span>ブースト</span>${segs('boost', BOOSTN, t.boost)}</div>`
+    + `<div class="ftrow"><span>ウイング</span>${segs('wing', WINGN, t.wing)}</div><div class="ftrow"><span>ホイール</span>${segs('rim', RIMN, t.rim)}</div>`
+    + `<div class="ftrow"><span>色</span><div class="ftcol">${PAL.map((p, i) => `<button type="button" data-c="${i}" class="${t.col === i ? 'on' : ''}" title="${p[0]}" style="background:#${p[1].toString(16).padStart(6, '0')}"></button>`).join('')}</div></div>`;
+  const redo = look => { saveFree(); if (look) showFreeCar(); else PL.st = freeSpec().st; drawFreeCar(); };
+  for (const b of T.querySelectorAll('[data-q]')) b.onclick = () => { AUDIO.click(); t.up = UP0.map(() => +b.dataset.q); redo(false); };
+  for (const box2 of T.querySelectorAll('.seg')) for (const b of box2.querySelectorAll('button')) b.onclick = () => { AUDIO.click(); const k = box2.dataset.k, v = +b.dataset.v; if (k[0] === 'u') t.up[+k.slice(1)] = v; else t[k] = v; redo(k === 'wing' || k === 'rim'); };
+  for (const b of T.querySelectorAll('[data-c]')) b.onclick = () => { AUDIO.click(); t.col = +b.dataset.c; saveFree(); PL.hero.paint.color.set(PAL[t.col][1]); PL.color = PAL[t.col][1]; drawFreeCar(); };
+}
 // スタートの並び（自分は s0 のまん中の車線）：[前後, 車線]
 const BOT_SLOT = [[13, -3.5], [13, 3.5], [-13, -3.5], [-13, 3.5], [26, 0], [-26, 0], [39, -3.5], [39, 3.5]];
 function addBots(n, lv, s0) {
@@ -2703,7 +2732,7 @@ function botOpts(b) {
 // ---------- バトル・フリーラン ----------
 function beginRace() { show(null); GAME.paused = false; document.body.classList.add('racing'); setTimeout(applyLayout, 0); document.body.classList.toggle('slide', SET.steer === 1); AUDIO.resume(); AUDIO.setBgm(1); CAM.psi = 0; HUD.tn = -1; for (const k in HC) delete HC[k]; }
 function startBattle(i, hard = false) {
-  const r = rivalOf(i), s0 = r.start, H = hard ? [1.05, 1.05, 1.04] : [1, 1, 1], dist = r.dist + (hard ? 1000 : 0); PL.st = myStats(); dropBots(); setDensity(TRAF_D[1]); setWeather(r.wx ? 1 : 0); setDawn(r.dawn ? .3 : 0);
+  if (PL.free) setPlayerCar(); const r = rivalOf(i), s0 = r.start, H = hard ? [1.05, 1.05, 1.04] : [1, 1, 1], dist = r.dist + (hard ? 1000 : 0); PL.st = myStats(); dropBots(); setDensity(TRAF_D[1]); setWeather(r.wx ? 1 : 0); setDawn(r.dawn ? .3 : 0);
   GAME.race = { type: 'battle', wx: WX.on, hard, i, r, skill: Math.min(1, r.skill + (hard ? .12 : 0)), phase: 'count', t: 0, s0, goal: dist, top: 0, hits: 0, nm: 0, earn: 0, win: false, why: '', endT: 0, flashed: false, beep: 3 };
   placeCar(PL, s0, 0, 100 / KMH); IN.shift = 0;
   setRival(r.car, r.col, statsOf(r.car, UP0, { top: r.top * H[0], acc: r.acc * H[1], grip: r.grip * H[2] })); placeCar(RV, s0, 3.5, 100 / KMH);
@@ -2726,15 +2755,15 @@ async function loadStage(i) {
 }
 async function startFree() {
   await loadStage(FREE.stage | 0);
-  PL.st = myStats(); dropRival(); dropBots(); setDensity(TRAF_D[FREE.traffic] ?? TRAF_D[1]); setWeather(FREE.wx === 1 || (FREE.wx === 2 && Math.random() < .5));
+  showFreeCar(); PL.st = PL.free ? freeSpec().st : myStats(); dropRival(); dropBots(); setDensity(TRAF_D[FREE.traffic] ?? TRAF_D[1]); setWeather(FREE.wx === 1 || (FREE.wx === 2 && Math.random() < .5));
   const nb = FREE.bots | 0, s0 = 0;
-  const bests = SAVE.bestS || {}; GAME.race = { type: 'free', wx: WX.on, phase: nb ? 'count' : 'go', t: 0, lap: 0, lapT: 0, best: bests[STG.id] || (STG.idx ? 0 : SAVE.best || 0), stage: STG.name, earn: 0, top: 0, hits: 0, nm: 0, km: 0, bots: nb, lv: FREE.lv, s0, beep: 4 };
+  const bests = SAVE.bestS || {}; GAME.race = { type: 'free', freeCar: PL.free, wx: WX.on, phase: nb ? 'count' : 'go', t: 0, lap: 0, lapT: 0, best: bests[STG.id] || (STG.idx ? 0 : SAVE.best || 0), stage: STG.name, earn: 0, top: 0, hits: 0, nm: 0, km: 0, bots: nb, lv: FREE.lv, s0, beep: 4 };
   placeCar(PL, s0, 0, (nb ? 100 : 80) / KMH); PL.off = 0; IN.shift = 0;
   if (nb) addBots(nb, FREE.lv, s0);
   resetTraffic(PL.s, [{ s: s0 }, ...BOTS.map(b => ({ s: b.s }))]);
   beginRace(); document.body.classList.remove('battle'); document.body.classList.toggle('bots', nb > 0);
   if (nb) { msg('3', `フリーラン　bot ${nb}台・${BOT_LV[FREE.lv].name}`, 1); AUDIO.beep(false); }
-  else msg('FREE RUN', (WX.on ? '雨の夜。すべりやすいので注意　' : '') + '1kmごとに賞金。ニアミスでボーナス', 2.2);
+  else msg('FREE RUN', (WX.on ? '雨の夜。すべりやすいので注意　' : '') + (PL.free ? `${CARS[PL.id].name}で自由に走る（賞金なし）` : '1kmごとに賞金。ニアミスでボーナス'), 2.2);
   if (nb && WX.on) toast('雨の夜。すべりやすいので注意', 2.4);
 }
 function drawStages() {
@@ -2744,9 +2773,9 @@ function drawStages() {
 // フリーランの準備：コース・bot の数と強さ・一般車の数
 function openFreeSet() {
   const seg = (id, key) => { for (const b of $(id).querySelectorAll('button')) b.classList.toggle('on', +b.dataset.v === (FREE[key] | 0)); };
-  setWeather(0); setDawn(0); seg('fsBots', 'bots'); seg('fsLv', 'lv'); seg('fsTraf', 'traffic'); seg('fsWx', 'wx'); drawStages();
+  setWeather(0); setDawn(0); seg('fsBots', 'bots'); seg('fsLv', 'lv'); seg('fsTraf', 'traffic'); seg('fsWx', 'wx'); drawStages(); showFreeCar(); drawFreeCar();
   $('fsLvRow').style.opacity = FREE.bots ? 1 : .45;
-  $('fsNote').textContent = FREE.bots ? 'bot といっしょに走るときは、お金はもらえません（順位とベストラップだけ）。' : '1人で走るときは、1kmごとに賞金。一般車のすぐ横をぬけるとボーナス。';
+  $('fsNote').textContent = FREE.bots ? 'bot といっしょに走るときは、お金はもらえません（順位とベストラップだけ）。' : useFreeCar() ? '自由に選んだ車で走るときは、賞金はありません（ガレージの車なら、1kmごとに賞金）。' : '1人で走るときは、1kmごとに賞金。一般車のすぐ横をぬけるとボーナス。';
   show('freeSet');
 }
 function retryRace() { const R = GAME.race || GAME.last; if (!R) return; if (R.type === 'battle') startBattle(R.i, R.hard); else startFree(); }
@@ -2769,7 +2798,7 @@ function raceStep(dt) {
   } else if (R.phase === 'go') {
     R.lapT += dt;
     if (PL.dist >= (R.lap + 1) * TRK.L) { const t = R.lapT; R.lap++; R.lapT = 0; if (!R.best || t < R.best) { R.best = t; SAVE.bestS = SAVE.bestS || {}; SAVE.bestS[STG.id] = t; if (!STG.idx) SAVE.best = t; save(); toast(`ベストラップ ${fmtT(t)}`, 2.4); } else toast(`LAP ${fmtT(t)}`, 2); }
-    const km = Math.floor(PL.dist / 1000); if (km > R.km) { R.km = km; if (!R.bots) earn(150, `${km}km`); SAVE.km = (SAVE.km || 0) + 1; }
+    const km = Math.floor(PL.dist / 1000); if (km > R.km) { R.km = km; if (!R.bots && !R.freeCar) earn(150, `${km}km`); SAVE.km = (SAVE.km || 0) + 1; }
     if (R.bots) { const me = freeOrder().indexOf(PL) + 1; if (R.pos && me !== R.pos && R.t > 1) toast(me < R.pos ? `${me}位にあがった！` : `${me}位にさがった`, 1.4); R.pos = me; }
   }
   if (R.phase === 'end') { R.endT += dt; if (R.endT > 3.2 && GAME.scr === 'race') showResult(); }
@@ -2838,7 +2867,7 @@ function resumeGame() { if (!GAME.paused) return; GAME.paused = false; show(null
 function quitRace() { const R = GAME.race; GAME.paused = false; if (R && R.type === 'free' && (R.earn > 0 || R.bots && R.phase === 'go' && PL.dist > 300)) { R.phase = 'end'; showResult(); } else toTitle(); }
 
 // ---------- ガレージ ----------
-function openGarage() { GAME.race = null; document.body.classList.remove('racing', 'battle'); dropRival(); dropBots(); setWeather(0); setDawn(0); GAME.view = 'garage'; AUDIO.setBgm(0); renderGarage(); show('garage'); }
+function openGarage() { GAME.race = null; document.body.classList.remove('racing', 'battle'); dropRival(); dropBots(); setWeather(0); setDawn(0); if (PL.free) setPlayerCar(); GAME.view = 'garage'; AUDIO.setBgm(0); renderGarage(); show('garage'); }
 const GEARN = ['加速++', '加速+', '標準', '最高速+', '最高速++'], BOOSTN = ['低め', '標準', '高め'], WINGN = ['純正', 'ダックテール', 'GTウイング', 'なし'], WINGP = [0, 2000, 6000, 0], RIMN = ['シルバー', 'ブラック', 'ゴールド', 'ブロンズ'];
 const WINGJ = { gt: 'GT', duck: 'ダック', roof: 'ルーフ', '': 'なし' };
 const upCost = (id, lv) => Math.round(UPCOST[lv] * (1 + CAR_IDS.indexOf(id) * .12));
@@ -3019,7 +3048,7 @@ function passCheck() {
     if (t.side === 1 && sd === -1 && Math.abs(d) < 15) {
       const gap = Math.abs(t.x - PL.x) - (PL.hw + t.W / 2);
       if (gap < 3 && PL.v - t.v > 10) AUDIO.whoosh(clamp((t.x - PL.x) / 4, -1, 1));
-      if (go && gap > -.05 && gap < .8 && PL.v > 150 / KMH) { R.nm++; SAVE.nm = (SAVE.nm || 0) + 1; if (R.bots) toast('ニアミス'); else earn(100, 'ニアミス'); }
+      if (go && gap > -.05 && gap < .8 && PL.v > 150 / KMH) { R.nm++; SAVE.nm = (SAVE.nm || 0) + 1; if (R.bots || R.freeCar) toast('ニアミス'); else earn(100, 'ニアミス'); }
     }
     t.side = sd;
   }
@@ -3044,7 +3073,7 @@ async function boot() {
   } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
 }
 window.__NH = { show, loadStage, STAGES, get STG() { return STG; }, MONO, WHEEL, BOTS, FREE, startFree, openFreeSet, freeOrder, progOf, setDensity, loop(on) { RUN = on; if (on) { LAST = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { composer.render(); renderMirror(); }, composer, GAME, SAVE, SET, TRK, TRAFFIC, RIVALS, CARS, AUDIO,
-  get PL() { return PL; }, get RV() { return RV; }, MIRROR, LOW, renderMirror, MAT, TEX, CMAT, SPOT, hemi, moon, WORLD, startBattle, startFree, openGarage, layoutEdit, applyLayout, openSettings, LAMPS, RETRO, GLB, aiControl, statsOf, playerCtl, setWeather, setDawn, WX, get WET() { return WET; }, SPR, openRecords, STORY, FINAL, chatSay, time200, physics, openStory, preBattle, toTitle, showResult, IN, CAM, camera, scene, renderer };
+  get PL() { return PL; }, get RV() { return RV; }, MIRROR, LOW, renderMirror, MAT, TEX, CMAT, SPOT, hemi, moon, WORLD, startBattle, startFree, openGarage, layoutEdit, applyLayout, openSettings, LAMPS, RETRO, GLB, aiControl, statsOf, playerCtl, setWeather, setDawn, WX, get WET() { return WET; }, SPR, openRecords, STORY, FINAL, chatSay, freeSpec, drawFreeCar, time200, physics, openStory, preBattle, toTitle, showResult, IN, CAM, camera, scene, renderer };
 boot();
 </script>
 </body></html>

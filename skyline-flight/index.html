@@ -957,7 +957,7 @@ function stepPlane(P, inp, dt) {
   for (const h of HIT_PTS) {
     _tp.set(h[0], h[1], h[2]).applyQuaternion(P.q).add(P.p);
     const k = hitAt(_tp.x, _tp.y, _tp.z);
-    if (k && !((k === 'ground' || k === 'water') && (P.ground || P.p.y - gh < gy + 1.5))) return crash(P, k);
+    if (k && !((k === 'ground' || k === 'water') && (P.ground || P.p.y - gh < gy + 1.5))) { if (P.grace > 0 && (k === 'building' || k === 'bridge')) continue; return crash(P, k); }
   }
   return null;
 }
@@ -1046,6 +1046,85 @@ function updateSky(focus) {
   const fx = Math.round(focus.x / k) * k, fz = Math.round(focus.z / k) * k, fy = Math.max(0, Math.round(focus.y / k) * k - 40);
   L.target.position.set(fx, fy, fz); L.position.set(fx + _sd.x * 3000, fy + _sd.y * 3000, fz + _sd.z * 3000); L.target.updateMatrixWorld();
 }
+
+// =========================================================================================
+//  ぶつかったときの爆発：火の玉・黒いけむり・飛びちる破片（けむりを引く）・光・衝撃の輪
+//  海に落ちたときは、白い水しぶき
+// =========================================================================================
+const BOOM = { on: false, t: 0, c: V3(), k: 1, water: false, shake: 0 };
+function partSys(n, add) {
+  const g = new THREE.BufferGeometry(), S = { n, i: 0, p: new Float32Array(n * 3), v: new Float32Array(n * 3), l: new Float32Array(n), L: new Float32Array(n).fill(1), s0: new Float32Array(n), s1: new Float32Array(n), ty: new Uint8Array(n), c: new Float32Array(n * 4), sz: new Float32Array(n) };
+  g.setAttribute('position', new THREE.BufferAttribute(S.p, 3)); g.setAttribute('aC', new THREE.BufferAttribute(S.c, 4)); g.setAttribute('aS', new THREE.BufferAttribute(S.sz, 1));
+  S.m = new THREE.ShaderMaterial({ uniforms: { uK: { value: 400 } }, transparent: true, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending,
+    vertexShader: 'attribute vec4 aC; attribute float aS; uniform float uK; varying vec4 vC; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.); gl_Position = projectionMatrix * mv; gl_PointSize = aS > 0. ? clamp(aS * uK / max(-mv.z, 1.), 1., 900.) : 0.; vC = aC; }',
+    fragmentShader: add ? 'varying vec4 vC; void main(){ vec2 q = gl_PointCoord - .5; float r = length(q) * 2.; if (r > 1.) discard; float a = vC.a * (1. - r * r); gl_FragColor = vec4(vC.rgb * a, 1.); }'
+      : 'varying vec4 vC; void main(){ vec2 q = gl_PointCoord - .5; float r = length(q) * 2.; if (r > 1.) discard; gl_FragColor = vec4(vC.rgb, vC.a * (1. - r * r) * (1. - r * .3)); }' });
+  S.pts = new THREE.Points(g, S.m); S.pts.frustumCulled = false; S.pts.renderOrder = add ? 6 : 5; scene.add(S.pts); return S;
+}
+// ty：0＝火、1＝けむり、2＝水しぶき
+function emit(S, x, y, z, vx, vy, vz, life, s0, s1, ty) {
+  const i = S.i = (S.i + 1) % S.n, o = i * 3; S.p[o] = x; S.p[o + 1] = y; S.p[o + 2] = z; S.v[o] = vx; S.v[o + 1] = vy; S.v[o + 2] = vz; S.l[i] = S.L[i] = life; S.s0[i] = s0; S.s1[i] = s1; S.ty[i] = ty;
+}
+const rnd = (a, b) => a + Math.random() * (b - a);
+function initBoom() {
+  BOOM.fire = partSys(420, true); BOOM.smoke = partSys(520, false);
+  BOOM.light = new THREE.PointLight(0xff8a3a, 0, 1400, 1.2); scene.add(BOOM.light);
+  BOOM.ring = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.1, .6), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  BOOM.ring.visible = false; scene.add(BOOM.ring);
+  // 破片（白い胴体・青い帯・灰色のエンジン・黒いかけら）
+  const cols = [0xe8eaee, 0xe8eaee, 0xe8eaee, 0x1d4fa8, 0x8a8e96, 0x2a2b30], mats = cols.map(c => new THREE.MeshLambertMaterial({ color: c }));
+  BOOM.deb = []; for (let i = 0; i < 26; i++) { const s = i < 4 ? rnd(3, 6) : rnd(.8, 3), m = new THREE.Mesh(new THREE.BoxGeometry(s, s * rnd(.2, .6), s * rnd(.4, 1.4)), mats[i % mats.length]); m.visible = false; scene.add(m); BOOM.deb.push({ m, v: V3(), w: V3(), st: 0, tr: 0 }); }
+}
+// p：場所、v：機体の速さ、why：ぶつかった物
+function boom(p, v, why) {
+  const k = BOOM.k = clamp(v.length() / 80, .35, 1.1), water = BOOM.water = why === 'water'; BOOM.on = true; BOOM.t = 0; BOOM.c.copy(p); BOOM.shake = 1.2 * k;
+  const bx = v.x * .22, by = v.y * .22, bz = v.z * .22;
+  if (water) {
+    for (let i = 0; i < 240; i++) { const a = rnd(0, TAU), r = rnd(4, 30) * k; emit(BOOM.smoke, p.x + rnd(-8, 8), Math.max(p.y, .5), p.z + rnd(-8, 8), Math.cos(a) * r + bx, rnd(18, 70) * k, Math.sin(a) * r + bz, rnd(1.4, 3), rnd(5, 9), rnd(18, 36), 2); }
+    for (let i = 0; i < 30; i++) emit(BOOM.fire, p.x + rnd(-8, 8), p.y + 2, p.z + rnd(-8, 8), rnd(-10, 10), rnd(5, 20), rnd(-10, 10), rnd(.25, .5), 6, 18, 0);
+  } else {
+    for (let i = 0; i < 170; i++) { const d = V3(rnd(-1, 1), rnd(-.6, 1), rnd(-1, 1)).normalize(), sp = rnd(8, 55) * k; emit(BOOM.fire, p.x, p.y, p.z, d.x * sp + bx, d.y * sp + by, d.z * sp + bz, rnd(.7, 1.7), rnd(5, 9) * k, rnd(18, 36) * k, 0); }
+    for (let i = 0; i < 70; i++) { const d = V3(rnd(-1, 1), rnd(-.3, 1), rnd(-1, 1)).normalize(), sp = rnd(5, 25) * k; emit(BOOM.smoke, p.x, p.y, p.z, d.x * sp + bx, d.y * sp + 3, d.z * sp + bz, rnd(3, 5.5), rnd(10, 18) * k, rnd(40, 75) * k, 1); }
+  }
+  for (const D of BOOM.deb) { const d = V3(rnd(-1, 1), rnd(-.2, 1), rnd(-1, 1)).normalize(), sp = rnd(15, 70) * k; D.m.position.copy(p); D.v.set(d.x * sp + v.x * .35, d.y * sp + v.y * .2 + 8, d.z * sp + v.z * .35); D.w.set(rnd(-9, 9), rnd(-9, 9), rnd(-9, 9)); D.st = 0; D.tr = rnd(0, .1); D.m.visible = !water || Math.random() < .5; D.m.rotation.set(rnd(0, 6), rnd(0, 6), rnd(0, 6)); }
+  BOOM.ring.visible = !water; BOOM.ring.position.copy(p);
+}
+const _bq = V3();
+function updateBoom(dt) {
+  if (!BOOM.fire) return;
+  const B = BOOM; B.t += dt; const t = B.t;
+  // 火の玉のあとも、しばらく燃えつづける・けむりが立ちのぼる
+  if (B.on && !B.water && t < 2.6) { const n = Math.round(dt * 60 * (1 - t / 2.6) * 3 * B.k); for (let i = 0; i < n; i++) { emit(B.fire, B.c.x + rnd(-6, 6), B.c.y + rnd(-3, 3), B.c.z + rnd(-6, 6), rnd(-4, 4), rnd(4, 12), rnd(-4, 4), rnd(.5, 1.1), rnd(5, 9) * B.k, rnd(12, 22) * B.k, 0); if (i % 2 === 0) emit(B.smoke, B.c.x + rnd(-6, 6), B.c.y + rnd(0, 6), B.c.z + rnd(-6, 6), rnd(-3, 3), rnd(6, 12), rnd(-3, 3), rnd(3.5, 6), rnd(12, 20) * B.k, rnd(45, 80) * B.k, 1); } }
+  B.light.position.copy(B.c); B.light.intensity = B.on && !B.water ? 9000 * B.k * Math.max(0, 1 - t / 1.6) ** 2 * (.85 + Math.random() * .3) + (t < 2.6 ? 900 * B.k * (1 - t / 2.6) : 0) : 0;
+  if (B.ring.visible) { const f = t / .65; if (f >= 1) B.ring.visible = false; else { B.ring.scale.setScalar(6 + 150 * B.k * (1 - (1 - f) ** 3)); B.ring.quaternion.copy(camera.quaternion); B.ring.material.opacity = (1 - f) * .9; } }
+  // 破片：重力で落ちて、地面でとまる。けむりを引く
+  for (const D of B.deb) {
+    if (!D.m.visible) continue; const m = D.m;
+    if (!D.st) { D.v.y -= 9.81 * dt; D.v.multiplyScalar(1 - .25 * dt); m.position.addScaledVector(D.v, dt); m.rotation.x += D.w.x * dt; m.rotation.y += D.w.y * dt; m.rotation.z += D.w.z * dt;
+      const gy = groundAt(m.position.x, m.position.z), hit = hitAt(m.position.x, m.position.y, m.position.z); if (m.position.y < gy + .5 || hit === 'building') { if (hit === 'building' && m.position.y > gy + 2) { D.v.multiplyScalar(-.25); } else { m.position.y = gy + .5; D.st = 1; if (gy <= .01) m.visible = false; } }
+      D.tr -= dt; if (D.tr <= 0 && t < 4) { D.tr = .07; emit(B.smoke, m.position.x, m.position.y, m.position.z, rnd(-1, 1), rnd(1, 3), rnd(-1, 1), rnd(1.4, 2.6), 3, 12, 1); if (t < 1.8) emit(B.fire, m.position.x, m.position.y, m.position.z, 0, 1, 0, .3, 3, 5, 0); } }
+    if (t > 9) m.visible = false;
+  }
+  // つぶつぶ
+  const kk = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360)); B.fire.m.uniforms.uK.value = kk; B.smoke.m.uniforms.uK.value = kk;
+  for (const S of [B.fire, B.smoke]) {
+    let live = 0;
+    for (let i = 0; i < S.n; i++) {
+      const o = i * 3, c = i * 4; if (S.l[i] <= 0) { if (S.sz[i]) S.sz[i] = 0; continue; } live++;
+      S.l[i] -= dt; const f = clamp(1 - S.l[i] / S.L[i], 0, 1), ty = S.ty[i];
+      if (ty === 2) { S.v[o + 1] -= 9.81 * dt; } else { const dr = Math.exp(-(ty ? 1.1 : 2.6) * dt); S.v[o] *= dr; S.v[o + 2] *= dr; S.v[o + 1] = S.v[o + 1] * dr + (ty ? 2.2 : 5) * dt; }
+      S.p[o] += S.v[o] * dt; S.p[o + 1] += S.v[o + 1] * dt; S.p[o + 2] += S.v[o + 2] * dt;
+      S.sz[i] = S.l[i] > 0 ? S.s0[i] + (S.s1[i] - S.s0[i]) * Math.sqrt(f) : 0;
+      if (ty === 0) { const w = f < .12 ? 1 : 0; S.c[c] = w ? 1.6 : lerp(1.5, .45, f); S.c[c + 1] = w ? 1.35 : lerp(.75, .1, f); S.c[c + 2] = w ? .9 : lerp(.22, .03, f); S.c[c + 3] = (1 - f) ** 1.4; }
+      else if (ty === 1) { const g = lerp(.06, .2, f); S.c[c] = g; S.c[c + 1] = g * .96; S.c[c + 2] = g * .92; S.c[c + 3] = .62 * Math.min(1, f * 8) * (1 - f) ** 1.2; }
+      else { S.c[c] = .86; S.c[c + 1] = .9; S.c[c + 2] = .95; S.c[c + 3] = .8 * (1 - f); if (S.p[o + 1] < 0) S.l[i] = 0; }
+    }
+    S.pts.visible = live > 0; if (live) { const G2 = S.pts.geometry; G2.attributes.position.needsUpdate = G2.attributes.aC.needsUpdate = G2.attributes.aS.needsUpdate = true; }
+  }
+  if (B.t > 12) B.on = false;
+}
+// 爆発のときのカメラのゆれ（だんだん小さく）
+function boomShake(dt) { if (BOOM.shake <= 0) return; BOOM.shake = Math.max(0, BOOM.shake - dt * .8); const a = BOOM.shake * BOOM.shake * 2.2; camera.position.x += rnd(-a, a); camera.position.y += rnd(-a, a) * .7; camera.position.z += rnd(-a, a); }
 // =========================================================================================
 //  ゲーム：コース（リング）・じゆうに飛ぶ・カメラ・計器（HUD）・地図・音・メニュー・自動操縦（タイトルの飛行と試験用）
 // =========================================================================================
@@ -1077,6 +1156,8 @@ const AU = {
   flap() { this.tone(330, .9, .04, 'sawtooth', 0, 300); },
   touch(k) { this.noise(.35, 2600, .12 + k * .2, 'bandpass'); this.noise(.25, 160, .3 + k * .3); },
   crash() { this.noise(1.2, 220, .5); this.tone(70, 1, .3, 'sine', 0, 40); },
+  boom(k = 1) { this.noise(.2, 3200, .5 * k, 'highpass'); this.noise(3, 420, .95 * k); this.tone(52, 2.4, .5 * k, 'sine', 0, 22); this.noise(1.6, 160, .6 * k, 'lowpass', .15); for (let i = 0; i < 7; i++) this.noise(.09, 1500, .16 * k, 'bandpass', .35 + i * .24 + Math.random() * .12); },   // 爆発（ドカーン・ゴロゴロ・パチパチ）
+  splash(k = 1) { this.noise(1.6, 900, .7 * k); this.noise(.7, 2600, .3 * k, 'bandpass'); this.tone(80, .6, .25 * k, 'sine', 0, 36); },
   beep(f = 880) { this.tone(f, .14, .07, 'square'); },
   click() { this.tone(1200, .04, .04, 'square'); },
   update(dt, P, cam) {
@@ -1164,10 +1245,15 @@ function showResult() {
 }
 const fmtT = t => { if (!t && t !== 0) return '-'; const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); };
 // ---------- ぶつかったとき（シミュレーターのリセット） ----------
+// 1回だけ：爆発（海なら水しぶき）→ 少しはなれて見る → 3秒後に、安全な場所からやりなおし
 function onCrash(why) {
-  G.crashT = 1.7; AU.crash(); $('flash').style.transition = 'none'; $('flash').style.opacity = .92; requestAnimationFrame(() => { $('flash').style.transition = 'opacity 1.5s'; $('flash').style.opacity = 0; });
-  const W = { water: '水面にふれました', ground: '地面にふれました', building: 'ビルにふれました', bridge: '橋にふれました', hard: '強く着地しすぎました', overrun: '滑走路から出てしまいました' }[why] || 'ふれました';
-  msg('シミュレーターをリセット', W + (G.mode === 'course' ? '（+5秒）' : ''), 2.2);
+  const P = G.P; G.crashT = 3.1; planeAxes(P);
+  if (G.cam === 2) CAM.p.copy(P.p).addScaledVector(_f, -70).add(_c2.set(0, 22, 0)); else CAM.p.copy(camera.position);
+  boom(P.p, P.v, why); PLANE.obj.root.visible = false;
+  if (why === 'water') AU.splash(BOOM.k); else AU.boom(BOOM.k);
+  const fl = $('flash'); fl.style.background = why === 'water' ? '#e8eef6' : '#ffc890'; fl.style.transition = 'none'; fl.style.opacity = why === 'water' ? .45 : .7; requestAnimationFrame(() => { fl.style.transition = 'opacity 1.2s'; fl.style.opacity = 0; });
+  const W = { water: '海に落ちました', ground: '地面にぶつかりました', building: 'ビルにぶつかりました', bridge: '橋にぶつかりました', hard: '強く着地しすぎました', overrun: '滑走路から出てしまいました' }[why] || 'ぶつかりました';
+  msg(why === 'water' ? 'ザブーン！' : 'ドカーン！', W + '　少しまえからやりなおし' + (G.mode === 'course' ? '（+5秒）' : ''), 3);
 }
 function respawn() {
   const P = G.P;
@@ -1179,8 +1265,12 @@ function respawn() {
   } else {
     const nearAp = Math.hypot(P.p.x - AIRPORT.x, P.p.z) < 3500 && P.p.y < 250;
     if (nearAp || G.mode === 'demo') placeStart({ start: { p: [AIRPORT.x, 0, 1380], hdg: 0, v: 0, thr: 0, gear: 1, flap: 1, ground: true } });
-    else { const Q = G.P = newPlane(), y = Math.max(320, topAt(P.p.x, P.p.z) + 200); setPose(Q, P.p.x, y, P.p.z, P.hdg); planeAxes(Q); Q.v.copy(_f).multiplyScalar(80); Q.thr = Q.thrS = .55; Q.gear = Q.gearK = 0; Q.s = 80; }
+    else {   // 前（900m 先まで、左右にも少し）のいちばん高いビルより上から
+      let y = 320; const sx = Math.sin(P.hdg), sz = -Math.cos(P.hdg);
+      for (let d = 0; d <= 900; d += 40) for (const o of [-80, 0, 80]) y = Math.max(y, topAt(P.p.x + sx * d - sz * o, P.p.z + sz * d + sx * o) + 140);
+      const Q = G.P = newPlane(); setPose(Q, P.p.x, y, P.p.z, P.hdg); planeAxes(Q); Q.v.copy(_f).multiplyScalar(80); Q.thr = Q.thrS = .55; Q.gear = Q.gearK = 0; Q.s = 80; }
   }
+  G.P.grace = 2.5; PLANE.obj.root.visible = true;   // やりなおしてすぐは、ビルと橋をすりぬける（点滅）
   resetCam();
 }
 // ---------- 自動操縦（タイトル・試験用） ----------
@@ -1249,6 +1339,11 @@ function updateCam(dt) {
     _c1.set(Math.sin(a) * d, 6 + Math.sin(a * .7) * 6, Math.cos(a) * d); camera.position.copy(P.p).add(_c1); camera.up.set(0, 1, 0); camera.lookAt(_c2.copy(P.p).add(_c3.set(0, 21, 0))); camera.fov = 50; camera.updateProjectionMatrix(); return;
   }
   camera.fov = SET.fov; camera.updateProjectionMatrix();
+  if (P.crashed && BOOM.on) {   // 爆発を、少しはなれたところから見る
+    _c1.copy(CAM.p).sub(BOOM.c); const d = _c1.length() || 1; _c1.setLength(lerp(d, 95, 1 - Math.exp(-1.6 * dt))); _c1.y = Math.max(_c1.y, 14); CAM.p.copy(BOOM.c).add(_c1);
+    for (let i = 0; i < 6 && hitAt(CAM.p.x, CAM.p.y, CAM.p.z); i++) CAM.p.y += 15;
+    camera.position.copy(CAM.p); camera.up.set(0, 1, 0); camera.lookAt(BOOM.c); boomShake(dt); return;
+  }
   if (G.cam === 2) {   // 機首
     _c1.set(0, 1.25, -16.2).applyQuaternion(P.q).add(P.p); camera.position.copy(_c1); camera.up.copy(_u); _c2.copy(_f).multiplyScalar(100).add(_c1); camera.lookAt(_c2); return;
   }
@@ -1382,6 +1477,7 @@ const _prev = V3();
 function gameStep(dt) {
   const P = G.P;
   if (G.crashT > 0) { G.crashT -= dt; if (G.crashT <= 0) respawn(); return; }
+  if (P.grace > 0) P.grace -= dt;
   let inp;
   if (G.mode === 'demo' || G.bot) { inp = botInput(); if (G.bot || G.mode === 'demo') botSystems(P); }
   else inp = { pitch: IN.pitch, roll: IN.roll, yaw: IN.yaw, thrRate: IN.thrRate, thrAbs: IN.thrAbs, brake: IN.brake };
@@ -1426,7 +1522,8 @@ function tick(dt) {
   const run = !G.paused && (G.scr === 'play' || G.scr === 'title' || G.scr === 'courseSel' || G.scr === 'freeSel' || ((G.scr === 'settings' || G.scr === 'how') && G.setBack === 'title') || G.scr === 'result');
   if (run && G.P) { gameStep(dt); }
   updateCity(dt, performance.now() / 1000, G.P);
-  posePlane(G.P, dt); updateBlob(); updateCam(dt); updateSky(G.P.p);
+  posePlane(G.P, dt); PLANE.obj.root.visible = !G.P.crashed && !(G.P.grace > 0 && ((G.P.grace * 9) | 0) % 2);
+  if (!G.paused) updateBoom(dt); updateBlob(); updateCam(dt); updateSky(G.P.p);
   if (G.scr === 'play') updateHud(dt);
   drawHud(); AU.update(dt, G.P, G.scr === 'play' ? G.cam : 0);
 }
@@ -1448,7 +1545,7 @@ async function boot() {
     onResize(); say('空を作っています…'); await nextFrame();
     await buildCity(say);
     say('飛行機を組み立てています…'); await nextFrame();
-    makeSky(); PLANE.obj = makePlane(); scene.add(PLANE.obj.root); scene.add(RINGS);
+    makeSky(); initBoom(); PLANE.obj = makePlane(); scene.add(PLANE.obj.root); scene.add(RINGS);
     for (const [z, hd] of [[-420, Math.PI / 2], [-20, Math.PI / 2], [380, Math.PI / 2]]) { const o = makePlane(); o.root.position.set(2560, AIRPORT.gy + GEAR_H, z); o.root.rotation.y = -hd; scene.add(o.root); posePlane({ p: o.root.position.clone(), q: o.root.quaternion.clone(), gearK: 1, flapK: 0, t: 0, inp: {}, gear: 1 }, 0, o); o.root.updateMatrixWorld(); addBox(2540, 2580, AIRPORT.gy, AIRPORT.gy + 17, z - 17, z + 17); }
     makeMap(); makeBlob(); wireUI();
     G.tod = 0; setTOD(0); toTitle();
@@ -1458,7 +1555,7 @@ async function boot() {
     addEventListener('pointerdown', () => AU.init(), { once: true }); addEventListener('keydown', () => AU.init(), { once: true });
   } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
 }
-window.__SF = { loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => renderer.render(scene, camera), G, IN, SET, CITY, COURSES, startCourse, startFree, toTitle, show, camera, scene, renderer, hitAt, groundAt, topAt, PL, AIRPORT, MEDAL, setTOD, BLD };
+window.__SF = { loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => renderer.render(scene, camera), G, IN, SET, CITY, COURSES, startCourse, startFree, toTitle, show, camera, scene, renderer, hitAt, groundAt, topAt, PL, AIRPORT, MEDAL, setTOD, BLD, BOOM, PLANE, respawn };
 boot();
 </script>
 </body></html>
