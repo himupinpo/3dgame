@@ -118,16 +118,25 @@ table.st td { padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,.06); 
 #loading .logo { font-size: 44px; font-weight: 900; font-style: italic; } #loading .logo b { color: var(--lime); }
 #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .25s; }
 #fade.on { opacity: 1; }
-.pkRow { display: flex; justify-content: center; gap: 30px; font-weight: 900; } .pkRow i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin: 0 2px; background: rgba(255,255,255,.15); } .pkRow i.g { background: var(--lime); } .pkRow i.x { background: var(--red); }
-#pkHud { left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: none; padding: 6px 14px; background: rgba(6,12,32,.85); }
-body.shootout #pkHud { display: block; }
+/* PK戦のスコア表（左上） */
+#pkHud { left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); display: none; background: linear-gradient(180deg, rgba(14,26,70,.94), rgba(6,12,40,.94)); border: 1px solid rgba(255,255,255,.18); border-radius: 6px; overflow: hidden; filter: drop-shadow(0 3px 8px rgba(0,0,0,.45)); }
+body.hub #pkHud { left: calc(62px + env(safe-area-inset-left, 0px)); }
+body.shootout #pkHud { display: block; } body.shootout #score, body.shootout #radar { display: none !important; }
+.pkRow { display: flex; align-items: center; height: 30px; font-weight: 900; } .pkRow + .pkRow { border-top: 1px solid rgba(255,255,255,.12); }
+.pkCol { width: 6px; align-self: stretch; } .pkNm { width: 46px; padding: 0 8px; font-size: 15px; letter-spacing: .04em; color: #fff; }
+.pkMk { display: flex; gap: 6px; padding: 0 10px 0 2px; } .pkMk i { width: 15px; height: 15px; border-radius: 3px; background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.35); box-sizing: border-box; }
+.pkMk i.g { background: #3ee06a; border-color: #3ee06a; } .pkMk i.x { background: #ff4040; border-color: #ff4040; } .pkMk i.now { border-color: #fff; box-shadow: 0 0 6px rgba(255,255,255,.8); }
+.pkSc { align-self: stretch; min-width: 34px; display: flex; align-items: center; justify-content: center; font-size: 19px; background: #ffd23a; color: #1a1a1a; }
+body.pkview #radar { display: none !important; }
+.pkNow { font-size: 11px; font-weight: 800; padding: 3px 10px; background: rgba(0,0,0,.35); color: #dfe6ff; white-space: nowrap; }
+.pkSd { font-size: 10px; font-weight: 900; text-align: center; padding: 2px 0; background: rgba(255,80,80,.85); letter-spacing: .2em; }
 @media (max-width: 640px) { #score { font-size: 14px; } #score .sc { font-size: 16px; min-width: 54px; } .btn { font-size: 15px; padding: 11px 14px; } }
 </style></head><body>
 <div id="rot">
   <canvas id="c"></canvas>
   <canvas id="hud"></canvas>
   <div id="score" class="hud"><div class="tm"><i id="sCa"></i><span id="sA">HOME</span></div><div class="sc" id="sS">0 - 0</div><div class="tm"><span id="sB">AWAY</span><i id="sCb"></i></div><div class="ck" id="sC">00:00</div></div>
-  <div id="pkHud" class="hud"><div class="pkRow"><span id="pkA"></span><span id="pkB"></span></div></div>
+  <div id="pkHud" class="hud"></div>
   <div id="feed" class="hud"></div>
   <canvas id="radar" class="hud" width="380" height="248"></canvas>
   <div id="msg" class="hud"></div><div id="sub" class="hud"></div><div id="toast" class="hud"></div><div id="hint" class="hud"></div><div id="rep" class="hud">REPLAY</div>
@@ -2156,6 +2165,7 @@ function gkTake(K, how) {
 // シュートが来たら：どこを通るか予測して、とれるか決め、そこへ飛ぶ
 function gkReact(K) {
   const b = BALL; if (M.gkPlan || b.owner || b.held) return;
+  if (M.pk && M.pk.ctl && PKX.on) { pkKeeperPlan(K); return; }   // PK：キーパーはえらんだ向きに飛ぶ
   const gx = ownGoalX(K.team), s = Math.sign(gx), toward = b.v.x * s;
   if (toward < 6) return;
   let hit = null;
@@ -2231,7 +2241,7 @@ function goal(t) {
 // ---------- 止まったボール → セットプレー ----------
 function deadBall(kind, team, x, z, title, sub) {
   M.phase = 'dead'; M.t = 0; M.restart = { kind, team, x, z, title, sub }; M.inThrow = false;
-  BALL.owner = null; M.offs = null; M.offsTeam = -1; M.shot = null; M.gkPlan = null; M.pk = null;
+  BALL.owner = null; M.offs = null; M.offsTeam = -1; M.shot = null; M.gkPlan = null; M.pk = null; if (PKX.on && !SO.on) pkEnd();
   for (const P of PLAYERS) { P.kick = null; if (P.act === ACT.kick || P.act === ACT.slide || P.act === ACT.poke) { P.act = 0; P.actP = {}; } }
   if (kind !== 'fk' && kind !== 'pk' && kind !== 'ifk') sfx('whistle', kind === 'goal' ? 1 : 0);
   UIX.say && UIX.say(title, sub, 1.6);
@@ -2253,7 +2263,7 @@ function setupRestart() {
   const outfield = T.players.filter(p => !p.gk);
   if (R.kind === 'gk') taker = T.gk;
   else if (R.kind === 'kickoff') taker = outfield.filter(p => p.role === 'FW').sort((a, b) => Math.abs(a.p.z) - Math.abs(b.p.z))[0] || outfield[outfield.length - 1];
-  else if (R.kind === 'pk') taker = outfield.slice().sort((a, b) => b.st.sho - a.st.sho)[0];
+  else if (R.kind === 'pk') taker = R.want || outfield.slice().sort((a, b) => b.st.sho - a.st.sho)[0];
   else if (R.kind === 'corner' || R.kind === 'fk' && Math.hypot(oppGoalX(R.team) - bx, bz) < 32) taker = outfield.slice().sort((a, b) => (b.st.pas + b.st.sho) - (a.st.pas + a.st.sho))[0];
   else taker = outfield.slice().sort((a, b) => Math.hypot(a.p.x - bx, a.p.z - bz) - Math.hypot(b.p.x - bx, b.p.z - bz))[0];
   // ボールのうしろに立たせる
@@ -2281,6 +2291,7 @@ function setupRestart() {
   }
   R.taker = taker; R.t = 0; M.phase = 'restart'; M.t = 0;
   if (R.kind === 'gk' || R.kind === 'pk') { TEAMS_M[R.team].gk.holding = false; }
+  if (R.kind === 'pk') pkSetup(R); else if (PKX.on) pkEnd();
   UIX.onRestart && UIX.onRestart(R);
 }
 // セットプレーをけって、試合を再開する
@@ -2299,7 +2310,7 @@ function takeRestart(kind, tx, tz, pw, o = {}) {
   }
   BALL.owner = P;
   doKick(P, kind, tx, tz, pw, o);
-  if (R.kind === 'pk') M.pk = { taker: P, guess: o.guess };
+  if (R.kind === 'pk') M.pk = { taker: P, guess: o.guess, ctl: !!o.pkctl };
 }
 // ---------- 時間 ----------
 const clockStr = () => { const s = Math.floor(M.clock), m = Math.floor(s / 60), ss = s % 60; return (m < 10 ? '0' : '') + m + ':' + (ss < 10 ? '0' : '') + ss; };
@@ -2407,6 +2418,7 @@ function setMoveTo(g) { USER.moveTo = { x: clamp(g.x, -PL - 2, PL + 2), z: clamp
 // タップしたときの動き（試合中・自分のセットプレー）
 function userTap(sx, sy, kind) {
   const T = TEAMS_M[USER.team], P = USER.P; if (!T || !P || M.autoUser) return;
+  if (PKX.on && M.phase === 'restart') { pkTap(sx, sy); return; }
   const g = screenToPitch(sx, sy); if (!g) return;
   const R = Math.max(30, VH() * .065), gx = oppGoalX(USER.team), onGoal = Math.abs(g.x - gx) < 4.5 && Math.abs(g.z) < GOAL_W + 2;
   if (kind === 'drag') { if (M.phase === 'play') setMoveTo(g); return; }
@@ -2582,7 +2594,7 @@ function userKick(P, b, pw) {
 // セットプレー（自分のチーム）
 function userRestart(b, held) {
   const R = M.restart, P = R.taker, T = TEAMS_M[R.team], w = stickWorld(), pw = Math.min(1, held / .9), gx = oppGoalX(R.team);
-  if (M.t < .5) return;
+  if (M.t < .5 || R.kind === 'pk' && PKX.on) return;   // PK はねらい・ゲージ・助走で（l2_pk.js）
   if (b === 'ok') b = 'pass';
   if (R.kind === 'pk' || R.kind === 'fk' && b === 'shoot') {
     const sz = w.l > .3 ? w.z / w.l : 0, gz = Math.abs(sz) > .3 ? Math.sign(sz) * (GOAL_W - .5) * Math.min(1, Math.abs(sz) * 1.3) : rr(-1, 1);
@@ -2617,6 +2629,7 @@ const CAM = { x: 0, z: 0, lx: 0, lz: 0, ly: 0, fov: 34, shake: 0, cut: 1, cine: 
 function updateCam(dt) {
   const b = BALL, m = CAM_MODES[SET.cam] || CAM_MODES[0];
   if (CAM.cine) { cineCam(dt); return; }
+  if (PKX.on && (M.phase === 'restart' || M.phase === 'play' || M.phase === 'sowait')) { pkCam(); return; }
   // 見たい所：ボールの少し先（攻めている向き）
   const pt = possTeam(), ahead = pt >= 0 ? TEAMS_M[pt].dir * 5 : 0;
   let fx = b.p.x + ahead + b.v.x * .25, fz = b.p.z + b.v.z * .15;
@@ -2696,6 +2709,160 @@ function replayEnd() {
   REC.on = false; const ents = PLAYERS.concat(REFS); REC.save.forEach((v, i) => ents[i] && Object.assign(ents[i].vis, v));
   CAM.cine = null; CAM.cut = 1; UIX.replay && UIX.replay(false);
   const cb = REC.cb; REC.cb = null; cb && cb();
+}
+// =========================================================================================
+//  PK：キッカーのななめうしろの低いカメラ、ねらい（スティック・タップ）と強さのゲージ、助走、
+//  キーパーの読み合い（スティックで飛ぶ方向。さわらないと真ん中）、名前の表示、PK戦のスコア表
+// =========================================================================================
+const PKX = { on: false, st: '', t: 0, R: null, P: null, K: null, team: 0, user: '', aim: { z: 0, y: .62 }, pw: 0, charging: false, chargeB: '', c0: 0, chip: false, side: 1, kickT: 0, gk: null, early: false, saved: false, ai: null, tapT: -9 };
+function pkSetup(R) {
+  const T = TEAMS_M[R.team], O = TEAMS_M[opp(R.team)], dir = T.dir, P = R.taker, K = O.gk, b = BALL.p;
+  Object.assign(PKX, { on: true, st: 'ready', t: 0, R, P, K, team: R.team, aim: { z: 0, y: .62 }, pw: 0, charging: false, chargeB: '', chip: false, kickT: 0, gk: null, early: false, saved: false, ai: null });
+  PKX.user = M.autoUser ? '' : R.team === USER.team ? 'kick' : opp(R.team) === USER.team ? 'keep' : '';
+  // 右足のキッカーは、画面の左うしろから助走（左足は右から）
+  PKX.side = -dir * (P.d.foot === 'L' ? -1 : 1);
+  P.p.x = b.x - dir * 1.5; P.p.z = b.z + PKX.side * 2.3; P.dir = yawOf(dir, 0); P.face = P.dir; P.act = 0; P.v.x = P.v.z = 0;
+  K.p.x = oppGoalX(R.team) - dir * .15; K.p.z = 0; K.dir = yawOf(-dir, 0); K.act = 0;
+  // カメラの前（キッカーのうしろの通り道）をあける
+  for (const Q of PLAYERS) { if (Q === P || Q === K) continue; if (Math.abs(Q.p.z) < 7.5 && Math.abs(Q.p.x - b.x) < 26) Q.p.z = (Q.p.z >= 0 ? 1 : -1) * rr(8, 12); }
+  for (const Rf of REFS) if (Math.abs(Rf.p.z) < 6 && Math.abs(Rf.p.x - b.x) < 24) Rf.p.z = 9;
+  if (USER.team === R.team && !M.autoUser) setUserP(P);
+  document.body.classList.add('pkview'); pkHint();
+}
+function pkEnd() { PKX.on = false; PKX.st = ''; $('hint').classList.remove('on'); document.body.classList.remove('pkview'); }
+function pkHint() {
+  const h = $('hint'), touch = IN.lastDev === 'touch' || document.body.classList.contains('touch');
+  if (!PKX.on || PKX.st === 'flight') { h.classList.remove('on'); return; }
+  let t = '';
+  if (PKX.user === 'kick') t = PKX.st === 'ready' ? (touch ? 'ゴールをタップ → シュート長押し（はなすと蹴る）' : 'スティック／矢印でねらう → シュート長押しで強さ（はなすと蹴る）・ロブでチップキック') : '';
+  else if (PKX.user === 'keep') t = PKX.gk ? 'キーパー：' + pkDirName(PKX.gk) + 'に飛ぶ' : touch ? '飛ぶ所をタップ（何もしないと真ん中）' : 'キーパー：スティック／矢印で飛ぶ方向（さわらないと真ん中）';
+  h.textContent = t; h.classList.toggle('on', !!t);
+}
+function pkDirName(g) { const sx = g.s * TEAMS_M[PKX.team].dir; return (sx < 0 ? '左' : sx > 0 ? '右' : 'まん中') + (g.s ? (g.high ? '上' : '下') : g.high ? '上' : ''); }
+// スティック → ゴールのねらい（円を四角にひろげて、ななめでも角をねらえる）
+function pkStickAim() {
+  let x = IN.sx, y = IN.sy; const l = Math.hypot(x, y); if (l < .18) return null;
+  const m = Math.max(Math.abs(x), Math.abs(y)) || 1; x = x / m * Math.min(1, l); y = y / m * Math.min(1, l);
+  return { z: x * TEAMS_M[PKX.team].dir * (GOAL_W - .45), y: y < 0 ? .62 - y * 1.38 : .62 - y * .36 };
+}
+// 画面の点 → ゴールの面の上の点
+const _pkRay = new THREE.Raycaster(), _pkN = new THREE.Vector2(), _pkPl = new THREE.Plane(), _pkHit = V3();
+function pkGoalPoint(sx, sy) {
+  const gx = oppGoalX(PKX.team); _pkN.set(sx / VW() * 2 - 1, -(sy / VH()) * 2 + 1); _pkRay.setFromCamera(_pkN, camera);
+  _pkPl.set(V3(1, 0, 0), -gx); return _pkRay.ray.intersectPlane(_pkPl, _pkHit) ? { z: _pkHit.z, y: _pkHit.y } : null;
+}
+function pkTap(sx, sy) {   // タッチ：ゴールをタップ
+  if (!PKX.on || PKX.st === 'flight') return false; const g = pkGoalPoint(sx, sy); if (!g || Math.abs(g.z) > GOAL_W + 2.5 || g.y > GOAL_H + 1.5 || g.y < -1) return false;
+  if (PKX.user === 'kick') { PKX.aim = { z: clamp(g.z, -GOAL_W + .3, GOAL_W - .3), y: clamp(g.y, .2, GOAL_H - .15) }; PKX.tapT = PKX.t; return true; }
+  if (PKX.user === 'keep' && !PKX.gk) { pkKeeperPick(Math.abs(g.z) < 1.1 ? 0 : Math.sign(g.z), g.y > 1.3); return true; }
+  return false;
+}
+function pkKeeperPick(s, high) {   // s：ワールドの z の向き（-1／0／1）
+  const left = PKX.st === 'ready' ? 9 : Math.hypot(PKX.P.p.x - BALL.p.x, PKX.P.p.z - BALL.p.z) / 3.6;
+  PKX.gk = { s, high, t: PKX.t, user: true, early: left > .55 }; PKX.early = PKX.gk.early; pkHint();
+}
+function pkAiChoose() {   // AI のキッカー：ねらい・強さ
+  const P = PKX.P, r = Math.random(), sk = (P.st.sho - 60) / 40;
+  let z, y, chip = false;
+  if (r < .42) z = -rr(2.1, 3.25); else if (r < .84) z = rr(2.1, 3.25); else { z = rr(-.7, .7); chip = Math.random() < .3; }
+  y = Math.random() < .6 ? rr(.25, .8) : rr(1.3, 2.0);
+  PKX.ai = { aim: { z, y }, pw: clamp(rr(.5, .82) + sk * .05, .4, .9), chip };
+  PKX.aim = PKX.ai.aim; PKX.pw = PKX.ai.pw;
+}
+function pkRun(chip) { PKX.st = 'run'; PKX.chip = chip; PKX.runT = PKX.t; pkHint(); }
+function pkKick() {
+  const P = PKX.P, gx = oppGoalX(PKX.team); let a = PKX.aim, pw = PKX.pw;
+  // AI のキッカーは、早く動いたキーパーの逆をつく
+  if (PKX.user === 'keep' && PKX.gk && PKX.early && Math.random() < .65) { const s = PKX.gk.s || (Math.random() < .5 ? -1 : 1); a = { z: -s * rr(2.1, 3.0), y: a.y }; PKX.chip = false; }
+  // AI のキーパー：読む／かける（自分がキーパーのときは自分で決める）
+  if (PKX.user !== 'keep') {
+    const read = PKX.user === 'kick' ? [.12, .2, .28, .36][M.diff] : .15, trueS = Math.abs(a.z) < 1.1 ? 0 : Math.sign(a.z);
+    let s; if (Math.random() < read) s = trueS; else { const r = Math.random(); s = r < .44 ? -1 : r < .88 ? 1 : 0; }
+    PKX.gk = { s, high: Math.random() < .3, t: PKX.t, user: false, early: false };
+  }
+  const gy = PKX.chip ? 1.6 : clamp(a.y + (pw - .6) * 1.15, .12, 3.6);
+  PKX.st = 'flight'; PKX.kickT = PKX.t; pkHint();
+  takeRestart('shot', gx, a.z, Math.max(.22, PKX.chip ? .3 : pw), { gy, chip: PKX.chip, errMul: .55, pkctl: 1 });
+}
+function pkUpdate(dt) {
+  if (!PKX.on) return; PKX.t += dt; const P = PKX.P, dir = TEAMS_M[PKX.team].dir, b = BALL.p;
+  if ((PKX.st === 'ready' || PKX.st === 'run') && PKX.user === 'keep' && !PKX.gk && Math.hypot(IN.sx, IN.sy) > .55) {
+    const sx = Math.abs(IN.sx) > .35 ? Math.sign(IN.sx) : 0; pkKeeperPick(sx * dir, IN.sy < -.4);
+  }
+  // キーパーが早く動くと、少しその向きへよる（相手に見える）
+  if (PKX.gk && PKX.gk.early && PKX.st !== 'flight' && PKX.gk.s) { const K = PKX.K; K.p.z = damp(K.p.z, PKX.gk.s * .7, 2, dt); }
+  if (PKX.st === 'ready') {
+    P.want.x = P.want.z = 0; P.face = yawOf(dir, 0);
+    if (PKX.user === 'kick') {
+      const a = pkStickAim(); if (a) PKX.aim = a;
+      const hb = IN.held.shoot ? 'shoot' : IN.held.lob ? 'lob' : '';
+      if (hb && !PKX.charging && PKX.t > .5) { PKX.charging = true; PKX.chargeB = hb; PKX.c0 = IN.now; }
+      if (PKX.charging) { PKX.pw = Math.min(1, (IN.now - PKX.c0) / .9); if (!IN.held[PKX.chargeB]) pkRun(PKX.chargeB === 'lob'); }
+      if (PKX.t > 25 && !PKX.charging) { PKX.pw = .6; pkRun(false); }
+    } else if (PKX.t > 1.6) { pkAiChoose(); pkRun(PKX.ai.chip); }
+  } else if (PKX.st === 'run') {
+    if (PKX.user === 'kick') { const a = pkStickAim(); if (a) PKX.aim = a; }
+    const kx = b.x - dir * .62, kz = b.z + PKX.side * .3, dx = kx - P.p.x, dz = kz - P.p.z, d = Math.hypot(dx, dz);
+    if (d > .14 && PKX.t - PKX.runT < 2.5) { const sp = Math.min(4.3, 1.6 + d * 1.6); P.want.x = dx / d * sp; P.want.z = dz / d * sp; P.face = yawOf(dir, -PKX.side * .25); P.sprint = false; P.jog = 1; }
+    else { P.want.x = P.want.z = 0; P.v.x *= .3; P.v.z *= .3; P.dir = P.face = yawOf(dir, 0); pkKick(); }
+  } else if (PKX.st === 'flight') {
+    if (!SO.on && (M.phase !== 'play' || PKX.t - PKX.kickT > 2.4 || BALL.held)) pkEnd();
+  }
+}
+// キーパーの動き（シュートが来たとき）：えらんだ向きに飛ぶ。向きが合えば、コースと強さでとれるか決まる
+function pkKeeperPlan(K) {
+  const b = BALL, gx = ownGoalX(K.team), s0 = Math.sign(gx); if (b.v.x * s0 < 4) return;
+  let hit = null;
+  simBall(b.p, b.v, b.w, (p, v, t) => { if (Math.abs(p.x) >= PL - .3) { hit = { z: p.z, y: p.y, t, sp: v.length() }; return true; } return Math.abs(p.x) > PL + 1 || v.x * s0 < 0; }, 2.5, 1 / 120);
+  const g = PKX.gk || { s: 0, high: false, early: false };
+  if (!hit) hit = { z: g.s * 5, y: 1, t: .5, sp: 20 };
+  const onT = Math.abs(hit.z) < GOAL_W && hit.y < GOAL_H, bs = Math.abs(hit.z) < 1.15 ? 0 : Math.sign(hit.z), bh = hit.y > 1.35;
+  let p = 0;
+  if (onT) {
+    if (g.s === 0) p = bs === 0 ? (hit.y < 2.05 ? .9 : .3) : Math.abs(hit.z) < 1.8 && !bh ? .28 : 0;
+    else if (g.s === bs) p = .76 + (K.st.gk - 70) * .01 - (hit.sp - 21) * .03 - Math.max(0, Math.abs(hit.z) - 2.75) * 1.3 - (g.high !== bh ? .3 : 0) - (g.early ? .14 : 0);
+  }
+  const save = onT && Math.random() < clamp(p, 0, .93), catchIt = save && hit.sp < 21 && Math.random() < .5;
+  M.gkPlan = { K, hit, save, catchIt, t0: M.t, done: 0 }; PKX.saved = save;
+  if (onT && M.shot) M.stats[opp(K.team)].onT++;
+  const kd = TEAMS_M[K.team].dir;
+  if (g.s !== 0) {
+    const tz = save ? hit.z : g.s * rr(2.2, 2.9), dz = Math.sign(tz - K.p.z) || g.s, L = Math.abs(tz - K.p.z), D = Math.max(.85, hit.t + .45), sp = Math.max(1, (L - .55) / Math.max(.28, hit.t * .95));
+    startAct(K, ACT.dive, D, { dx: kd * .15, dz, s: clamp(sp, 1, 6.8), dir: -dz * kd, hgt: clamp((save ? hit.y : g.high ? 1.75 : .45) / 2.2, 0, 1) });
+    K.dir = yawOf(kd, 0); K.face = K.dir;
+  }
+}
+// ---------- カメラ（キッカーのうしろ、低く） ----------
+function pkCam() {
+  const dir = TEAMS_M[PKX.team].dir, gx = oppGoalX(PKX.team), spot = gx - dir * PEN_D;
+  const asp = camera.aspect || 1.7, fov = Math.max(25, 2 * Math.atan(Math.tan(21.5 * D2R) / asp) / D2R);
+  camera.position.set(spot - dir * 13, 2.0, 0); camera.fov = fov; camera.updateProjectionMatrix(); camera.lookAt(gx, -.1, 0);
+}
+// ---------- 表示：名前・ねらい・強さ ----------
+function pkDraw(x, proj, W, H) {
+  const P = PKX.P, K = PKX.K;
+  const tag = (Q, col) => { const t = proj(Q.p.x, 2.2 + (Q.yOff || 0), Q.p.z); if (!t.ok) return; x.font = '800 13px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'bottom'; x.lineWidth = 3.5; x.strokeStyle = 'rgba(0,0,0,.7)'; x.strokeText(Q.d.name, t.x, t.y - 14); x.fillStyle = col; x.fillText(Q.d.name, t.x, t.y - 14);
+    x.beginPath(); x.moveTo(t.x - 6, t.y - 10); x.lineTo(t.x + 6, t.y - 10); x.lineTo(t.x, t.y - 2); x.closePath(); x.fill(); x.lineWidth = 1.5; x.stroke(); };
+  if (PKX.st !== 'flight' || PKX.t - PKX.kickT < .5) { tag(P, '#ffffff'); tag(K, '#ffffff'); }
+  if (PKX.user === 'kick' && PKX.st !== 'flight') {
+    // ねらい（自分にだけ見える）
+    const gx = oppGoalX(PKX.team), a = proj(gx, PKX.aim.y, PKX.aim.z);
+    if (a.ok) { x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 2; x.beginPath(); x.arc(a.x, a.y, 10, 0, TAU); x.stroke(); x.beginPath(); x.moveTo(a.x - 15, a.y); x.lineTo(a.x - 5, a.y); x.moveTo(a.x + 5, a.y); x.lineTo(a.x + 15, a.y); x.moveTo(a.x, a.y - 15); x.lineTo(a.x, a.y - 5); x.moveTo(a.x, a.y + 5); x.lineTo(a.x, a.y + 15); x.stroke(); x.fillStyle = 'rgba(255,214,58,.9)'; x.beginPath(); x.arc(a.x, a.y, 2.5, 0, TAU); x.fill(); }
+    // 強さのゲージ
+    const f = proj(P.p.x, 0, P.p.z); if (f.ok) { const gw = 110, gy = f.y + 14, gx0 = f.x - gw / 2;
+      x.fillStyle = 'rgba(0,0,0,.6)'; x.fillRect(gx0 - 3, gy - 3, gw + 6, 14); const gr = x.createLinearGradient(gx0, 0, gx0 + gw, 0); gr.addColorStop(0, '#3ad8ff'); gr.addColorStop(.6, '#c6ff3a'); gr.addColorStop(.86, '#ffd23a'); gr.addColorStop(1, '#ff4a4a');
+      x.fillStyle = gr; x.fillRect(gx0, gy, gw * PKX.pw, 8); x.fillStyle = 'rgba(255,255,255,.85)'; x.fillRect(gx0 + gw * .86, gy - 3, 2, 14);
+      x.font = '800 11px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'top'; x.fillStyle = '#fff'; x.fillText(PKX.chargeB === 'lob' ? 'チップキック' : PKX.pw > .86 ? '強すぎ注意' : '強さ', f.x, gy + 12); }
+  }
+}
+// ---------- PK戦のスコア表（左上） ----------
+function pkBoard() {
+  if (!TEAMS_M[0]) return;
+  const n = Math.max(5, SO.n[0], SO.n[1]), from = Math.max(0, n - 5), sd = n > 5;
+  const row = t => { let s = ''; for (let i = from; i < from + 5; i++) { const m = SO.marks[t][i]; s += `<i class="${m || ''}${!m && SO.on && SO.turn === t && i === SO.n[t] ? ' now' : ''}"></i>`; }
+    return `<div class="pkRow"><b class="pkCol" style="background:${hex(TEAMS_M[t].kit.shirt)}"></b><span class="pkNm">${TEAMS_M[t].T.short}</span><span class="pkMk">${s}</span><span class="pkSc">${SO.score[t]}</span></div>`; };
+  const cur = SO.on && TEAMS_M[SO.turn] ? `<div class="pkNow">${TEAMS_M[SO.turn].T.short}　${SO.n[SO.turn] + 1}人目${PKX.P && PKX.team === SO.turn ? '　' + PKX.P.d.name : ''}</div>` : '';
+  $('pkHud').innerHTML = row(0) + row(1) + (sd ? '<div class="pkSd">サドンデス</div>' : '') + cur;
 }
 // =========================================================================================
 //  音（すべてその場で作る）：観客のざわめき・歓声・ため息・手拍子、笛、キック・トラップ・ポスト・ネット・キャッチ
@@ -2965,6 +3132,7 @@ function drawHud() {
   const x = c.getContext('2d'); x.setTransform(pr, 0, 0, pr, 0, 0); x.clearRect(0, 0, W, H);
   if (GAME.scr !== 'match' || REC.on || CAM.cine || !USER.P) return;
   const proj = (px, py, pz) => { _hp.set(px, py, pz).project(camera); return { x: (_hp.x + 1) / 2 * W, y: (1 - _hp.y) / 2 * H, ok: _hp.z < 1 }; };
+  if (PKX.on && (M.phase === 'restart' || M.phase === 'play' || M.phase === 'sowait')) { pkDraw(x, proj, W, H); return; }
   const P = USER.P, top = proj(P.p.x, 2.25 + P.yOff, P.p.z), foot = proj(P.p.x, 0, P.p.z);
   if (!top.ok) return;
   // 画面の外なら、はしに矢印
@@ -2992,7 +3160,7 @@ function startMatch(hi, ai, you, o = {}) {
   setupTeams(hi, ai, you); USER.team = you; USER.P = null; GAME.planT = 0; GAME.predT = 0;
   M.diff = SET.diff; M.halfLen = LENS[SET.len] * 30; M.rate = 2700 / M.halfLen; M.staScale = 300 / M.halfLen;
   M.score = [0, 0]; M.scorers = []; M.possT = [0, 0]; M.clock = 0; M.half = 1; M.added = 0; M.t = 0; M.firstKick = Math.random() < .5 ? 0 : 1; M.replayed = 0; M.pk = null;
-  applyTod(SET.tod); recInit(); SO.on = false; document.body.classList.remove('shootout');
+  applyTod(SET.tod); recInit(); SO.on = false; pkEnd(); document.body.classList.remove('shootout');
   for (const R of REFS) R.B.root.visible = true;
   document.body.classList.add('match'); show('match'); GAME.paused = false; $('feed').innerHTML = '';
   drawScreen(TEAMS_M[0].T.short, TEAMS_M[1].T.short, 0, 0, 'KICK OFF');
@@ -3026,7 +3194,7 @@ function showResult() {
   $('resAgain').textContent = M.mode === 'cup' ? 'トーナメント表へ' : 'もう一度';
   show('result');
 }
-function endMatchToMenu() { M.phase = 'menu'; REC.on = false; CAM.cine = null; document.body.classList.remove('match'); document.body.classList.remove('shootout'); GAME.paused = false; show('title'); }
+function endMatchToMenu() { pkEnd(); M.phase = 'menu'; REC.on = false; CAM.cine = null; document.body.classList.remove('match'); document.body.classList.remove('shootout'); GAME.paused = false; show('title'); }
 function pauseGame() { if (GAME.scr !== 'match') return; GAME.paused = true; show('pause'); }
 function resume() { GAME.paused = false; show('match'); document.body.classList.add('match'); LASTT = performance.now(); }
 // ---------- PK戦 ----------
@@ -3043,24 +3211,23 @@ function soFinished() {
 }
 function nextPk() {
   drawPkHud();
-  if (soFinished()) { SO.done = true; SO.on = false; M.phase = 'endwait'; M.t = 0; const w = SO.score[0] > SO.score[1] ? 0 : 1; say(TEAMS_M[w].T.short + ' の勝ち！', 'PK ' + SO.score[0] + ' - ' + SO.score[1], 2.5); sfx('whistle', 3); return; }
+  if (soFinished()) { pkEnd(); SO.done = true; SO.on = false; M.phase = 'endwait'; M.t = 0; const w = SO.score[0] > SO.score[1] ? 0 : 1; say(TEAMS_M[w].T.short + ' の勝ち！', 'PK ' + SO.score[0] + ' - ' + SO.score[1], 2.5); sfx('whistle', 3); return; }
   const t = SO.turn, T = TEAMS_M[t]; T.dir = 1; TEAMS_M[opp(t)].dir = -1;
   const order = T.players.filter(p => !p.gk).sort((a, b) => b.st.sho - a.st.sho), taker = order[SO.n[t] % order.length];
-  M.restart = { kind: 'pk', team: t, x: PL - PEN_D, z: 0, title: '', sub: '' };
-  setupRestart(); M.restart.taker = taker;
+  M.restart = { kind: 'pk', team: t, x: PL - PEN_D, z: 0, title: '', sub: '', want: taker };
+  setupRestart();
   // キッカーを置きなおす
   for (const P of T.players) if (P !== taker && !P.gk) { P.p.x = rr(-2, 2); P.p.z = rr(-8, 8); }
-  taker.p.x = PL - PEN_D - .8; taker.p.z = 0; taker.dir = yawOf(1, 0);
-  SO.kicked = false; SO.wait = 0; say(taker.d.name, T.T.name + '　' + (SO.n[t] + 1) + '人目', 1.4);
+  for (const P of T.players) if (P !== taker && !P.gk) { P.p.z = (P.p.z >= 0 ? 1 : -1) * Math.max(Math.abs(P.p.z), 3); }
+  SO.kicked = false; SO.wait = 0; drawPkHud();
 }
 function soRecord(goal) {
   const t = SO.turn; SO.marks[t].push(goal ? 'g' : 'x'); SO.n[t]++; if (goal) SO.score[t]++;
-  say(goal ? 'GOAL!' : '止めた！', '', 1.3, goal ? 'goal' : ''); if (!goal) sfx('ooh');
+  say(goal ? 'GOAL!' : PKX.saved ? 'セーブ！' : 'はずれ…', '', 1.3, goal ? 'goal' : ''); if (!goal) sfx('ooh');
   SO.turn = opp(t); M.phase = 'sowait'; M.t = 0; drawPkHud();
 }
 function drawPkHud() {
-  const m = t => { let s = ''; for (let i = 0; i < Math.max(5, SO.n[t]); i++) s += `<i class="${SO.marks[t][i] || ''}"></i>`; return s; };
-  if (!TEAMS_M[0]) return; $('pkA').innerHTML = TEAMS_M[0].T.short + ' ' + m(0); $('pkB').innerHTML = m(1) + ' ' + TEAMS_M[1].T.short;
+  pkBoard();
 }
 // ---------- カップ戦 ----------
 const CUP = { st: null };
@@ -3142,6 +3309,7 @@ function simulate(dt) {
   const ph = M.phase;
   if ((ph === 'play' || ph === 'restart') && !SO.on) M.clock += dt * M.rate;
   if (ph === 'play') {
+    if (PKX.on) pkUpdate(dt);
     userUpdate(dt);
     GAME.planT -= dt; if (GAME.planT <= 0) { GAME.planT = .25; teamPlan(TEAMS_M[0]); teamPlan(TEAMS_M[1]); }
     GAME.predT -= dt; if (GAME.predT <= 0 || BALL.owner) { GAME.predT = .1; if (!BALL.owner && !BALL.held) predictBall(); else PRED.n = 0; }
@@ -3166,9 +3334,11 @@ function simulate(dt) {
     const R = M.restart;
     for (const P of PLAYERS) { P.want.x = P.want.z = 0; if (P !== R.taker) P.face = yawOf(BALL.p.x - P.p.x, BALL.p.z - P.p.z); }
     if (R.taker.gk && R.kind === 'gk') R.taker.face = yawOf(TEAMS_M[R.team].dir, 0);
+    const pkOn = R.kind === 'pk' && PKX.on; if (pkOn) pkUpdate(dt);
     stepPlayers(dt, false);
     const userTeam = R.team === USER.team && !M.autoUser && !(R.taker.gk && R.kind !== 'gk' && R.kind !== 'pk');
-    if (userTeam) { $('hint').classList.add('on'); $('hint').textContent = hintFor(R); if (M.t > 14) aiRestart(); }
+    if (pkOn) { /* PK は l2_pk.js */ }
+    else if (userTeam) { $('hint').classList.add('on'); $('hint').textContent = hintFor(R); if (M.t > 14) aiRestart(); }
     else { $('hint').classList.remove('on'); if (M.t > (R.kind === 'pk' ? 1.6 : R.kind === 'kickoff' ? 1.0 : 1.3)) { if (R.kind === 'pk' && R.team !== USER.team) M.pkGuessUser = true; aiRestart(); if (M.pk && R.team !== USER.team) { const w = stickWorld(); M.pk.guess = w.l > .3 ? Math.random() < .7 : Math.random() < .32; } } }
     if (M.phase !== 'restart') $('hint').classList.remove('on');
     if (SO.on && M.phase === 'play') SO.wait = 0;
@@ -3257,7 +3427,7 @@ async function boot() {
     addEventListener('pointerdown', () => AUDIO.init(), { once: true }); addEventListener('keydown', () => AUDIO.init(), { once: true });
   } catch (e) { sayL('エラー：' + (e && e.message)); console.error(e); }
 }
-window.__GP = { userTap, screenToPitch, nearOnScreen, SEL, buildSquad, teamAll, LINEUP, openMembers, faceSvg, loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, simulate, render: () => { if (composer) composer.render(); else renderer.render(scene, camera); drawHud(); drawRadar(); },
+window.__GP = { PKX, SO, deadBall, USERX: USER, MX: M, TMX: TEAMS_M, BX: BALL, userTap, screenToPitch, nearOnScreen, SEL, buildSquad, teamAll, LINEUP, openMembers, faceSvg, loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, simulate, render: () => { if (composer) composer.render(); else renderer.render(scene, camera); drawHud(); drawRadar(); },
   M, BALL, PLAYERS, TEAMS_M, TEAMS, USER, IN, SET, CAM, REC, SO, CUP, WORLD, startMatch, setupRestart, takeRestart, doKick, kickVel, aiRestart, endHalf, secondHalf, showResult, camera, scene, renderer, applyTod, show, GAME,
   btnDown, btnUp, giveBall, predictBall, PRED, possTeam, shotVal, bestPass, startShootout, cupNext, newCup, saveCup, drawCup, openSettings, pauseGame, resume, ACT, setUserP };
 boot();
