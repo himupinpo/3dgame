@@ -36,7 +36,7 @@ body.bcam .hud, body.bcam #cross, body.bcam .tb, body.bcam #hHint { display: non
 #hTime { right: calc(16px + env(safe-area-inset-right, 0px)); top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 26px; font-weight: 900; }
 #hTime.warn { color: var(--red); }
 #hAmmo { left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); font-size: 15px; font-weight: 900; }
-#hAmmo i { display: inline-block; width: 6px; height: 16px; margin-right: 3px; border-radius: 2px; background: var(--acc); vertical-align: -3px; } #hAmmo i.e { background: rgba(255,255,255,.2); }
+#hAmmo i { display: inline-block; width: 6px; height: 16px; margin-right: 3px; border-radius: 2px; background: var(--acc); vertical-align: -3px; } #hAmmo i.e { background: rgba(255,255,255,.2); } #hAmmo b { font-size: 20px; margin-left: 6px; } #hAmmo small { opacity: .75; } #hAmmo .rl { display: inline-block; width: 70px; height: 6px; margin-left: 8px; border-radius: 3px; background: rgba(255,255,255,.2); vertical-align: 2px; overflow: hidden; } #hAmmo .rl span { display: block; height: 100%; background: #6ad8ff; } #hAmmo.empty b { color: #ff6a5a; }
 #hWind { left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(40px + env(safe-area-inset-bottom, 0px)); font-size: 14px; font-weight: 800; }
 #hBreath { left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: 160px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.2); overflow: hidden; }
 #hBreathF { height: 100%; width: 100%; background: linear-gradient(90deg, #6ad8ff, #c8ffee); }
@@ -55,6 +55,7 @@ body.touch.playing .tb { display: flex; }
 #bScope { width: calc(66px * var(--bs)); height: calc(66px * var(--bs)); right: calc(126px * var(--bs) + 22px + env(safe-area-inset-right, 0px)); bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 #bZoom { width: calc(56px * var(--bs)); height: calc(56px * var(--bs)); right: calc(34px + env(safe-area-inset-right, 0px)); bottom: calc(128px * var(--bs) + 24px + env(safe-area-inset-bottom, 0px)); }
 #bHide { width: calc(66px * var(--bs)); height: calc(66px * var(--bs)); left: calc(24px + env(safe-area-inset-left, 0px)); bottom: calc(150px * var(--bs) + 70px + env(safe-area-inset-bottom, 0px)); background: rgba(40,80,60,calc(var(--opa) * 1.1)); } body:not(.cover) #bHide { display: none !important; } body.hiding #bHide { background: rgba(200,150,40,.8); }
+#bReload { width: calc(58px * var(--bs)); height: calc(58px * var(--bs)); right: calc(130px * var(--bs) + 22px + env(safe-area-inset-right, 0px)); bottom: calc(112px * var(--bs) + 30px + env(safe-area-inset-bottom, 0px)); font-size: calc(12px * var(--bs)); }
 #bBreath { width: calc(66px * var(--bs)); height: calc(66px * var(--bs)); left: calc(24px + env(safe-area-inset-left, 0px)); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 #bPause { width: 44px; height: 44px; border-radius: 12px; left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); display: none; pointer-events: auto; font: 900 16px var(--f); color: #fff; background: rgba(0,0,0,.5); border: 2px solid rgba(255,255,255,.6); position: absolute; }
 body.playing #bPause { display: block; } body.hub #bPause { left: calc(64px + env(safe-area-inset-left, 0px)); }
@@ -94,7 +95,7 @@ input[type=range] { width: 150px; accent-color: var(--acc); }
   <canvas id="hc"></canvas>
   <div id="cross"></div>
   <div id="tArea"></div>
-  <div class="tb" data-b="fire" id="bFire">うつ</div><div class="tb" data-b="scope" id="bScope">スコープ</div><div class="tb" data-b="zoom" id="bZoom">ズーム</div><div class="tb" data-b="breath" id="bBreath">息を<br>止める</div><div class="tb" data-b="hide" id="bHide">隠れる</div>
+  <div class="tb" data-b="fire" id="bFire">うつ</div><div class="tb" data-b="scope" id="bScope">スコープ</div><div class="tb" data-b="zoom" id="bZoom">ズーム</div><div class="tb" data-b="reload" id="bReload">リロード</div><div class="tb" data-b="breath" id="bBreath">息を<br>止める</div><div class="tb" data-b="hide" id="bHide">隠れる</div>
   <div id="hTop" class="hud"><div id="hMis"></div><div id="hLeft"></div></div>
   <div id="hTime" class="hud"></div><div id="hAmmo" class="hud"></div><div id="hWind" class="hud"></div>
   <div id="hBreath" class="hud"><div id="hBreathF"></div></div><div id="hHint" class="hud"></div>
@@ -213,14 +214,14 @@ function noise2(seed) {
   return (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy); return lerp(lerp(at(xi, yi), at(xi + 1, yi), u), lerp(at(xi, yi + 1), at(xi + 1, yi + 1), u), v); };
 }
 // ---------- 入力 ----------
-const KEYS = { hide: ['KeyC', 'ControlLeft'], fire: ['KeyF'], scope: ['Space', 'KeyE'], zoom: ['KeyZ'], breath: ['ShiftLeft', 'ShiftRight'], pause: ['Escape', 'KeyP'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'] };
+const KEYS = { hide: ['KeyC', 'ControlLeft'], reload: ['KeyR'], fire: ['KeyF'], scope: ['Space', 'KeyE'], zoom: ['KeyZ'], breath: ['ShiftLeft', 'ShiftRight'], pause: ['Escape', 'KeyP'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'] };
 const IN = { look: [0, 0], kb: new Set(), ev: [], breath: false, touchBreath: false, padPrev: [], lastDev: IS_TOUCH ? 'touch' : 'kb', pad: null };
 const keyAct = c => { for (const k in KEYS) if (KEYS[k].includes(c)) return k; return null; };
 addEventListener('keydown', e => {
   if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   const a = keyAct(e.code); if (a) e.preventDefault(); IN.lastDev = 'kb';
   if (e.repeat) return; IN.kb.add(e.code);
-  if (a && !e.repeat && ['fire', 'scope', 'zoom', 'pause', 'hide'].includes(a)) IN.ev.push(a);
+  if (a && !e.repeat && ['fire', 'scope', 'zoom', 'pause', 'hide', 'reload'].includes(a)) IN.ev.push(a);
 });
 addEventListener('keyup', e => IN.kb.delete(e.code));
 addEventListener('blur', () => IN.kb.clear());
@@ -258,7 +259,7 @@ function readInput(dt) {
     const ax = (Math.abs(gp.axes[2] || 0) > .12 ? gp.axes[2] : 0) + (Math.abs(gp.axes[0] || 0) > .15 ? gp.axes[0] * .6 : 0), ay = (Math.abs(gp.axes[3] || 0) > .12 ? gp.axes[3] : 0) + (Math.abs(gp.axes[1] || 0) > .15 ? gp.axes[1] * .6 : 0);
     if (ax || ay) { IN.look[0] += Math.sign(ax) * ax * ax * 900 * dt; IN.look[1] += Math.sign(ay) * ay * ay * 900 * dt; IN.lastDev = 'pad'; }
     const b = i => gp.buttons[i] && gp.buttons[i].pressed;
-    if (b(7) && !IN.padPrev[7]) IN.ev.push('fire'); if (b(6) && !IN.padPrev[6]) IN.ev.push('scope'); if (b(5) && !IN.padPrev[5]) IN.ev.push('zoom'); if (b(9) && !IN.padPrev[9]) IN.ev.push('pause');
+    if (b(7) && !IN.padPrev[7]) IN.ev.push('fire'); if (b(6) && !IN.padPrev[6]) IN.ev.push('scope'); if (b(5) && !IN.padPrev[5]) IN.ev.push('zoom'); if (b(2) && !IN.padPrev[2]) IN.ev.push('reload'); if (b(9) && !IN.padPrev[9]) IN.ev.push('pause');
     br = br || b(0) || b(4); gp.buttons.forEach((bb, i) => (IN.padPrev[i] = bb.pressed));
   }
   IN.breath = br;
@@ -1195,6 +1196,9 @@ const AU = {
   tone(f, dur, peak, type = 'sine', t0 = 0, f2) { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur); o.connect(g); g.connect(this.master); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + dur); o.start(t); o.stop(t + dur + .05); },
   noise(dur, f, peak, type = 'lowpass', t0 = 0) { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, s = c.createBufferSource(); s.buffer = this.nb; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; const g = c.createGain(); s.connect(fl); fl.connect(g); g.connect(this.master); g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.start(t); s.stop(t + dur + .05); },
   shot() { this.noise(.05, 7000, .8, 'highpass'); this.noise(1.1, 340, .75); this.tone(58, .75, .55, 'sine', 0, 26); this.noise(.25, 1500, .25, 'bandpass', .01); this.noise(2.6, 170, .2, 'lowpass', .2); this.noise(.7, 450, .07, 'lowpass', .6); },
+  // リロード：弾倉をはずす → ぬく → 新しい弾倉を入れる → たたく → 槓桿を引いてはなす
+  reload() { const T = RELOAD_T; this.noise(.02, 3600, .1, 'bandpass', T * .1); this.tone(1700, .015, .03, 'square', T * .1); this.noise(.14, 1300, .07, 'bandpass', T * .15); this.noise(.1, 900, .05, 'lowpass', T * .45);
+    this.noise(.03, 2300, .22, 'bandpass', T * .6); this.tone(480, .04, .07, 'square', T * .6); this.noise(.03, 1600, .16, 'bandpass', T * .655); this.noise(.06, 2900, .15, 'bandpass', T * .73); this.tone(950, .03, .04, 'square', T * .74); this.noise(.04, 2000, .24, 'bandpass', T * .845); this.tone(620, .03, .07, 'square', T * .845); },
   // 半自動の作動音（ガシャッ）と、屋上に落ちた薬きょう（チン）
   action() { this.noise(.035, 2600, .28, 'bandpass', .03); this.noise(.045, 1700, .22, 'bandpass', .075); this.tone(640, .025, .05, 'square', .075); this.tone(3700, .09, .035, 'sine', .62); this.tone(5100, .05, .02, 'sine', .7); this.tone(3300, .07, .02, 'sine', .86); },
   bolt() { this.noise(.04, 3000, .2, 'bandpass', .35); this.noise(.05, 2200, .2, 'bandpass', .55); this.tone(900, .03, .05, 'square', .6); },
@@ -1226,14 +1230,15 @@ function makeGun() {
   box(.054, .066, .54, metal, 0, -.002, -.1); box(.056, .006, .54, dark, 0, -.036, -.1);
   for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) { const o = add(new THREE.CapsuleGeometry(.011, .045, 4, 10).rotateX(Math.PI / 2), hole, sx * .0272, .002, -.31 + k * .072); o.scale.x = .12; }
   for (const sx of [-1, 1]) box(.002, .012, .5, dark, sx * .0275, .022, -.1);   // 横のみぞ
-  box(.012, .016, .03, dark, .034, .002, -.05); box(.02, .01, .012, metal, .046, .002, -.05);   // 槓桿（右）
+  const chg = new THREE.Group(); chg.position.set(.034, .002, -.05); G.add(chg); GUN.ch = chg; box(.012, .016, .03, dark, 0, 0, 0, chg); box(.02, .01, .012, metal, .012, 0, 0, chg);   // 槓桿（右）
   box(.004, .022, .07, hole, .028, .008, .02);   // 排きょう口（右）
   box(.006, .016, .12, dark, -.031, .01, -.2);   // たたんだ運ぶ取っ手（左）
   // 下の機関部・引き金・にぎり・大きな弾倉（引き金の前）
   box(.048, .05, .3, metal, 0, -.06, .04); const tg = add(new THREE.TorusGeometry(.026, .0035, 6, 16, Math.PI), dark, 0, -.085, .1); tg.rotation.set(0, Math.PI / 2, Math.PI); box(.005, .024, .008, metal, 0, -.092, .098);
   const gp = box(.032, .11, .045, poly, 0, -.135, .15); gp.rotation.x = .32; box(.034, .012, .05, poly, 0, -.188, .168).rotation.x = .32;
-  const mg = box(.04, .13, .085, dark, 0, -.145, -.035); mg.rotation.x = -.08; box(.042, .012, .088, metal, 0, -.212, -.03).rotation.x = -.08;
-  for (const sx of [-1, 1]) box(.002, .09, .06, metal, sx * .0205, -.14, -.035).rotation.x = -.08;
+  const mag = new THREE.Group(); mag.position.set(0, -.145, -.035); mag.rotation.x = -.08; G.add(mag); GUN.mag = mag; GUN.mag0 = mag.position.clone();
+  box(.04, .13, .085, metal, 0, 0, 0, mag); box(.042, .012, .088, metal, 0, -.067, .005, mag); for (const sx of [-1, 1]) box(.002, .09, .06, metal, sx * .0205, .005, 0, mag);
+  for (let k = 0; k < 2; k++) add(cylZ(.0098, .0098, .07, 10), brass, 0, .068 - k * .004, .006 - k * .002, mag).visible = true;   // 上から見える弾
   // 銃床：機関部とまっすぐ。ほお当て・床尾のゴム・下の一脚
   box(.05, .062, .26, metal, 0, -.004, .3); box(.044, .03, .2, poly, 0, .044, .32); box(.046, .07, .18, metal, 0, -.07, .34).rotation.x = -.18;
   box(.056, .16, .03, rubber, 0, -.04, .445); box(.05, .02, .14, dark, 0, -.115, .36);
@@ -1261,7 +1266,7 @@ function makeGun() {
   const rh = new THREE.Group(); rh.position.set(.004, -.13, .155); rh.rotation.x = .32; G.add(rh);
   add(cap(.031, .05), glove, 0, 0, 0, rh); for (let k = 0; k < 3; k++) { const f = add(cap(.009, .03), glove, -.022, .028 - k * .021, -.03, rh); f.rotation.z = Math.PI / 2; } add(cap(.01, .035), glove, .024, .045, -.02, rh).rotation.x = -.8;
   const ra = add(cap(.045, .32), sleeve, .06, -.2, .29); ra.rotation.set(.9, 0, -.45);
-  const lh = new THREE.Group(); lh.position.set(-.004, -.075, -.13); G.add(lh);
+  const lh = new THREE.Group(); lh.position.set(-.004, -.075, -.13); G.add(lh); GUN.lh = lh; GUN.lh0 = lh.position.clone();
   add(cap(.028, .05), glove, 0, -.012, 0, lh).rotation.x = Math.PI / 2; for (let k = 0; k < 3; k++) { const f = add(cap(.008, .028), glove, .026, .006, -.022 + k * .02, lh); f.rotation.x = Math.PI / 2; } add(cap(.009, .03), glove, -.027, .006, -.01, lh).rotation.x = Math.PI / 2;
   const la = add(cap(.04, .3), sleeve, -.075, -.2, -.04); la.rotation.set(1.2, 0, .32);
   // 銃口の光（まん中と、ブレーキの左右）
@@ -1289,6 +1294,16 @@ function gunAnim(dt) {
   const tall = VM.cam.aspect < 1, bx = tall ? .1 : .21, by = tall ? -.2 : -.17, r = ssf(clamp((G_.scA || 0) / .6, 0, 1)), arc = Math.sin(r * Math.PI);
   G.position.set(lerp(bx, 0, r) - settle * .01 + wx * (1 - r), lerp(by, -.0612, r) + arc * .025 - settle * .012 + br * (1 - r) + kick * .016, lerp(-.66, -.27, r) + kick * .12 + G_.hideK * .05);
   G.rotation.set((.02 + kick * .26) * (1 - r) + kick * .05 * r - G_.hideK * .4 + arc * .06, (.15 + kick * .03) * (1 - r), -arc * .12 - kick * .04);
+  // リロード（p：0〜1）
+  const p = G_.rl > 0 ? 1 - G_.rl / RELOAD_T : -1, sg = (a, b) => p < 0 ? 0 : ssf(clamp((p - a) / (b - a), 0, 1)), tilt = sg(0, .1) - sg(.88, 1);
+  if (p >= 0) {
+    const out = sg(.1, .28), inn = sg(.38, .6), slap = p > .6 && p < .68 ? Math.sin((p - .6) / .08 * Math.PI) : 0;
+    GUN.mag.visible = p < .3 || p > .36; const drop = p < .33 ? out : 1 - inn;
+    GUN.mag.position.set(GUN.mag0.x - drop * .05, GUN.mag0.y - drop * .26 + slap * .006, GUN.mag0.z + drop * .04); GUN.mag.rotation.z = drop * .5;
+    GUN.lh.position.set(GUN.lh0.x - drop * .05 - sg(.08, .14) * .01 + sg(.62, .7) * .01, GUN.lh0.y - (p < .33 ? sg(.08, .14) * .07 + out * .25 : .07 + (1 - inn) * .25) + sg(.62, .72) * .07, GUN.lh0.z + .1 * (sg(.08, .14) - sg(.62, .72)));
+    GUN.ch.position.z = -.05 + (sg(.7, .78) - sg(.84, .86)) * .09;
+    G.position.x -= tilt * .11; G.position.y += tilt * .09 - slap * .006; G.position.z += tilt * .1; G.rotation.z += tilt * .62; G.rotation.x += tilt * .3; G.rotation.y += tilt * .22;
+  } else { GUN.mag.visible = true; GUN.mag.position.copy(GUN.mag0); GUN.lh.position.copy(GUN.lh0); GUN.ch.position.z = -.05; }
   G.visible = (G_.scr === 'play' || G_.scr === 'pause') && (G_.scA || 0) < .62;
   const fo = on ? Math.max(0, 1 - e / .05) : 0; GUN.flash.material.opacity = fo; GUN.flash.scale.setScalar(.22 + Math.random() * .12);
   for (const f of GUN.side) { f.material.opacity = fo * .9; f.scale.set(.3 + Math.random() * .1, .12, 1); }
@@ -1296,6 +1311,15 @@ function gunAnim(dt) {
   for (let i = GUN.smoke.length - 1; i >= 0; i--) { const S = GUN.smoke[i]; S.t += dt; S.o.position.addScaledVector(S.v, dt); S.v.multiplyScalar(Math.exp(-dt * 3)); S.o.scale.setScalar(.06 + S.t * .35); S.o.material.opacity = Math.max(0, .4 - S.t * .32); if (S.t > 1.3) { G.remove(S.o); GUN.smoke.splice(i, 1); } }
 }
 const SHOT_CD = 1;   // 次をうてるまで（反動から構えなおす時間）
+const MAG = 6, RELOAD_T = 2.6;   // 弾倉の弾の数・リロードの時間（弾は無限）
+function startReload() {
+  if (G.rl > 0 || G.mag >= MAG || G.phase !== 'play' || G.bc) return;
+  G.rl = RELOAD_T; G.rlScope = G.scoped; if (G.scoped) setScope(false); AU.reload();
+}
+function updateReload(dt) {
+  if (G.rl > 0) { G.rl -= dt; if (G.rl <= 0) { G.rl = 0; G.mag = MAG; if (G.rlScope && !G.hide && G.phase === 'play') setScope(true); G.rlScope = false; } }
+  else if (G.mag <= 0 && G.bolt <= .3 && G.phase === 'play' && !G.bc) startReload();   // 0 発になったら、自動でリロード
+}
 function ejectShell() {   // 大きな薬きょう（約14cm）
   const o = new THREE.Mesh(new THREE.CylinderGeometry(.0105, .0118, .13, 10).rotateX(Math.PI / 2), GUN.mats.brass); o.position.copy(GUN.port); GUN.g.add(o);
   GUN.shells.push({ o, t: 0, v: V3(rr(1.3, 1.7), rr(.8, 1.1), rr(.1, .3)), w: rr(10, 16) });
@@ -1737,7 +1761,7 @@ function startMission(i) {
   clearPeople(); buildStage(M.stage || 'city'); for (const C of TRAFFIC) C.stop = false; const fK = (M.lv - 1) / (MISSIONS.length - 1); W.spK = .855 + 1.015 * fK; W.reK = 1.405 - 1.305 * fK; setHide(false); document.body.classList.toggle('cover', !!M.cover); CITY.cars.splice(CITY.cars.length - (CITY.extraCars || 0)); for (const o of CITY.extra || []) CITY.grp.remove(o); CITY.extra = []; CITY.extraCars = 0; CITY.boxes.length = CITY.baseBoxes;
   const nc = CITY.cars.length, ng = CITY.grp.children.length;
   setTOD(M.tod); M.setup(); CITY.extraCars = CITY.cars.length - nc; CITY.extra = CITY.grp.children.slice(ng);
-  Object.assign(G, { phase: 'intro', t: 0, left: M.time, ammo: M.ammo, shots: 0, hits: 0, scoped: false, scA: 0, scVis: false, zf: ZOOMS[1], zKick: 0, zoom: 1, breath: 1, recoil: 0, bolt: 0, bullets: [], escaped: 0, res: null, bc: null, endT: 0, alertAll: false });
+  Object.assign(G, { phase: 'intro', t: 0, left: M.time, mag: MAG, rl: 0, rlScope: false, shots: 0, hits: 0, scoped: false, scA: 0, scVis: false, zf: ZOOMS[1], zKick: 0, zoom: 1, breath: 1, recoil: 0, bolt: 0, bullets: [], escaped: 0, res: null, bc: null, endT: 0, alertAll: false });
   for (const f of G.fx) scene.remove(f.o); G.fx = []; if (!M.cover) G.glint = null; G.warnT = 0; G.boatT = 0;
   const D = DIFF[SET.diff], w = rr(M.wind[0], M.wind[1]) * (SET.diff === 0 ? 0 : 1), wa = rr(0, TAU); G.wind.set(Math.cos(wa) * w, 0, Math.sin(wa) * w);
   const a = M.aim; G.base = Math.atan2(-(a[0] - ME_POS.x), -(a[2] - ME_POS.z)); G.yaw = G.base; G.pitch = Math.atan2(a[1] - ME_POS.y, Math.hypot(a[0] - ME_POS.x, a[2] - ME_POS.z));
@@ -1801,7 +1825,7 @@ function updateAim(dt) {
   const dy = angDiff(G.base, G.yaw); if (Math.abs(dy) > 1.5) G.yaw = G.base + Math.sign(dy) * 1.5; G.pitch = clamp(G.pitch, -1.2, .3);
   G.swayT += dt; G.recoil = damp(G.recoil, 0, 6, dt);
   if (IN.breath && G.scoped && G.breath > 0) G.breath = Math.max(0, G.breath - dt / 3.5); else G.breath = Math.min(1, G.breath + dt / 5);
-  G.bolt = Math.max(0, G.bolt - dt);
+  G.bolt = Math.max(0, G.bolt - dt); updateReload(dt);
   G.hideK = damp(G.hideK || 0, G.hide ? 1 : 0, 9, dt); camera.position.copy(ME_POS); camera.position.y -= G.hideK * 1.15; G.shake = Math.max(0, (G.shake || 0) - dt * 5); const shk = G.shake * G.shake * (G.scoped ? .004 : .012); _e.set(G.pitch + swayP() - G.hideK * .25 + rr(-shk, shk), G.yaw + swayY() + rr(-shk, shk), 0); camera.quaternion.setFromEuler(_e);
   scopeAnim(dt); gunLight(); gunAnim(dt);
   renderer.toneMappingExposure = (TODS[SKY.tod] || TODS[0]).exp * (G.scVis && G.M && G.M.nv ? 3 : 1); if (FX.bloom) FX.bloom.strength = (G.scVis && G.M && G.M.nv ? .25 : [.14, .24, .55][SKY.tod] || .2);
@@ -1824,9 +1848,9 @@ function predictImpact() {   // 着弾予想（ふつう）：今のねらいで
   if (!PRED.p) return null; const d = aimDir(_dir.clone()), L = PRED.p.distanceTo(ME_POS); return ME_POS.clone().addScaledVector(d.add(PRED.off).normalize(), L);
 }
 function fire() {
-  if (G.phase !== 'play') return; if (G.hide) { msg('', '隠れているあいだは、うてません', 1); return; } if (G.bolt > 0) return; if (G.ammo <= 0) { AU.empty(); msg('', '弾がない', 1); return; }
+  if (G.phase !== 'play') return; if (G.hide) { msg('', '隠れているあいだは、うてません', 1); return; } if (G.bolt > 0) return; if (G.rl > 0) { AU.empty(); return; } if (G.mag <= 0) { AU.empty(); startReload(); return; }
   const d = aimDir(_dir.clone()), r = simShot(ME_POS, d);
-  G.ammo--; G.shots++; G.bolt = SHOT_CD; G.recoil = G.scoped ? .045 : .09; G.shake = 1; AU.shot(); AU.action(); gunFire();
+  G.mag--; G.shots++; G.bolt = SHOT_CD; G.recoil = G.scoped ? .045 : .09; G.shake = 1; AU.shot(); AU.action(); gunFire();
   const B = { r, t: 0, o: ME_POS.clone().addScaledVector(d, 1.2) };
   // 最後の悪者に当たるなら、弾を追うカメラ
   if (SET.bcam && r.kind === 'person' && r.who.kind === 'crim' && crimsAlive() === 1 && r.t > .08) { G.phase = 'bullet'; G.bc = { B, t: 0, T: Math.min(2.2, 1.1 + r.t * 2.5), who: r.who, off: r.pos.clone().sub(r.who.p) }; G.scoped = false; G.scA = 0; G.scVis = false; document.body.classList.remove('scoped'); GUN.g.visible = false; AU.scopeOut(); }
@@ -1903,7 +1927,7 @@ function updateHud() {
   const M = G.M; $('hMis').textContent = M.name; const n = crimsAlive();
   $('hLeft').innerHTML = M.noMark ? (n ? `ターゲット のこり <b>${n}</b>` : '') : `悪者 のこり <b>${n}</b>`;
   const tl = Math.max(0, G.left); $('hTime').textContent = tl.toFixed(0); $('hTime').className = 'hud' + (tl < 10 ? ' warn' : '');
-  let a = ''; for (let i = 0; i < M.ammo; i++) a += `<i class="${i < G.ammo ? '' : 'e'}"></i>`; $('hAmmo').innerHTML = a + (G.bolt > 0 ? ' 装てん中' : '');
+  let a = ''; for (let i = 0; i < MAG; i++) a += `<i class="${i < G.mag ? '' : 'e'}"></i>`; const ha = $('hAmmo'); ha.innerHTML = a + `<b>${G.mag}/${MAG}</b>` + (G.rl > 0 ? `<span class="rl"><span style="width:${((1 - G.rl / RELOAD_T) * 100).toFixed(0)}%"></span></span>` : ''); ha.classList.toggle('empty', G.mag === 0); const br = $('bReload'); if (br) br.classList.toggle('lit', G.rl > 0);
   const ws = G.wind.length(), wd = ws < .2 ? 'なし' : ws.toFixed(1) + 'm/s';
   $('hWind').textContent = '風 ' + wd; $('hBreathF').style.width = (G.breath * 100) + '%'; $('hBreath').style.opacity = G.scoped ? 1 : .35;
   // スコープの数字
@@ -1911,7 +1935,7 @@ function updateHud() {
     $('sRange').textContent = dist < 1199 ? '距離 ' + Math.round(dist) + 'm' : '距離 ---';
     const rel = Math.atan2(G.wind.x, G.wind.z) - (G.yaw + Math.PI), arrows = ['↓', '↙', '←', '↖', '↑', '↗', '→', '↘'], ai = ((Math.round(-rel / (TAU / 8)) % 8) + 8) % 8;
     $('sWind').textContent = '風 ' + (ws < .2 ? 'なし' : arrows[ai] + ' ' + ws.toFixed(1)); $('sZoom').textContent = (G.zKick > 0 ? (62 / G.zf * .97).toFixed(1) : G.zoom === 1 ? '4' : '10') + '倍'; }
-  const hint = G.hide ? '隠れている（うたれない）。「立つ」で起き上がる' : !G.scoped ? (IN.lastDev === 'touch' ? 'スコープボタンで、のぞく' : '右クリック／スペースでスコープ') : G.breath > .3 && !IN.breath ? (IN.lastDev === 'touch' ? '「息を止める」でゆれが止まる' : 'Shift でゆれが止まる') : '';
+  const hint = G.hide ? '隠れている（うたれない）。「立つ」で起き上がる' : G.rl > 0 ? 'リロード中…' : G.mag < MAG && !G.scoped && IN.lastDev !== 'touch' ? '右クリック／スペースでスコープ・R でリロード' : !G.scoped ? (IN.lastDev === 'touch' ? 'スコープボタンで、のぞく' : '右クリック／スペースでスコープ') : G.breath > .3 && !IN.breath ? (IN.lastDev === 'touch' ? '「息を止める」でゆれが止まる' : 'Shift でゆれが止まる') : '';
   if (hint !== HK) { HK = hint; $('hHint').textContent = hint; $('hHint').style.display = hint ? '' : 'none'; }
 }
 // ---------- 画面 ----------
@@ -1936,11 +1960,11 @@ function openSettings(back) {
 function drawMissions() {
   const b = loadBest(), el = $('misList'); el.innerHTML = '';
   MISSIONS.forEach((M, i) => { const o = b[M.id] || {}, locked = i > 0 && !(b[MISSIONS[i - 1].id] || {}).stars && !(o.stars), btn = document.createElement('button'); btn.className = 'btn'; btn.disabled = locked;
-    btn.innerHTML = `<div class="mis"><div class="n">${i + 1}</div><div class="tx">${M.name}<small>${locked ? '前のミッションをクリアすると選べる' : STAGES[M.stage || 'city'].name + '・' + ['昼', '夕方', '夜'][M.tod] + '・' + M.time + '秒・弾 ' + M.ammo + '発'}</small></div><div class="st">${o.stars ? '★'.repeat(o.stars) + '☆'.repeat(3 - o.stars) : ''}</div></div>`;
+    btn.innerHTML = `<div class="mis"><div class="n">${i + 1}</div><div class="tx">${M.name}<small>${locked ? '前のミッションをクリアすると選べる' : STAGES[M.stage || 'city'].name + '・' + ['昼', '夕方', '夜'][M.tod] + '・' + M.time + '秒'}</small></div><div class="st">${o.stars ? '★'.repeat(o.stars) + '☆'.repeat(3 - o.stars) : ''}</div></div>`;
     btn.onclick = () => openBrief(i); el.appendChild(btn); });
   show('misSel');
 }
-function openBrief(i) { const M = MISSIONS[i]; G.mi = i; $('bTitle').textContent = 'ミッション ' + (i + 1) + '：' + M.name; $('brief').innerHTML = M.brief.map(t => `<p>${t}</p>`).join('') + `<p style="opacity:.8;font-size:13px">制限時間 ${M.time}秒・弾 ${M.ammo}発・むずかしさ「${DIFF[SET.diff].name}」</p>`; show('briefing'); }
+function openBrief(i) { const M = MISSIONS[i]; G.mi = i; $('bTitle').textContent = 'ミッション ' + (i + 1) + '：' + M.name; $('brief').innerHTML = M.brief.map(t => `<p>${t}</p>`).join('') + `<p style="opacity:.8;font-size:13px">制限時間 ${M.time}秒・弾は無限（${MAG}発ごとにリロード）・むずかしさ「${DIFF[SET.diff].name}」</p>`; show('briefing'); }
 function toTitle() { G.M = null; G.scoped = false; setHide(false); clearPeople(); document.body.classList.remove('scoped', 'cover'); setTOD(0); if (STAGE.id === 'port') portWorkers(18); else if (STAGE.id === 'city') spawnCivilians(30, { plaza: .5 }); else stageCivs(18); show('title'); G.phase = 'title'; }
 function wireUI() {
   const on = (id, f) => $(id).addEventListener('click', () => { AU.init(); f(); });
@@ -1961,7 +1985,9 @@ function tick(dt) {
     if (e === 'fire') fire();
     if (e === 'hide') { if (G.M.cover) { setHide(!G.hide); AU.scope(); } continue; }
     if (G.hide && (e === 'scope' || e === 'zoom' || e === 'zoomIn')) { setHide(false); continue; }
-    if (e === 'scope') setScope(!G.scoped);
+    if (e === 'scope') { if (G.rl > 0) G.rlScope = !G.rlScope; else setScope(!G.scoped); }
+    if (e === 'reload') { startReload(); continue; }
+    if ((e === 'zoom' || e === 'zoomIn') && G.rl > 0) { G.rlScope = true; continue; }
     if (e === 'zoom') { if (!G.scoped) setScope(true); else setZoom(G.zoom === 1 ? 2 : 1); }
     if (e === 'zoomIn') { if (!G.scoped) setScope(true); else setZoom(2); }
     if (e === 'zoomOut') { if (G.zoom === 2) setZoom(1); else setScope(false); }
