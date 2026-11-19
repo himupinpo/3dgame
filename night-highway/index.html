@@ -396,11 +396,16 @@ addEventListener('devicemotion', e => {
   const k = IS_IOS ? -1 : 1; tiltUp(a.x * k, a.y * k);   // iPhone の加速度は、向きが Android と反対
 });
 // iPhone などは、ボタンを押したときに許可をもらう必要がある（向き・加速度の両方）
+// 答え：'granted'（許可）・'denied'（ことわられた）・'blocked'（お知らせも出ずに、すぐことわられた＝この枠の中では使えない）・'none'（許可のいらない端末）
 async function askTilt() {
   const P = [window.DeviceOrientationEvent, window.DeviceMotionEvent].filter(E => E && typeof E.requestPermission === 'function');
-  if (!P.length) return 'none'; TILT.asked = true;
-  try { const r = await Promise.all(P.map(E => E.requestPermission())); TILT.deny = r.every(x => x !== 'granted'); return TILT.deny ? 'denied' : 'granted'; } catch (e) { return 'error'; }
+  if (!P.length) return 'none'; TILT.asked = true; const t0 = performance.now();
+  const r = await Promise.allSettled(P.map(E => E.requestPermission())), ok = r.some(x => x.status === 'fulfilled' && x.value === 'granted');
+  TILT.deny = !ok; return ok ? 'granted' : performance.now() - t0 < 450 ? 'blocked' : 'denied';
 }
+// claude.ai など、別のサイトの枠の中で動いているか（そのときブラウザは、ゲームに傾きセンサーを渡さないことが多い）
+const IN_FOREIGN = (() => { try { return window.top !== window && !window.top.location.href; } catch (e) { return true; } })();
+const SENSOR_OFF = (() => { try { const F = document.permissionsPolicy || document.featurePolicy; return !!F && typeof F.allowsFeature === 'function' && !F.allowsFeature('gyroscope') && !F.allowsFeature('accelerometer'); } catch (e) { return false; } })();
 // いまの持ち方を「まっすぐ」にする（大きくかたむいているときは合わせない）
 function tiltCenter(force) { if (!TILT.ok) return false; if (!force && Math.abs(TILT.ang) > .5) return false; TILT.c0 = TILT.ang; tiltApply(); return true; }
 
@@ -2990,9 +2995,15 @@ function renderGarage() {
 }
 // ---------- 設定 ----------
 // ジャイロを使いはじめる：許可 → 少し待って値が来ていれば、まっすぐを合わせる
+// 1.3秒待っても値が来なければ、この画面では使えない：ハンドルを前の方法にもどして、わけを出す
+let GYRO_PREV = SET.steer === 2 ? 0 : SET.steer;
 async function gyroStart(center) {
   const r = await askTilt(); tiltNote(r);
-  setTimeout(() => { if (center && TILT.ok) tiltCenter(true); tiltNote(r); }, 700);
+  setTimeout(() => {
+    if (TILT.ok && performance.now() - TILT.last < 1500) { if (center) tiltCenter(true); tiltNote(r); return; }
+    if (SET.steer === 2) { SET.steer = GYRO_PREV; saveSet(); document.body.classList.toggle('slide', SET.steer === 1); for (const o of $('sSteer').querySelectorAll('button')) o.classList.toggle('on', +o.dataset.v === SET.steer); }
+    tiltNote(r === 'denied' ? 'denied' : 'blocked'); if (GAME.scr !== 'settings') toast('この画面ではジャイロが使えません（設定に説明があります）', 3);
+  }, 1300);
 }
 // 設定の画面にいる間、ジャイロのいまの値を見せる
 let GYT = 0;
@@ -3008,7 +3019,7 @@ function openSettings(from) {
 function wireSettings() {
   const segs = { sDot: 'dot', sCrt: 'crt', sBgm: 'bgm', sCam: 'cam', sSteer: 'steer', sAuto: 'auto', sMeter: 'meter', sMt: 'mt', sTinv: 'tinv' };
   for (const [id, key] of Object.entries(segs)) for (const b of $(id).querySelectorAll('button')) b.addEventListener('click', () => {
-    SET[key] = +b.dataset.v; saveSet(); AUDIO.click(); for (const o of $(id).querySelectorAll('button')) o.classList.toggle('on', o === b);
+    if (key === 'steer' && SET.steer !== 2) GYRO_PREV = SET.steer; SET[key] = +b.dataset.v; saveSet(); AUDIO.click(); for (const o of $(id).querySelectorAll('button')) o.classList.toggle('on', o === b);
     if (key === 'tinv') { TILT.ang = -TILT.ang; TILT.c0 = -TILT.c0; tiltApply(); } if (key === 'dot' || key === 'crt') onResize(); if (key === 'bgm') AUDIO.setVol(); if (key === 'steer') { document.body.classList.toggle('slide', SET.steer === 1); if (SET.steer === 2) gyroStart(); tiltNote(); }
     if (key === 'meter') document.body.classList.toggle('meterD', SET.meter === 1); if (key === 'mt') { document.body.classList.toggle('mt', SET.mt === 1); IN.shift = 0; }
   });
@@ -3016,7 +3027,7 @@ function wireSettings() {
   $('sOpa').addEventListener('input', () => { SET.opa = +$('sOpa').value; saveSet(); applyLayout(); });
   $('sTilt').addEventListener('input', () => { SET.tilt = +$('sTilt').value; saveSet(); tiltApply(); });
   // ジャイロ：許可をもらって（iPhone）、ハンドルをジャイロにして、いまの持ち方をまっすぐにする
-  $('sGyro').addEventListener('click', () => { AUDIO.click(); SET.steer = 2; saveSet(); document.body.classList.remove('slide'); for (const o of $('sSteer').querySelectorAll('button')) o.classList.toggle('on', +o.dataset.v === 2); gyroStart(true); });
+  $('sGyro').addEventListener('click', () => { AUDIO.click(); if (SET.steer !== 2) GYRO_PREV = SET.steer; SET.steer = 2; saveSet(); document.body.classList.remove('slide'); for (const o of $('sSteer').querySelectorAll('button')) o.classList.toggle('on', +o.dataset.v === 2); gyroStart(true); });
   $('sLayout').addEventListener('click', () => { AUDIO.click(); layoutEdit(true); });
   // キーの割り当て
   $('sKeys').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; KEYWAIT.on = b.dataset.a; drawKeys(); });
@@ -3060,8 +3071,11 @@ function drawKeys() { $('sKeys').innerHTML = Object.keys(KEYN).map(a => `<button
 function tiltNote(r) {
   const on = TILT.ok && performance.now() - TILT.last < 1500;
   $('tiltNote').textContent = on ? (SET.steer === 2 ? 'ジャイロ ON：スマホをハンドルのように左右に回してください（右に回すと、上のバーが右へ動きます）。走っている間は、左下のバーをタップすると、いまの持ち方を「まっすぐ」にできます。' : 'ジャイロは使えます。「ジャイロを使う」を押すとハンドルがジャイロになります。')
-    : r === 'denied' ? 'ジャイロが許可されませんでした。もう一度「ジャイロを使う」を押して「許可」を選んでください。'
-    : TILT.ok ? 'ジャイロの値がとどいていません。' : (SET.steer === 2 ? 'ジャイロの値がまだ来ていません。「ジャイロを使う」を押してください（iPhone は許可が必要です）。この画面の中では、センサーが使えないこともあります。' : '');
+    : r === 'denied' ? 'ジャイロが許可されませんでした（「許可しない」が選ばれたため）。iPhone では、Safari をいちど終了してひらきなおすと、もう一度たずねられます。ハンドルは前の方法にもどしました。'
+    : r === 'blocked' ? 'この画面では、スマホの傾きセンサーが使えません。ゲームが claude.ai のページの中（別のサイトの枠の中）で動いているため、ブラウザがゲームにセンサーを渡さず、許可のお知らせも出ません。ゲームの側では直せないので、ハンドルは前の方法（ボタンかスライド）にもどしました。ゲームのファイルを直接ひらいたとき（GitHub Pages などで公開したとき）は使えます。'
+    : TILT.ok ? 'ジャイロの値がとどいていません。'
+    : (IN_FOREIGN || SENSOR_OFF) ? '「ジャイロを使う」を押すと、使えるかどうかを調べます。ただ、いまはゲームが claude.ai のページの中（別のサイトの枠の中）で動いているので、ブラウザが傾きセンサーを渡さず、使えないことが多いです。'
+    : '「ジャイロを使う」を押してください（iPhone は許可のお知らせが出ます）。';
 }
 // ---------- ボタン ----------
 function wireUI() {
