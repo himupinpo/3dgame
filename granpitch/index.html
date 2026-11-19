@@ -55,6 +55,10 @@ body.touch.match .tb { display: flex; }
 #bDash { width: calc(64px * var(--bs)); height: calc(64px * var(--bs)); right: calc(104px * var(--bs) + 18px + env(safe-area-inset-right, 0px)); bottom: calc(104px * var(--bs) + 14px + env(safe-area-inset-bottom, 0px)); border-color: rgba(255,210,58,.9); }
 #bSw { width: calc(54px * var(--bs)); height: calc(54px * var(--bs)); right: calc(196px * var(--bs) + 18px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 #camR { position: absolute; display: none; right: calc(66px + env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); z-index: 6; font: 800 13px var(--f); color: #fff; background: rgba(10,20,48,.75); border: 2px solid rgba(255,255,255,.75); border-radius: 10px; padding: 8px 10px; cursor: pointer; } body.match.camoff #camR { display: block; }
+.camb { position: absolute; display: none; z-index: 6; top: calc(14px + env(safe-area-inset-top, 0px)); font: 800 13px var(--f); color: #fff; background: rgba(10,20,48,.75); border: 2px solid rgba(255,255,255,.55); border-radius: 10px; padding: 8px 10px; cursor: pointer; white-space: nowrap; }
+body.match .camb { display: block; } .camb.on { border-color: #ffd23a; color: #ffd23a; }
+#camL { right: calc(66px + env(safe-area-inset-right, 0px)); } #camB { right: calc(150px + env(safe-area-inset-right, 0px)); } body.match.camoff #camR { right: calc(260px + env(safe-area-inset-right, 0px)); }
+body:not(.touch) #camL { right: calc(14px + env(safe-area-inset-right, 0px)); } body:not(.touch) #camB { right: calc(98px + env(safe-area-inset-right, 0px)); } body:not(.touch).match.camoff #camR { right: calc(208px + env(safe-area-inset-right, 0px)); }
 #bPause { width: 44px; height: 44px; border-radius: 10px; right: calc(14px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); font-size: 16px; }
 body.touch.match #rep { top: calc(64px + env(safe-area-inset-top, 0px)); }
 /* 画面（メニュー） */
@@ -97,6 +101,7 @@ h2 { font-size: 22px; font-weight: 900; font-style: italic; margin: 6px 0 14px; 
 @media (max-width: 640px) { .mlist { grid-template-columns: 1fr; } }
 .opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 15px; font-weight: 800; }
 .opt:last-child { border-bottom: 0; }
+.opt.col { flex-direction: column; align-items: stretch; gap: 6px; } .opt.col .seg { justify-content: flex-start; } .opt small { display: block; font-size: 11px; font-weight: 600; opacity: .75; margin-top: 2px; line-height: 1.5; }
 .seg { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
 .seg button { font: 800 13px var(--f); color: var(--dim); background: rgba(255,255,255,.06); border: 1px solid var(--line); padding: 6px 10px; cursor: pointer; }
 .seg button.on { background: var(--lime); color: #0a1430; border-color: var(--lime); }
@@ -143,7 +148,7 @@ body.pkview #radar { display: none !important; }
   <div id="msg" class="hud"></div><div id="sub" class="hud"></div><div id="toast" class="hud"></div><div id="hint" class="hud"></div><div id="rep" class="hud">REPLAY</div>
   <div id="tArea"></div><div id="tStick"><i id="tKnob"></i></div>
   <div class="tb" data-b="shoot" id="bShoot">シュート</div><div class="tb" data-b="pass" id="bPass">パス</div><div class="tb" data-b="through" id="bThru">スルー</div>
-  <div class="tb" data-b="lob" id="bLob">ロング</div><div class="tb" data-b="dash" id="bDash">ダッシュ</div><div class="tb" data-b="sw" id="bSw">切替</div><div class="tb" data-b="pause" id="bPause">II</div><button id="camR" type="button">視点もどす</button>
+  <div class="tb" data-b="lob" id="bLob">ロング</div><div class="tb" data-b="dash" id="bDash">ダッシュ</div><div class="tb" data-b="sw" id="bSw">切替</div><div class="tb" data-b="pause" id="bPause">II</div><button id="camR" type="button">視点もどす</button><button id="camL" class="camb" type="button">🔓 自由</button><button id="camB" class="camb" type="button">視点</button>
   <div id="fade"></div>
 
   <div id="title" class="scr dim"><div class="box">
@@ -188,15 +193,17 @@ body.pkview #radar { display: none !important; }
   <div id="settings" class="scr dim"><div class="box">
     <h2>設定 <i>SETTINGS</i></h2>
     <div class="card">
-      <div class="opt">カメラ<div class="seg" id="sCam"></div></div>
-      <div class="opt">スワイプで視点を動かす（スマホ：右半分を1本指／どこでも2本指でなぞる・2本指でズーム。PC：右ボタンでなぞる・ホイールでズーム）<div class="seg" id="sSwipe"></div></div>
+      <div class="opt col"><span>いまの視点</span><div class="seg" id="sCam"></div></div>
+      <div class="opt col"><span>「視点」ボタンで切りかえる視点<small>いくつでもえらべます。試合中の右上の「視点」ボタン（PC は T キー）で、えらんだ視点だけを順番に切りかえます。</small></span><div class="seg" id="sCamSet"></div></div>
+      <div class="opt col"><span>視点の動かし方<small>固定：えらんだ視点のまま、なぞっても動きません。自由：なぞって動かせます（スマホは右半分を1本指／どこでも2本指・2本指でズーム。PC は右ボタンでなぞる・ホイールでズーム）。試合中は右上の 🔒／🔓 でも切りかえられます。</small></span><div class="seg" id="sSwipe"></div></div>
+      <div class="opt col"><span>パスの強さ</span><div class="seg" id="sPass"></div></div>
       <div class="opt">画質<div class="seg" id="sGfx"></div></div>
       <div class="opt">音量<input type="range" id="sVol" min="0" max="1" step=".05"></div>
       <div class="opt">観客の声<div class="seg" id="sBgm"></div></div>
-      <div class="opt">守りで自動で選手を切りかえる<div class="seg" id="sAssist"></div></div>
+      <div class="opt col"><span>ボールに近い選手へ、自動で切りかえる<small>いつも：相手がボールを持っているときも、こぼれ球や相手のパスの途中も、いちばん早くボールに行ける選手を動かします。</small></span><div class="seg" id="sAssist"></div></div>
       <div class="opt">選手の名前<div class="seg" id="sNames"></div></div>
       <div class="opt">レーダー（小さな地図）<div class="seg" id="sRadar"></div></div>
-      <div class="opt">移動のしかた（タップ・クリックでその場所へ）<div class="seg" id="sTap"></div></div>
+      <div class="opt col"><span>移動のしかた（タップ・クリックでその場所へ）</span><div class="seg" id="sTap"></div></div>
       <div class="opt">ボタンのこさ（スマホ）<input type="range" id="sOpa" min=".2" max="1" step=".05"></div>
       <div class="opt">ボタンの大きさ（スマホ）<input type="range" id="sBsz" min=".8" max="1.35" step=".05"></div>
     </div>
@@ -259,8 +266,12 @@ if (IS_TOUCH) document.body.classList.add('touch');
 const PL = 52.5, PW = 34, GOAL_W = 3.66, GOAL_H = 2.44, BOX_D = 16.5, BOX_W = 20.16, SIX_D = 5.5, SIX_W = 9.16, PEN_D = 11, CIRC = 9.15;
 
 // ---------- 設定（この端末に保存） ----------
-const SET = { cam: 0, diff: 1, len: 1, tod: 2, gfx: -1, vol: .8, bgm: 1, pad: 1, opa: .5, bsz: 1, assist: 1, names: 1, radar: 1, tapMove: 1, swipe: 1, keys: {} };
+const SET = { cam: 0, diff: 1, len: 1, tod: 2, gfx: -1, vol: .8, bgm: 1, pad: 1, opa: .5, bsz: 1, assist: 2, names: 1, radar: 1, tapMove: 1, swipe: 1, passPw: 1, camSet: [0, 1, 2, 3, 4], keys: {} };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('gpitch-settings')) || {}); } catch (e) { /* はじめて */ }
+// 前の版の「守りで自動で切りかえる：する」は、「いつも（ボールに近い選手へ）」にする
+if ((SET.setV | 0) < 2) { if (SET.assist === 1) SET.assist = 2; SET.setV = 2; }
+if (!Array.isArray(SET.camSet) || !SET.camSet.length) SET.camSet = [0, 1, 2, 3, 4];
+const PASS_K = () => [1, 1.45, 1.85][SET.passPw ?? 1] || 1.45;   // パスの強さ（ふつう・つよい・とてもつよい）
 const saveSet = () => { try { localStorage.setItem('gpitch-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
 // 画質：-1 は自動（スマホは「ふつう」、PC は「きれい」）
 const GFX = () => (SET.gfx >= 0 ? SET.gfx : IS_TOUCH ? 1 : 2);
@@ -1777,7 +1788,7 @@ function bestPass(P) {
     const xa = axOf(P.team, x), za = z * dir, d = Math.hypot(x - BALL.p.x, z - BALL.p.z);
     if (d < 4 || d > (kind === 'pass' ? 40 : kind === 'through' ? 38 : 55)) return;
     if (Math.abs(z) > PW - .8 || Math.abs(x) > PL - .8) return;
-    const lofted = kind === 'lob' || kind === 'cross', vavg = lofted ? 17 : kind === 'through' ? 13 : 12 + d * .1;
+    const lofted = kind === 'lob' || kind === 'cross', vavg = lofted ? 17 : (kind === 'through' ? 13 : 12 + d * .1) * (1 + (PASS_K() - 1) * .6);
     const risk = laneRisk(P.team, BALL.p.x, BALL.p.z, x, z, vavg, lofted), open = openness(P.team, { x, z });
     let sc = posVal(xa, za) - v0 * .55 + clamp(xa - xa0, -15, 25) * .006 - risk * 1.35 - clamp(1 - open / 6, 0, 1) * .3;
     if (kind === 'lob') sc -= .06; if (kind === 'through') sc += .04; if (kind === 'cross') sc += .02;
@@ -1905,7 +1916,7 @@ function giveBall(P, firstTouch) {
   b.owner = P; b.last = P; b.held = null; P.touchT = .05; M.shot = null; M.gkPlan = null; P.gotT = M.t; P.think = Math.min(P.think, .12);
   if (firstTouch) {
     // トラップ：足もとで止める（速いボールほど少し流れる）
-    const rv = Math.hypot(b.v.x - P.v.x, b.v.z - P.v.z), q = (1.25 - P.st.dri / 100) * Math.min(1.3, rv / 16) * cpuMul(P) * (1 + pressureOn(P) * .5);
+    const rv = Math.hypot(b.v.x - P.v.x, b.v.z - P.v.z), q = (1.25 - P.st.dri / 100) * Math.min(1.3, rv / (16 * (1 + (PASS_K() - 1) * .8))) * cpuMul(P) * (1 + pressureOn(P) * .5);   // 強いパスでも止めやすく
     b.v.x = P.v.x * .9 + gauss() * q * 2.6; b.v.z = P.v.z * .9 + gauss() * q * 2.6; b.v.y = 0; if (b.p.y > BR + .1) b.p.y = Math.max(BR, b.p.y * .5);
     sfx('touch', Math.min(1, rv / 15));
   }
@@ -2107,7 +2118,7 @@ function kickVel(P, kind, tx, tz, pw, o = {}) {
   let yaw = Math.atan2(dx, dz) + gauss() * err;
   const vel = V3(), spin = V3();
   if (kind === 'pass' || kind === 'through' || kind === 'gk') {
-    const va = o.va !== undefined ? o.va : kind === 'through' ? 2.2 + pw * 3.2 : 3.2 + d * .075 + pw * 3.5;
+    const K = kind === 'gk' ? 1 : PASS_K(), va = o.va !== undefined ? o.va : kind === 'through' ? (2.2 + pw * 3.2) * K + (K - 1) * 2 : (3.2 + d * .075 + pw * 3.5) * K + (K - 1) * 2;   // 強いほど、着いたときも速い
     const v0 = Math.min(rollV0(d, va) * (1 + gauss() * err * 1.1 + (Math.random() < .04 * cpuMul(P) ? rr(-.25, .3) : 0)), 32);
     vel.set(Math.sin(yaw) * v0, 0, Math.cos(yaw) * v0);
   } else if (kind === 'shot') {
@@ -2521,13 +2532,20 @@ function userUpdate(dt) {
   if (BALL.owner && BALL.owner.team === USER.team && !BALL.owner.gk) setUserP(BALL.owner);
   if (!USER.P || USER.P.off || USER.P.gk) setUserP(userPick());
   // 相手がボールを持ったら、近い選手に自動で切りかえ
-  if (SET.assist && BALL.owner && BALL.owner.team !== USER.team && USER.swT <= 0 && USER.P && dist2(USER.P.p, BALL.owner.p) > 9) { const c = userPick(); if (c && dist2(c.p, BALL.owner.p) < dist2(USER.P.p, BALL.owner.p) - 4) { setUserP(c); USER.swT = 1.2; } }
+  // ボールに近い選手へ自動で切りかえ（1：相手がボールを持っているとき　2：いつも＝こぼれ球・相手のパスの途中も）
+  if (SET.assist && USER.swT <= 0 && USER.P && M.phase === 'play' && !USER.moveTo && !USER.chase && !BALL.held && !(BALL.owner && BALL.owner.team === USER.team)) {
+    const own = BALL.owner, L = M.lastPass, toMate = L && L.team === USER.team && L.R && !L.done && M.t - L.t < 2.5;   // 味方へのパスの途中は、受ける人のまま
+    if ((own || SET.assist >= 2) && !toMate) {
+      const c = userPick(), far = Q => own ? dist2(Q.p, own.p) : PRED.n > 0 ? interceptPt(Q).t * 7 : dist2(Q.p, BALL.p);
+      if (c && c !== USER.P) { const a = far(USER.P), b = far(c), hard = SET.assist >= 2; if (a > (hard ? 4 : 9) && b < a - (hard ? 2.5 : 4)) { setUserP(c); USER.swT = hard ? .8 : 1.2; } }
+    }
+  }
   const P0 = USER.P; if (!P0) return;
   if (IN.tapAt) { const [sx, sy, kind] = IN.tapAt; IN.tapAt = null; userTap(sx, sy, kind); }
   const P = USER.P; if (!P) return;
   for (const [b, kind, held] of ev) {
     if (b === 'pause') { UIX.togglePause && UIX.togglePause(); continue; }
-    if (b === 'cam') { SET.cam = (SET.cam + 1) % CAM_MODES.length; saveSet(); camReset(); UIX.toast && UIX.toast('カメラ：' + CAM_MODES[SET.cam].name); continue; }
+    if (b === 'cam') { nextCam(); continue; }
     if (M.phase === 'restart' && M.restart.team === USER.team) { if (kind === 'up' || b === 'ok') userRestart(b, held); continue; }
     if (M.phase !== 'play') continue;
     const attack = BALL.owner === P;
@@ -2658,6 +2676,14 @@ function camDrag(dx, dy, zoom = 1) {
   CAM.tiltO = clamp(CAM.tiltO + dy * .0045, -.9, 1.1); CAM.zoomO = clamp(CAM.zoomO * zoom, .45, 1.9); document.body.classList.toggle('camoff', camMoved());
 }
 function camReset() { CAM.yawO = 0; CAM.tiltO = 0; CAM.zoomO = 1; document.body.classList.remove('camoff'); }
+// 設定でえらんだ視点だけを、順番に切りかえる
+function nextCam() {
+  const L = (SET.camSet || []).filter(i => CAM_MODES[i]); if (!L.length) L.push(0); const k = L.indexOf(SET.cam);
+  SET.cam = L[(k + 1) % L.length]; saveSet(); CAM.cut = 1; camReset(); UIX.toast && UIX.toast('視点：' + CAM_MODES[SET.cam].name); camBtns();
+}
+// 視点の固定／自由（自由：スワイプ・右ボタン・ホイールで動かせる）
+function camLock(lock) { SET.swipe = lock ? 0 : 1; saveSet(); if (lock) camReset(); camBtns(); UIX.toast && UIX.toast(lock ? '視点を固定しました（動かせません）' : '視点を自由に動かせます（なぞる・2本指・ホイール）'); }
+function camBtns() { const l = $('camL'), b = $('camB'); if (l) { l.textContent = SET.swipe === 0 ? '🔒 固定' : '🔓 自由'; l.classList.toggle('on', SET.swipe === 0); } if (b) b.textContent = '視点：' + (CAM_MODES[SET.cam] || CAM_MODES[0]).name; }
 // 見る点 (lx, ly, lz) のまわりで、カメラの位置をまわす
 function camOrbit(px, py, pz, lx, ly, lz) {
   if (!camMoved()) { camera.position.set(px, py, pz); return; }
@@ -3086,7 +3112,7 @@ function wireUI() {
   $('cupGo').onclick = () => cupNext();
   $('setBack').onclick = () => { if (GAME.setFrom === 'pause') show('pause'); else show('title'); };
   $('howBack').onclick = () => { if (GAME.howFrom === 'pause') show('pause'); else show('title'); };
-  $('pResume').onclick = () => resume(); $('pCam').onclick = () => { SET.cam = (SET.cam + 1) % CAM_MODES.length; saveSet(); toast('カメラ：' + CAM_MODES[SET.cam].name); };
+  $('pResume').onclick = () => resume(); $('pCam').onclick = () => nextCam();
   $('pSet').onclick = () => { GAME.setFrom = 'pause'; openSettings(); }; $('pHow').onclick = () => { GAME.howFrom = 'pause'; show('how'); };
   $('pQuit').onclick = () => { endMatchToMenu(); };
   $('halfGo').onclick = () => secondHalf();
@@ -3097,15 +3123,28 @@ function wireUI() {
   $('howAtk').innerHTML = atk.map(([a, b]) => `<b>${a}</b><span>${b}</span>`).join(''); $('howDef').innerHTML = def.map(([a, b]) => `<b>${a}</b><span>${b}</span>`).join('');
   initTouch(); initMouse(); applyButtons();
   $('camR').addEventListener('pointerdown', e => e.stopPropagation()); $('camR').addEventListener('click', e => { e.stopPropagation(); camReset(); });
+  for (const [id, f] of [['camB', nextCam], ['camL', () => camLock(SET.swipe !== 0)]]) { $(id).addEventListener('pointerdown', e => e.stopPropagation()); $(id).addEventListener('click', e => { e.stopPropagation(); AUDIO.init && AUDIO.init(); f(); }); }
+  camBtns();
 }
 function applyButtons() { document.documentElement.style.setProperty('--opa', SET.opa); document.documentElement.style.setProperty('--bs', SET.bsz); document.body.classList.toggle('radar', !!SET.radar); }
 const KEY_NAMES = { up: '上', down: '下', left: '左', right: '右', pass: 'パス／プレス', shoot: 'シュート／スライディング', through: 'スルー／2人目', lob: 'ロング・クロス', dash: 'ダッシュ', sw: '切りかえ', pause: '一時停止', cam: 'カメラ' };
+// 切りかえで使う視点（いくつでもえらべる。ひとつは必ずのこる）
+function drawCamSet() {
+  const el = $('sCamSet'); el.innerHTML = '';
+  CAM_MODES.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = c.name; b.classList.toggle('on', SET.camSet.includes(i));
+    b.onclick = () => { const on = SET.camSet.includes(i); if (on && SET.camSet.length === 1) { toast('ひとつはえらんでおいてください'); return; } SET.camSet = on ? SET.camSet.filter(k => k !== i) : SET.camSet.concat(i).sort((a, c2) => a - c2);
+      if (!SET.camSet.includes(SET.cam)) { SET.cam = SET.camSet[0]; CAM.cut = 1; camReset(); seg($('sCam'), CAM_MODES.map(c => c.name), () => SET.cam, v => { SET.cam = v; if (!SET.camSet.includes(v)) SET.camSet.push(v); saveSet(); CAM.cut = 1; camReset(); camBtns(); drawCamSet(); }); }
+      saveSet(); camBtns(); drawCamSet(); };
+    el.appendChild(b); });
+}
 function openSettings() {
-  seg($('sCam'), CAM_MODES.map(c => c.name), () => SET.cam, v => { SET.cam = v; saveSet(); CAM.cut = 1; camReset(); });
-  seg($('sSwipe'), ['なし', 'あり'], () => SET.swipe ?? 1, v => { SET.swipe = v; saveSet(); if (!v) camReset(); });
+  seg($('sCam'), CAM_MODES.map(c => c.name), () => SET.cam, v => { SET.cam = v; if (!SET.camSet.includes(v)) SET.camSet.push(v); saveSet(); CAM.cut = 1; camReset(); camBtns(); drawCamSet(); });
+  seg($('sSwipe'), ['固定（えらんだ視点）', '自由（なぞって動かす）'], () => SET.swipe === 0 ? 0 : 1, v => { SET.swipe = v; saveSet(); if (!v) camReset(); camBtns(); });
+  drawCamSet();
+  seg($('sPass'), ['ふつう（前と同じ）', 'つよい', 'とてもつよい'], () => SET.passPw ?? 1, v => { SET.passPw = v; saveSet(); });
   seg($('sGfx'), ['自動', '軽い', 'ふつう', 'きれい'], () => SET.gfx + 1, v => { SET.gfx = v - 1; saveSet(); toast('画質は次の起動から変わります'); });
   seg($('sBgm'), ['なし', 'あり'], () => SET.bgm, v => { SET.bgm = v; saveSet(); });
-  seg($('sAssist'), ['しない', 'する'], () => SET.assist, v => { SET.assist = v; saveSet(); });
+  seg($('sAssist'), ['しない', '守りのときだけ', 'いつも（ボールに近い選手へ）'], () => SET.assist, v => { SET.assist = v; saveSet(); });
   seg($('sNames'), ['なし', 'あり'], () => SET.names, v => { SET.names = v; saveSet(); });
   seg($('sRadar'), ['なし', 'あり'], () => SET.radar, v => { SET.radar = v; saveSet(); applyButtons(); });
   seg($('sTap'), ['スティックだけ', 'スティック＋タップ', 'タップだけ'], () => SET.tapMove, v => { SET.tapMove = v; saveSet(); });

@@ -782,7 +782,7 @@ function updateSky(focus) {
   L.target.position.set(fx, fy, fz); L.position.set(fx + _sd.x * 700, fy + _sd.y * 700, fz + _sd.z * 700); L.target.updateMatrixWorld();
 }
 // =========================================================================================
-//  ゲーム：ミッション（5つ）、ねらう・スコープ・ゆれ・息を止める、弾（落ちる・風）、弾を追うカメラ、表示、音、メニュー
+//  ゲーム：ミッション（10）、ねらう・スコープ・ゆれ・息を止める、弾（落ちる・風）、弾を追うカメラ、表示、音、メニュー
 // =========================================================================================
 const UI = { playing: () => G.scr === 'play' && !G.paused };
 const G = { scr: 'title', paused: false, mi: 0, M: null, phase: 'intro', t: 0, left: 0, ammo: 0, shots: 0, hits: 0, scoped: false, zoom: 0, yaw: 0, pitch: 0, base: 0, swayT: 0, breath: 1, recoil: 0, bolt: 0, bullets: [], fx: [], wind: V3(), res: null, msgT: 0, bc: null, escaped: 0, endT: 0 };
@@ -875,6 +875,74 @@ const MISSIONS = [
     },
     update(t) { for (const P of PEOPLE) if (P.kind === 'crim' && !P.alert && P.data.leave && t > P.data.leave) { P.alert = true; P.alertT = 0; } },
   },
+  // ---------- ここから追加のミッション ----------
+  { id: 'm6', name: '爆弾犯を止めろ', tod: 1, time: 45, ammo: 6, wind: [1, 3], aim: [0, 1, -22],
+    brief: ['夕方の広場。<b>かばんに爆弾を入れた男</b>が、北から広場のまん中の<b>噴水</b>へ向かって歩いている。噴水に着く前に止めよう。', '広場のはしには、じゅうを持った<b>見張りが2人</b>。だれかをうつと、爆弾犯は気づいて<b>走り出す</b>。見張りはにげ出す。', '爆弾犯はじゅうを持っていない。茶色い服と、黒いかばんが目じるし。人ごみに当てないように。'],
+    setup() {
+      spawnCivilians(30, { plaza: .62 });
+      const B = spawnPerson('crim', -5, -44, { noGun: true, bag: true, st: 'script', cloth: [.36, .24, .14] }); B.face = 0;
+      B.beh = (P, dt, W) => { if (moveTo(P, 0, -7.6, P.alert ? 3.6 : 1.05, dt)) { P.sp = 0; fail('爆弾がしかけられてしまった…'); } };
+      for (const [x, z, fx] of [[-27, -14, -50], [26, 12, 50]]) { const P = spawnPerson('crim', x, z, { st: 'script', fleeTo: [fx, z] }); P.beh = crimPatrol([x, z], [x, z + 6], .9); }
+    },
+  },
+  { id: 'm7', name: '屋上の狙撃手', tod: 1, time: 60, ammo: 7, wind: [2, 4], aim: [64, 40, -95],
+    brief: ['まわりのビルの屋上に、敵の<b>狙撃手が3人</b>かくれている。ふだんは屋上のかべにかくれて見えない。', 'ときどき<b>顔を出して、こちらをねらう</b>。そのときスコープが<b>キラッと光る</b>。顔を出しているうちにうとう。', '長く顔を出させておくと、<b>うたれてしまう</b>（画面に「ねらわれている！」と出る）。'],
+    setup() {
+      spawnCivilians(18, { plaza: .4 });
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false })); CITY.grp.add(glint); G.glint = glint;
+      const mk = (bx, bz, x, z0, z1, k) => { const y = roofAt(bx, bz), P = spawnPerson('crim', x, (z0 + z1) / 2, { y, st: 'script' }); P.data.aim = 1; P.data.z = [z0, z1]; P.data.hideT = 2 + k * 3.2; P.data.vis = 0; P.gone = true; P.H.root.visible = false;
+        P.beh = (P, dt) => { P.face = towardMe(P.p.x, P.p.z); P.sp = 0; }; return P; };
+      mk(94, -94, 64.6, -112, -80, 0); mk(188, 0, 158.6, -16, 16, 1); mk(0, -94, -29.4, -108, -82, 2);
+    },
+    update(t, dt) {
+      const lim = [7, 4.2, 3.4][SET.diff]; let warn = 0;
+      for (const P of PEOPLE) { if (P.kind !== 'crim' || P.down) continue; const D = P.data;
+        if (P.gone) { if ((D.hideT -= dt) <= 0) { P.gone = false; P.H.root.visible = true; P.p.z = rr(D.z[0], D.z[1]); D.vis = 0; D.glT = 0; D.peek = (D.peek || 0) + 1; } continue; }
+        D.vis += dt; D.glT = (D.glT || 0) + dt; warn = Math.max(warn, D.vis / lim);
+        if (D.vis > lim) { fail('敵の狙撃手にうたれてしまった…'); return; }
+        if (D.peek < 3 && D.vis > rr(3.2, 4.2) && !P.alert && D.vis < lim - .6) { P.gone = true; P.H.root.visible = false; D.hideT = rr(2.5, 5.5); }   // 少しのぞいて、またかくれる
+      }
+      // スコープの光：顔を出した直後と、ねらいはじめに光る
+      const g = G.glint, show = PEOPLE.find(P => P.kind === 'crim' && !P.down && !P.gone && (P.data.glT < .5 || (P.data.vis > lim * .55 && P.data.vis < lim * .55 + .4)));
+      if (g) { if (show) { g.position.set(show.p.x, show.p.y + 1.55, show.p.z); g.material.opacity = .95; g.scale.setScalar(2 + Math.sin(t * 30) * .6); } else g.material.opacity = Math.max(0, g.material.opacity - dt * 4); }
+      if (warn > .55 && G.phase === 'play' && (G.warnT = (G.warnT || 0) - dt) <= 0) { G.warnT = 1; msg('', 'ねらわれている！', .9, 'bad'); }
+    },
+  },
+  { id: 'm8', name: '護送車をまもれ', tod: 0, time: 70, ammo: 8, wind: [1, 3], aim: [8, 1, 40],
+    brief: ['銀行の前に止まった白い<b>護送車</b>を、悪者が<b>5人</b>、ちがう方向から順番におそいに来る。', '悪者が護送車にたどり着いたら失敗。気づかれると<b>走って</b>くる。', '護送車のそばの<b>青い服の警備員</b>はうたないように。広場には、ふつうの人もいる。'],
+    setup() {
+      spawnCivilians(20, { plaza: .4 });
+      car(12, 53.6, Math.PI / 2, 0xeeeef2, true);
+      for (const [x, z] of [[8.6, 57.6], [15.4, 57.6]]) { const P = spawnPerson('civ', x, z, { st: 'idle', cloth: [.12, .2, .52], face: Math.PI }); P.guard = true; P.lookAt = [12, 40]; }
+      const R = [[[-46, 24], [7.5, 51.5]], [[46, 30], [16.5, 51.5]], [[-18, -6], [9, 50.6]], [[28, -24], [15, 50.6]], [[-44, 52], [7, 53.8]]];
+      R.forEach((r, i) => { const P = spawnPerson('crim', r[0][0], r[0][1], { st: 'script' }); P.gone = true; P.H.root.visible = false; P.data.appear = 3 + i * 8.5; P.data.to = r[1];
+        P.beh = (P, dt) => { if (P.gone) return; if (moveTo(P, P.data.to[0], P.data.to[1], P.alert ? 3.3 : 1.6, dt)) { P.sp = 0; fail('護送車がおそわれた…'); } }; });
+    },
+    update(t) { for (const P of PEOPLE) if (P.kind === 'crim' && P.gone && P.data.appear && t > P.data.appear && !P.data.out) { P.data.out = 1; P.gone = false; P.H.root.visible = true; if (t > 4) msg('', '悪者が来た！', 1); } },
+  },
+  { id: 'm9', name: 'ボスと護衛', tod: 1, time: 65, ammo: 7, wind: [1, 3], aim: [-20, 1, -33],
+    brief: ['悪者の<b>ボス</b>（白いスーツ）が、<b>護衛3人</b>に囲まれて、広場のまわりの歩道を歩いている。', '広場の東がわの歩道の先に止めた<b>黒い車</b>に乗られたら失敗。だれかをうつと、ボスは<b>走って</b>車へ向かう。', '護衛は気づくと、その場で止まってボスを守る。ボスから先にねらうのがコツ。'],
+    setup() {
+      spawnCivilians(22, { plaza: .45 });
+      car(44, 36, 0, 0x101014);
+      const way = [[33, -40], [40, -33], [40, 32], [43.6, 33.4]];   // 自分のビルの真下の近くは、屋上のかべで見えないので、少し東から
+      const B = spawnPerson('crim', -6, -40, { noGun: true, bag: true, st: 'script', cloth: [.88, .88, .9] }); B.data.k = 0; B.face = Math.PI / 2;
+      B.beh = (P, dt) => { const w = way[P.data.k]; if (moveTo(P, w[0], w[1], P.alert ? 3.5 : 2, dt)) { if (++P.data.k >= way.length) { P.gone = true; P.H.root.visible = false; fail('ボスに車でにげられた…'); } } };
+      [[1.4, -1.2], [-1.4, -1.2], [0, 1.6]].forEach(([ox, oz]) => { const P = spawnPerson('crim', -6 + ox, -40 + oz, { st: 'script' });
+        P.beh = (P, dt) => { if (P.alert || B.down || B.gone) { P.face = towardMe(P.p.x, P.p.z); P.data.aim = 1; P.sp = 0; return; } const c = Math.cos(B.face), s = Math.sin(B.face); moveTo(P, B.p.x + ox * c + oz * s, B.p.z - ox * s + oz * c, 2.6, dt); }; });
+    },
+  },
+  { id: 'm10', name: '3人の手配犯', tod: 1, time: 85, ammo: 6, wind: [1, 3], aim: [0, 1, 0], noMark: true,
+    brief: ['夕方の広場の人ごみに、<b>指名手配犯が3人</b>まぎれている。3人とも<b>黒いかばん</b>を持っている。', '目じるし：<b style="color:#ff6a5a">赤い服</b>＋かばん、<b>白い服</b>＋かばん、<b style="color:#5ad06a">緑の服</b>＋かばん。', '同じ色の服だけの人・かばんだけの人もいる。だれかをうつと、のこりの手配犯は広場から出ていこうとする。'],
+    setup() {
+      spawnCivilians(32, { plaza: .66 });
+      const C3 = [[.82, .12, .1], [.9, .9, .9], [.14, .56, .2]];
+      C3.forEach((c, i) => { const [x, z] = plazaPoint(); const T = spawnPerson('crim', x, z, { noGun: true, bag: true, cloth: c, st: 'wander', fleeTo: [[-44, 30], [44, -30], [30, 44]][i] }); T.wanted = true; });
+      C3.forEach(c => { for (let k = 0; k < 2; k++) { const [x, z] = plazaPoint(); spawnPerson('civ', x, z, { st: 'wander', cloth: c }); } });
+      for (let k = 0; k < 3; k++) { const [x, z] = plazaPoint(); spawnPerson('civ', x, z, { st: 'wander', bag: true, cloth: [[.1, .2, .5], [.4, .4, .42], [.86, .74, .06]][k] }); }
+    },
+    update() { for (const P of PEOPLE) if (P.wanted && P.alert && P.st === 'wander') { P.st = 'flee'; P.runTo = P.fleeTo; } },
+  },
 ];
 // ---------- はじめる ----------
 function startMission(i) {
@@ -883,7 +951,7 @@ function startMission(i) {
   const nc = CITY.cars.length, ng = CITY.grp.children.length;
   setTOD(M.tod); M.setup(); CITY.extraCars = CITY.cars.length - nc; CITY.extra = CITY.grp.children.slice(ng);
   Object.assign(G, { phase: 'intro', t: 0, left: M.time, ammo: M.ammo, shots: 0, hits: 0, scoped: false, zoom: 1, breath: 1, recoil: 0, bolt: 0, bullets: [], escaped: 0, res: null, bc: null, endT: 0, alertAll: false });
-  for (const f of G.fx) scene.remove(f.o); G.fx = [];
+  for (const f of G.fx) scene.remove(f.o); G.fx = []; if (!M.id || M.id !== 'm7') G.glint = null; G.warnT = 0;
   const D = DIFF[SET.diff], w = rr(M.wind[0], M.wind[1]) * (SET.diff === 0 ? 0 : 1), wa = rr(0, TAU); G.wind.set(Math.cos(wa) * w, 0, Math.sin(wa) * w);
   const a = M.aim; G.base = Math.atan2(-(a[0] - ME_POS.x), -(a[2] - ME_POS.z)); G.yaw = G.base; G.pitch = Math.atan2(a[1] - ME_POS.y, Math.hypot(a[0] - ME_POS.x, a[2] - ME_POS.z));
   $('scope').classList.toggle('nv', !!M.nv);
@@ -1006,7 +1074,7 @@ function drawHud() {
 let HK = '';
 function updateHud() {
   const M = G.M; $('hMis').textContent = M.name; const n = crimsAlive();
-  $('hLeft').innerHTML = M.id === 'm4' ? (n ? 'ターゲット <b>1</b>' : '') : `悪者 のこり <b>${n}</b>`;
+  $('hLeft').innerHTML = M.noMark ? (n ? `ターゲット のこり <b>${n}</b>` : '') : `悪者 のこり <b>${n}</b>`;
   const tl = Math.max(0, G.left); $('hTime').textContent = tl.toFixed(0); $('hTime').className = 'hud' + (tl < 10 ? ' warn' : '');
   let a = ''; for (let i = 0; i < M.ammo; i++) a += `<i class="${i < G.ammo ? '' : 'e'}"></i>`; $('hAmmo').innerHTML = a + (G.bolt > 0 ? ' 装てん中' : '');
   const ws = G.wind.length(), wd = ws < .2 ? 'なし' : ws.toFixed(1) + 'm/s';
