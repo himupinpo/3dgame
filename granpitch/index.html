@@ -54,6 +54,7 @@ body.touch.match .tb { display: flex; }
 #bLob { width: calc(64px * var(--bs)); height: calc(64px * var(--bs)); right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 #bDash { width: calc(64px * var(--bs)); height: calc(64px * var(--bs)); right: calc(104px * var(--bs) + 18px + env(safe-area-inset-right, 0px)); bottom: calc(104px * var(--bs) + 14px + env(safe-area-inset-bottom, 0px)); border-color: rgba(255,210,58,.9); }
 #bSw { width: calc(54px * var(--bs)); height: calc(54px * var(--bs)); right: calc(196px * var(--bs) + 18px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+#camR { position: absolute; display: none; right: calc(66px + env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); z-index: 6; font: 800 13px var(--f); color: #fff; background: rgba(10,20,48,.75); border: 2px solid rgba(255,255,255,.75); border-radius: 10px; padding: 8px 10px; cursor: pointer; } body.match.camoff #camR { display: block; }
 #bPause { width: 44px; height: 44px; border-radius: 10px; right: calc(14px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); font-size: 16px; }
 body.touch.match #rep { top: calc(64px + env(safe-area-inset-top, 0px)); }
 /* 画面（メニュー） */
@@ -142,7 +143,7 @@ body.pkview #radar { display: none !important; }
   <div id="msg" class="hud"></div><div id="sub" class="hud"></div><div id="toast" class="hud"></div><div id="hint" class="hud"></div><div id="rep" class="hud">REPLAY</div>
   <div id="tArea"></div><div id="tStick"><i id="tKnob"></i></div>
   <div class="tb" data-b="shoot" id="bShoot">シュート</div><div class="tb" data-b="pass" id="bPass">パス</div><div class="tb" data-b="through" id="bThru">スルー</div>
-  <div class="tb" data-b="lob" id="bLob">ロング</div><div class="tb" data-b="dash" id="bDash">ダッシュ</div><div class="tb" data-b="sw" id="bSw">切替</div><div class="tb" data-b="pause" id="bPause">II</div>
+  <div class="tb" data-b="lob" id="bLob">ロング</div><div class="tb" data-b="dash" id="bDash">ダッシュ</div><div class="tb" data-b="sw" id="bSw">切替</div><div class="tb" data-b="pause" id="bPause">II</div><button id="camR" type="button">視点もどす</button>
   <div id="fade"></div>
 
   <div id="title" class="scr dim"><div class="box">
@@ -188,6 +189,7 @@ body.pkview #radar { display: none !important; }
     <h2>設定 <i>SETTINGS</i></h2>
     <div class="card">
       <div class="opt">カメラ<div class="seg" id="sCam"></div></div>
+      <div class="opt">スワイプで視点を動かす（スマホ：右半分を1本指／どこでも2本指でなぞる・2本指でズーム。PC：右ボタンでなぞる・ホイールでズーム）<div class="seg" id="sSwipe"></div></div>
       <div class="opt">画質<div class="seg" id="sGfx"></div></div>
       <div class="opt">音量<input type="range" id="sVol" min="0" max="1" step=".05"></div>
       <div class="opt">観客の声<div class="seg" id="sBgm"></div></div>
@@ -257,7 +259,7 @@ if (IS_TOUCH) document.body.classList.add('touch');
 const PL = 52.5, PW = 34, GOAL_W = 3.66, GOAL_H = 2.44, BOX_D = 16.5, BOX_W = 20.16, SIX_D = 5.5, SIX_W = 9.16, PEN_D = 11, CIRC = 9.15;
 
 // ---------- 設定（この端末に保存） ----------
-const SET = { cam: 0, diff: 1, len: 1, tod: 2, gfx: -1, vol: .8, bgm: 1, pad: 1, opa: .5, bsz: 1, assist: 1, names: 1, radar: 1, tapMove: 1, keys: {} };
+const SET = { cam: 0, diff: 1, len: 1, tod: 2, gfx: -1, vol: .8, bgm: 1, pad: 1, opa: .5, bsz: 1, assist: 1, names: 1, radar: 1, tapMove: 1, swipe: 1, keys: {} };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('gpitch-settings')) || {}); } catch (e) { /* はじめて */ }
 const saveSet = () => { try { localStorage.setItem('gpitch-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
 // 画質：-1 は自動（スマホは「ふつう」、PC は「きれい」）
@@ -2352,25 +2354,41 @@ function initTouch() {
   const pad = $('tStick'), knob = $('tKnob');
   // 画面ぜんたいがタッチの場所（ボタンはその上）。左半分を押して動かす＝スティック、さっとタップ＝その場所へ走る。
   // 「タップだけ」の設定なら、どこを押してもその場所へ（押したままなぞると、指についていく）
-  const st = { id: null, ox: 0, oy: 0, moved: false, t0: 0, stick: false };
-  const area = $('tArea');
+  // 視点のスワイプ：右半分を1本の指でなぞる（タップはその場所へ・はなしたときに）か、どこでも2本の指でなぞる（2本の指を広げる・せばめるとズーム）
+  const st = { id: null, ox: 0, oy: 0, cx: 0, cy: 0, moved: false, t0: 0, stick: false, defer: false, cam: false };
+  const tw = { id: null, x: 0, y: 0, mx: 0, my: 0, d: 0 };
+  const area = $('tArea'), swipeOn = () => SET.swipe !== 0;
+  const twoStart = () => { tw.mx = (st.cx + tw.x) / 2; tw.my = (st.cy + tw.y) / 2; tw.d = Math.hypot(st.cx - tw.x, st.cy - tw.y) || 1; };
+  const twoMove = () => { const mx = (st.cx + tw.x) / 2, my = (st.cy + tw.y) / 2, d = Math.hypot(st.cx - tw.x, st.cy - tw.y) || 1; camDrag(mx - tw.mx, my - tw.my, tw.d / d); tw.mx = mx; tw.my = my; tw.d = d; };
   area.addEventListener('pointerdown', e => {
-    if (st.id !== null) return; const p = toStage(e.clientX, e.clientY); st.id = e.pointerId; st.ox = p.x; st.oy = p.y; st.moved = false; st.t0 = performance.now(); IN.lastDev = 'touch';
+    const p = toStage(e.clientX, e.clientY);
+    if (st.id !== null) {   // 2本目の指：2本の指で視点を動かす
+      if (!swipeOn() || tw.id !== null) return; tw.id = e.pointerId; tw.x = p.x; tw.y = p.y; st.cam = true; st.defer = false; st.stick = false; IN.touchStick = null; pad.classList.remove('on'); twoStart();
+      try { area.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } e.preventDefault(); return;
+    }
+    st.id = e.pointerId; st.ox = st.cx = p.x; st.oy = st.cy = p.y; st.moved = false; st.t0 = performance.now(); st.defer = false; st.cam = false; IN.lastDev = 'touch';
     st.stick = SET.tapMove !== 2 && p.x < VW() * .5;
     if (st.stick) { pad.style.left = (p.x - 60) + 'px'; pad.style.top = (p.y - 60) + 'px'; pad.classList.add('on'); knob.style.transform = 'translate(0,0)'; }
+    else if (SET.tapMove !== 2 && swipeOn()) st.defer = !!SET.tapMove;   // 右半分：なぞったら視点、さっとタップならその場所へ
     else if (SET.tapMove) IN.tapAt = [p.x, p.y, 'tap'];
     try { area.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } e.preventDefault();
   });
   area.addEventListener('pointermove', e => {
+    if (e.pointerId === tw.id) { const p = toStage(e.clientX, e.clientY); tw.x = p.x; tw.y = p.y; twoMove(); return; }
     if (e.pointerId !== st.id) return; const p = toStage(e.clientX, e.clientY); let dx = p.x - st.ox, dy = p.y - st.oy; const l = Math.hypot(dx, dy), R = 52;
+    const px = st.cx, py = st.cy; st.cx = p.x; st.cy = p.y;
+    if (st.cam) { if (tw.id !== null) twoMove(); else camDrag(p.x - px, p.y - py); return; }
     if (l > 12) st.moved = true;
+    if (!st.stick && SET.tapMove !== 2 && swipeOn() && st.moved) { st.cam = true; st.defer = false; camDrag(p.x - st.ox, p.y - st.oy); return; }
     if (st.stick) { if (l > R) { dx *= R / l; dy *= R / l; } IN.touchStick = [dx / R, dy / R]; knob.style.transform = `translate(${dx}px,${dy}px)`; }
     else if (SET.tapMove && st.moved) IN.tapAt = [p.x, p.y, 'drag'];
   });
   const end = e => {
+    if (e && e.pointerId === tw.id) { tw.id = null; return; }   // 2本目をはなした：のこりの指で、そのまま視点を動かせる
     if (e && e.pointerId !== st.id) return;
     if (e && st.id !== null && st.stick && !st.moved && SET.tapMove && performance.now() - st.t0 < 350) IN.tapAt = [st.ox, st.oy, 'tap'];   // スティック側でも、さっとタップなら移動
-    st.id = null; IN.touchStick = null; pad.classList.remove('on');
+    if (e && st.id !== null && st.defer && !st.moved && !st.cam && performance.now() - st.t0 < 450) IN.tapAt = [st.ox, st.oy, 'tap'];
+    st.id = null; st.cam = false; st.defer = false; tw.id = null; IN.touchStick = null; pad.classList.remove('on');
   };
   // 指をスティックの外ではなしても、つかまえそこねても、かならず放す（しないと、つぎから動けなくなる）
   area.addEventListener('pointerup', end); area.addEventListener('pointercancel', end); area.addEventListener('lostpointercapture', end);
@@ -2393,6 +2411,13 @@ function initMouse() {
   addEventListener('pointerdown', e => { if (e.button !== 0 || !onPitch(e)) return; down = true; const p = toStage(e.clientX, e.clientY); IN.tapAt = [p.x, p.y, 'tap']; });
   addEventListener('pointermove', e => { if (!down || !onPitch(e)) return; const p = toStage(e.clientX, e.clientY); IN.tapAt = [p.x, p.y, 'drag']; });
   addEventListener('pointerup', () => (down = false));
+  // 右ボタンでなぞる＝視点をまわす、ホイール＝ズーム
+  let rd = null; const onCanvas = e => GAME.scr === 'match' && (e.target.id === 'c' || e.target.id === 'hud' || e.target.id === 'tArea');
+  addEventListener('contextmenu', e => { if (onCanvas(e)) e.preventDefault(); });
+  addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button === 2 && onCanvas(e) && SET.swipe !== 0) { rd = { x: e.clientX, y: e.clientY }; e.preventDefault(); } });
+  addEventListener('pointermove', e => { if (!rd) return; const dx = e.clientX - rd.x, dy = e.clientY - rd.y; rd.x = e.clientX; rd.y = e.clientY; camDrag(ROT.on ? dy : dx, ROT.on ? -dx : dy); });
+  addEventListener('pointerup', e => { if (e.button === 2) rd = null; });
+  addEventListener('wheel', e => { if (!onCanvas(e) || SET.swipe === 0) return; e.preventDefault(); camDrag(0, 0, Math.exp(e.deltaY * .0012)); }, { passive: false });
 }
 // ---------- タップ：画面の点 → ピッチの上の点・選手 ----------
 const _tray = new THREE.Raycaster(), _tndc = new THREE.Vector2(), _thit = V3(), _tplane = new THREE.Plane(V3(0, 1, 0), 0), _tpv = V3();
@@ -2502,7 +2527,7 @@ function userUpdate(dt) {
   const P = USER.P; if (!P) return;
   for (const [b, kind, held] of ev) {
     if (b === 'pause') { UIX.togglePause && UIX.togglePause(); continue; }
-    if (b === 'cam') { SET.cam = (SET.cam + 1) % CAM_MODES.length; saveSet(); UIX.toast && UIX.toast('カメラ：' + CAM_MODES[SET.cam].name); continue; }
+    if (b === 'cam') { SET.cam = (SET.cam + 1) % CAM_MODES.length; saveSet(); camReset(); UIX.toast && UIX.toast('カメラ：' + CAM_MODES[SET.cam].name); continue; }
     if (M.phase === 'restart' && M.restart.team === USER.team) { if (kind === 'up' || b === 'ok') userRestart(b, held); continue; }
     if (M.phase !== 'play') continue;
     const attack = BALL.owner === P;
@@ -2625,7 +2650,20 @@ const CAM_MODES = [
   { name: 'スタジアム', h: 27, z: 60, fov: 40, k: .7 },
   { name: 'たて', h: 16, z: 0, fov: 46, k: 1, vert: 1 },
 ];
-const CAM = { x: 0, z: 0, lx: 0, lz: 0, ly: 0, fov: 34, shake: 0, cut: 1, cine: null, t: 0, vx: 0 };
+const CAM = { x: 0, z: 0, lx: 0, lz: 0, ly: 0, fov: 34, shake: 0, cut: 1, cine: null, t: 0, vx: 0, yawO: 0, tiltO: 0, zoomO: 1 };
+// スワイプで動かした視点（まわす・上下・ズーム）。カメラの切りかえ・「視点もどす」で、もとにもどる
+const camMoved = () => Math.abs(CAM.yawO) > .01 || Math.abs(CAM.tiltO) > .01 || Math.abs(CAM.zoomO - 1) > .01;
+function camDrag(dx, dy, zoom = 1) {
+  CAM.yawO -= dx * .0065; if (CAM.yawO > Math.PI) CAM.yawO -= TAU; if (CAM.yawO < -Math.PI) CAM.yawO += TAU;
+  CAM.tiltO = clamp(CAM.tiltO + dy * .0045, -.9, 1.1); CAM.zoomO = clamp(CAM.zoomO * zoom, .45, 1.9); document.body.classList.toggle('camoff', camMoved());
+}
+function camReset() { CAM.yawO = 0; CAM.tiltO = 0; CAM.zoomO = 1; document.body.classList.remove('camoff'); }
+// 見る点 (lx, ly, lz) のまわりで、カメラの位置をまわす
+function camOrbit(px, py, pz, lx, ly, lz) {
+  if (!camMoved()) { camera.position.set(px, py, pz); return; }
+  const vx = px - lx, vy = py - ly, vz = pz - lz, r = Math.hypot(vx, vy, vz) || 1, el = clamp(Math.asin(vy / r) + CAM.tiltO, .12, 1.45), az = Math.atan2(vx, vz) + CAM.yawO, r2 = r * CAM.zoomO;
+  camera.position.set(lx + Math.sin(az) * Math.cos(el) * r2, ly + Math.sin(el) * r2, lz + Math.cos(az) * Math.cos(el) * r2);
+}
 function updateCam(dt) {
   const b = BALL, m = CAM_MODES[SET.cam] || CAM_MODES[0];
   if (CAM.cine) { cineCam(dt); return; }
@@ -2639,14 +2677,14 @@ function updateCam(dt) {
     // たて：攻める向きのうしろから
     const dir = TEAMS_M[USER.team] ? TEAMS_M[USER.team].dir : 1;
     CAM.lx = lerp(CAM.lx, fx, k); CAM.lz = lerp(CAM.lz, fz, k); CAM.ly = 0;
-    CAM.x = CAM.lx - dir * 26; CAM.z = CAM.lz * .9; camera.position.set(CAM.x, m.h, CAM.z);
+    CAM.x = CAM.lx - dir * 26; CAM.z = CAM.lz * .9; camOrbit(CAM.x, m.h, CAM.z, CAM.lx + dir * 8, 0, CAM.lz);
     camera.fov = m.fov; camera.lookAt(CAM.lx + dir * 8, 0, CAM.lz); camera.updateProjectionMatrix(); CAM.cut = 0; return;
   }
   const lim = PL - 20 * (m.fov / 34);
   CAM.lx = lerp(CAM.lx, clamp(fx, -lim - 6, lim + 6), k); CAM.lz = lerp(CAM.lz, clamp(fz * .55 - 3, -16, 10), k);
   CAM.x = CAM.lx * m.k; CAM.z = m.z + Math.max(0, CAM.lz) * .15;
   const sh = CAM.shake > 0 ? (Math.random() - .5) * CAM.shake : 0; CAM.shake = Math.max(0, CAM.shake - dt * 2);
-  camera.position.set(CAM.x, m.h + sh, CAM.z);
+  camOrbit(CAM.x, m.h, CAM.z, CAM.lx, 0, CAM.lz); camera.position.y += sh;
   camera.fov = lerp(camera.fov, m.fov * (M.phase === 'restart' && M.restart && (M.restart.kind === 'pk' || M.restart.kind === 'corner') ? .8 : 1), CAM.cut ? 1 : .05); camera.updateProjectionMatrix();
   camera.lookAt(CAM.lx, 0, CAM.lz);
   CAM.cut = 0;
@@ -3058,11 +3096,13 @@ function wireUI() {
   const def = [['プレス（寄せてボールをうばう）', 'J／Z・(A)・パスのボタン。ボールを持った相手をタップしてもプレス'], ['タップで切りかえ', '味方をタップすると、その選手を動かす'], ['スライディング', 'K／X・(X)・シュートのボタン'], ['2人目もプレス', 'L／C・(Y)・スルーのボタン'], ['選手を切りかえる', 'Q／E・(LB)・切替']];
   $('howAtk').innerHTML = atk.map(([a, b]) => `<b>${a}</b><span>${b}</span>`).join(''); $('howDef').innerHTML = def.map(([a, b]) => `<b>${a}</b><span>${b}</span>`).join('');
   initTouch(); initMouse(); applyButtons();
+  $('camR').addEventListener('pointerdown', e => e.stopPropagation()); $('camR').addEventListener('click', e => { e.stopPropagation(); camReset(); });
 }
 function applyButtons() { document.documentElement.style.setProperty('--opa', SET.opa); document.documentElement.style.setProperty('--bs', SET.bsz); document.body.classList.toggle('radar', !!SET.radar); }
 const KEY_NAMES = { up: '上', down: '下', left: '左', right: '右', pass: 'パス／プレス', shoot: 'シュート／スライディング', through: 'スルー／2人目', lob: 'ロング・クロス', dash: 'ダッシュ', sw: '切りかえ', pause: '一時停止', cam: 'カメラ' };
 function openSettings() {
-  seg($('sCam'), CAM_MODES.map(c => c.name), () => SET.cam, v => { SET.cam = v; saveSet(); CAM.cut = 1; });
+  seg($('sCam'), CAM_MODES.map(c => c.name), () => SET.cam, v => { SET.cam = v; saveSet(); CAM.cut = 1; camReset(); });
+  seg($('sSwipe'), ['なし', 'あり'], () => SET.swipe ?? 1, v => { SET.swipe = v; saveSet(); if (!v) camReset(); });
   seg($('sGfx'), ['自動', '軽い', 'ふつう', 'きれい'], () => SET.gfx + 1, v => { SET.gfx = v - 1; saveSet(); toast('画質は次の起動から変わります'); });
   seg($('sBgm'), ['なし', 'あり'], () => SET.bgm, v => { SET.bgm = v; saveSet(); });
   seg($('sAssist'), ['しない', 'する'], () => SET.assist, v => { SET.assist = v; saveSet(); });
