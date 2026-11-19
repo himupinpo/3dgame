@@ -1194,7 +1194,9 @@ const AU = {
   setVol() { if (this.master) this.master.gain.setTargetAtTime(clamp(SET.vol, 0, 1) * HUB.vol, this.ctx.currentTime, .05); },
   tone(f, dur, peak, type = 'sine', t0 = 0, f2) { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur); o.connect(g); g.connect(this.master); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + dur); o.start(t); o.stop(t + dur + .05); },
   noise(dur, f, peak, type = 'lowpass', t0 = 0) { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, s = c.createBufferSource(); s.buffer = this.nb; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; const g = c.createGain(); s.connect(fl); fl.connect(g); g.connect(this.master); g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.start(t); s.stop(t + dur + .05); },
-  shot() { this.noise(.06, 6000, .7, 'highpass'); this.noise(.9, 420, .6); this.tone(70, .5, .4, 'sine', 0, 38); this.noise(1.6, 260, .12, 'lowpass', .25); },
+  shot() { this.noise(.05, 7000, .8, 'highpass'); this.noise(1.1, 340, .75); this.tone(58, .75, .55, 'sine', 0, 26); this.noise(.25, 1500, .25, 'bandpass', .01); this.noise(2.6, 170, .2, 'lowpass', .2); this.noise(.7, 450, .07, 'lowpass', .6); },
+  // 半自動の作動音（ガシャッ）と、屋上に落ちた薬きょう（チン）
+  action() { this.noise(.035, 2600, .28, 'bandpass', .03); this.noise(.045, 1700, .22, 'bandpass', .075); this.tone(640, .025, .05, 'square', .075); this.tone(3700, .09, .035, 'sine', .62); this.tone(5100, .05, .02, 'sine', .7); this.tone(3300, .07, .02, 'sine', .86); },
   bolt() { this.noise(.04, 3000, .2, 'bandpass', .35); this.noise(.05, 2200, .2, 'bandpass', .55); this.tone(900, .03, .05, 'square', .6); },
   hit() { this.noise(.12, 800, .18); this.tone(1200, .1, .04, 'sine', .02); },
   thud() { this.noise(.1, 1400, .12, 'bandpass'); },
@@ -1209,49 +1211,62 @@ const AU = {
   bad() { [330, 294, 247].forEach((f, i) => this.tone(f, .5, .08, 'sawtooth', i * .22)); },
   update() { if (this.ok) this.amb.gain.setTargetAtTime(G.scr === 'play' ? (G.scoped ? .025 : .05) : .02, this.ctx.currentTime, .3); },
 };
-// ---------- じゅう（自分の手もと）：ボルトアクションのライフル・スコープ・手ぶくろの手 ----------
-// 部品の大きさは本物くらい（全長 約1.2m）。原点は機関部のまん中、銃口は -z
-const GUN = { g: new THREE.Group(), bolt: null, shells: [], smoke: [], flash: null, muzzle: V3(0, .006, -.83), port: V3(.022, .012, .04) };
+// ---------- じゅう（自分の手もと）：大口径の半自動ライフル（箱形の機関部・太い銃身・矢じり形の銃口ブレーキ）・スコープ・手ぶくろの手 ----------
+// 部品の大きさは本物くらい（全長 約1.45m）。原点は機関部のまん中、銃口は -z。スコープの中心は y .068、接眼レンズは z .2
+const GUN = { g: new THREE.Group(), bar: null, shells: [], smoke: [], flash: null, side: [], muzzle: V3(0, 0, -1.0), port: V3(.032, .008, .02) };
 function makeGun() {
-  const metal = new THREE.MeshStandardMaterial({ color: 0x2b2e31, roughness: .42, metalness: .78 }), dark = new THREE.MeshStandardMaterial({ color: 0x17191b, roughness: .55, metalness: .6 }),
-    stockM = new THREE.MeshStandardMaterial({ color: 0x3d4234, roughness: .82, metalness: 0 }), rubber = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: .95 }),
+  const metal = new THREE.MeshStandardMaterial({ color: 0x3a3e42, roughness: .5, metalness: .65 }), dark = new THREE.MeshStandardMaterial({ color: 0x1c1d20, roughness: .6, metalness: .55 }),
+    poly = new THREE.MeshStandardMaterial({ color: 0x1c1d1e, roughness: .85, metalness: .05 }), rubber = new THREE.MeshStandardMaterial({ color: 0x121212, roughness: .95 }), hole = new THREE.MeshBasicMaterial({ color: 0x050505 }),
     glass = new THREE.MeshStandardMaterial({ color: 0x0e2a3c, roughness: .04, metalness: 1, emissive: 0x06141e }), glove = new THREE.MeshStandardMaterial({ color: 0x2c2c2a, roughness: .9 }),
     sleeve = new THREE.MeshStandardMaterial({ color: 0x4a5038, roughness: .92 }), brass = new THREE.MeshStandardMaterial({ color: 0xc8a050, roughness: .3, metalness: .95 });
   GUN.mats = { brass };
-  const G = GUN.g, add = (geo, m, x, y, z, p = G) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); p.add(o); return o; }, cylZ = (r0, r1, len, seg = 16) => new THREE.CylinderGeometry(r0, r1, len, seg).rotateX(Math.PI / 2);
-  // 銃床（横から見た形をおし出す）。x：前が＋、y：上が＋
-  const sh = new THREE.Shape(), P = [[.36, -.012], [.06, -.012], [.06, -.02], [-.1, -.02], [-.1, -.012], [-.16, .008], [-.4, .02], [-.43, .016], [-.445, -.02], [-.44, -.11], [-.405, -.122], [-.25, -.075], [-.17, -.064], [-.152, -.15], [-.112, -.152], [-.094, -.06], [-.03, -.046], [.06, -.046], [.34, -.04]];
-  sh.moveTo(...P[0]); for (let k = 1; k < P.length; k++) sh.lineTo(...P[k]); sh.closePath();
-  const sg = new THREE.ExtrudeGeometry(sh, { depth: .036, bevelEnabled: true, bevelThickness: .006, bevelSize: .006, bevelSegments: 2, curveSegments: 4 }); sg.translate(0, 0, -.018); sg.rotateY(-Math.PI / 2); sg.computeVertexNormals(); add(sg, stockM, 0, 0, 0);
-  add(new THREE.BoxGeometry(.05, .1, .02), rubber, 0, -.048, .447);   // 床尾のゴム
-  // 機関部・ボルト・引き金
-  add(cylZ(.019, .019, .21), metal, 0, .004, .0); add(new THREE.BoxGeometry(.026, .012, .055), dark, .012, .016, .045);   // 排きょう口
-  const bolt = new THREE.Group(); bolt.position.set(0, .004, .07); G.add(bolt); GUN.bolt = bolt;
-  add(cylZ(.012, .012, .09), metal, 0, 0, -.02, bolt); const hd = add(new THREE.CylinderGeometry(.004, .004, .065, 8), metal, .03, -.012, .015, bolt); hd.rotation.z = Math.PI / 2 + .55; add(new THREE.SphereGeometry(.012, 12, 10), dark, .058, -.03, .015, bolt);
-  const tg = add(new THREE.TorusGeometry(.022, .003, 6, 14, Math.PI), metal, 0, -.05, .1); tg.rotation.set(0, Math.PI / 2, Math.PI); add(new THREE.BoxGeometry(.004, .022, .007), metal, 0, -.045, .1);
-  add(new THREE.BoxGeometry(.03, .06, .075), dark, 0, -.055, .02);   // 弾倉
-  // 銃身・銃口のブレーキ・二脚（たたんだ）
-  add(cylZ(.0105, .0128, .6), metal, 0, .006, -.41); add(cylZ(.0148, .0148, .065), dark, 0, .006, -.745);
-  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(.004, .012, .028), new THREE.MeshBasicMaterial({ color: 0x050505 }), sx * .0145, .006, -.742);
-  add(new THREE.BoxGeometry(.03, .016, .03), dark, 0, -.05, -.3); for (const sx of [-1, 1]) add(cylZ(.0035, .0035, .2), metal, sx * .01, -.058, -.2);
-  // レールとスコープ
-  add(new THREE.BoxGeometry(.022, .008, .25), dark, 0, .026, -.02); for (let k = 0; k < 10; k++) add(new THREE.BoxGeometry(.024, .004, .008), dark, 0, .032, -.13 + k * .024);
-  for (const z of [-.1, .05]) { add(new THREE.BoxGeometry(.024, .03, .018), metal, 0, .045, z); add(cylZ(.018, .018, .02, 20), metal, 0, .068, z); }
-  add(cylZ(.0152, .0152, .31, 24), metal, 0, .068, -.03); add(cylZ(.0272, .0165, .08, 24), metal, 0, .068, -.225); add(cylZ(.0272, .0272, .018, 24), dark, 0, .068, -.27);
-  add(cylZ(.0168, .02, .075, 24), metal, 0, .068, .16); add(cylZ(.021, .021, .02, 24), rubber, 0, .068, .2);
-  add(new THREE.CylinderGeometry(.0125, .0125, .03, 18), dark, 0, .098, -.03); add(new THREE.CylinderGeometry(.0125, .0125, .028, 18).rotateZ(Math.PI / 2), dark, .03, .068, -.03); add(new THREE.CylinderGeometry(.011, .011, .02, 18).rotateZ(Math.PI / 2), dark, -.026, .068, -.03);
-  add(new THREE.CylinderGeometry(.015, .015, .002, 24).rotateX(Math.PI / 2), dark, 0, .098, -.03).rotation.set(0, 0, 0);
-  const lo = add(new THREE.CircleGeometry(.025, 24), glass, 0, .068, -.2795); lo.rotation.y = Math.PI; add(new THREE.CircleGeometry(.0185, 24), glass, 0, .068, .211);
-  // 手ぶくろの手と、そで
+  const G = GUN.g, add = (geo, m, x, y, z, p = G) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); p.add(o); return o; }, box = (w, h, d, m, x, y, z, p) => add(new THREE.BoxGeometry(w, h, d), m, x, y, z, p),
+    cylZ = (r0, r1, len, seg = 16) => new THREE.CylinderGeometry(r0, r1, len, seg).rotateX(Math.PI / 2);
+  // 上の機関部（長い箱）。前半は銃身のおおいで、横に長い穴が3つずつ
+  box(.054, .066, .54, metal, 0, -.002, -.1); box(.056, .006, .54, dark, 0, -.036, -.1);
+  for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) { const o = add(new THREE.CapsuleGeometry(.011, .045, 4, 10).rotateX(Math.PI / 2), hole, sx * .0272, .002, -.31 + k * .072); o.scale.x = .12; }
+  for (const sx of [-1, 1]) box(.002, .012, .5, dark, sx * .0275, .022, -.1);   // 横のみぞ
+  box(.012, .016, .03, dark, .034, .002, -.05); box(.02, .01, .012, metal, .046, .002, -.05);   // 槓桿（右）
+  box(.004, .022, .07, hole, .028, .008, .02);   // 排きょう口（右）
+  box(.006, .016, .12, dark, -.031, .01, -.2);   // たたんだ運ぶ取っ手（左）
+  // 下の機関部・引き金・にぎり・大きな弾倉（引き金の前）
+  box(.048, .05, .3, metal, 0, -.06, .04); const tg = add(new THREE.TorusGeometry(.026, .0035, 6, 16, Math.PI), dark, 0, -.085, .1); tg.rotation.set(0, Math.PI / 2, Math.PI); box(.005, .024, .008, metal, 0, -.092, .098);
+  const gp = box(.032, .11, .045, poly, 0, -.135, .15); gp.rotation.x = .32; box(.034, .012, .05, poly, 0, -.188, .168).rotation.x = .32;
+  const mg = box(.04, .13, .085, dark, 0, -.145, -.035); mg.rotation.x = -.08; box(.042, .012, .088, metal, 0, -.212, -.03).rotation.x = -.08;
+  for (const sx of [-1, 1]) box(.002, .09, .06, metal, sx * .0205, -.14, -.035).rotation.x = -.08;
+  // 銃床：機関部とまっすぐ。ほお当て・床尾のゴム・下の一脚
+  box(.05, .062, .26, metal, 0, -.004, .3); box(.044, .03, .2, poly, 0, .044, .32); box(.046, .07, .18, metal, 0, -.07, .34).rotation.x = -.18;
+  box(.056, .16, .03, rubber, 0, -.04, .445); box(.05, .02, .14, dark, 0, -.115, .36);
+  add(cylZ(.006, .006, .09).rotateX(Math.PI / 2), metal, 0, -.165, .37); box(.03, .006, .03, dark, 0, -.21, .37);
+  // 銃身（反動で少し下がる）・みぞ・矢じり形の銃口ブレーキ
+  const bar = new THREE.Group(); G.add(bar); GUN.bar = bar;
+  add(cylZ(.0135, .0145, .58, 20), metal, 0, 0, -.66, bar); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU, o = box(.003, .003, .44, hole, Math.cos(a) * .0137, Math.sin(a) * .0137, -.62, bar); o.rotation.z = a; }
+  add(cylZ(.018, .018, .03, 18), dark, 0, 0, -.955, bar);
+  const ch = new THREE.Shape(); ch.moveTo(0, -.034); ch.lineTo(.04, -.004); ch.lineTo(.04, .018); ch.lineTo(0, -.01); ch.lineTo(-.04, .018); ch.lineTo(-.04, -.004); ch.closePath();
+  const cg = new THREE.ExtrudeGeometry(ch, { depth: .05, bevelEnabled: true, bevelThickness: .003, bevelSize: .003, bevelSegments: 1 }); cg.translate(0, 0, -.025); cg.rotateX(Math.PI / 2);
+  for (const z of [-.985, -1.035]) add(cg, metal, 0, 0, z, bar);
+  for (const sy of [-1, 1]) box(.074, .004, .088, dark, 0, sy * .0255, -1.012, bar);   // 上と下の板（横はあいていて、ガスが横へぬける）
+  for (const sx of [-1, 1]) box(.004, .05, .012, metal, sx * .039, 0, -.965, bar);
+  // 二脚（たたんで銃身の下に）
+  box(.06, .018, .03, dark, 0, -.03, -.39); for (const sx of [-1, 1]) { const l = add(cylZ(.006, .005, .3), metal, sx * .022, -.034, -.55); l.rotation.y = -sx * .03; box(.016, .01, .03, rubber, sx * .026, -.034, -.71); }
+  // レールとスコープ（大きな対物レンズ）
+  box(.03, .012, .5, dark, 0, .037, -.08); for (let k = 0; k < 18; k++) box(.032, .005, .01, dark, 0, .045, -.32 + k * .028);
+  for (const z of [-.1, .06]) { box(.03, .024, .02, metal, 0, .055, z); add(cylZ(.02, .02, .022, 20), metal, 0, .068, z); }
+  add(cylZ(.017, .017, .32, 24), metal, 0, .068, -.03); add(cylZ(.033, .0175, .1, 24), metal, 0, .068, -.24); add(cylZ(.033, .033, .03, 24), dark, 0, .068, -.3);
+  add(cylZ(.0185, .022, .08, 24), metal, 0, .068, .155); add(cylZ(.023, .023, .022, 24), rubber, 0, .068, .2);
+  add(new THREE.CylinderGeometry(.014, .014, .032, 18), dark, 0, .101, -.03); add(new THREE.CylinderGeometry(.014, .014, .03, 18).rotateZ(Math.PI / 2), dark, .033, .068, -.03); add(new THREE.CylinderGeometry(.012, .012, .022, 18).rotateZ(Math.PI / 2), dark, -.029, .068, -.03);
+  const lo = add(new THREE.CircleGeometry(.03, 24), glass, 0, .068, -.3155); lo.rotation.y = Math.PI; add(new THREE.CircleGeometry(.02, 24), glass, 0, .068, .2115);
+  // 手ぶくろの手と、そで（右手はにぎり、左手は弾倉の前の下）
   const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
-  const rh = new THREE.Group(); rh.position.set(.004, -.098, .128); rh.rotation.x = .35; G.add(rh);
-  add(cap(.03, .05), glove, 0, 0, 0, rh); for (let k = 0; k < 3; k++) { const f = add(cap(.009, .03), glove, -.02, .03 - k * .021, -.03, rh); f.rotation.z = Math.PI / 2; } add(cap(.01, .035), glove, .022, .03, -.02, rh).rotation.x = -.8;
-  const ra = add(cap(.045, .32), sleeve, .06, -.17, .27); ra.rotation.set(.9, 0, -.45);
-  const lh = new THREE.Group(); lh.position.set(-.005, -.052, -.26); G.add(lh);
-  add(cap(.028, .05), glove, 0, -.01, 0, lh).rotation.x = Math.PI / 2; for (let k = 0; k < 3; k++) { const f = add(cap(.008, .028), glove, .022, .012, -.022 + k * .02, lh); f.rotation.x = Math.PI / 2; } add(cap(.009, .03), glove, -.024, .012, -.01, lh).rotation.x = Math.PI / 2;
-  const la = add(cap(.04, .3), sleeve, -.07, -.2, -.17); la.rotation.set(1.2, 0, .32);
-  // 銃口の光
-  GUN.flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xffd28a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); GUN.flash.position.copy(GUN.muzzle); GUN.flash.scale.setScalar(.25); G.add(GUN.flash);
+  const rh = new THREE.Group(); rh.position.set(.004, -.13, .155); rh.rotation.x = .32; G.add(rh);
+  add(cap(.031, .05), glove, 0, 0, 0, rh); for (let k = 0; k < 3; k++) { const f = add(cap(.009, .03), glove, -.022, .028 - k * .021, -.03, rh); f.rotation.z = Math.PI / 2; } add(cap(.01, .035), glove, .024, .045, -.02, rh).rotation.x = -.8;
+  const ra = add(cap(.045, .32), sleeve, .06, -.2, .29); ra.rotation.set(.9, 0, -.45);
+  const lh = new THREE.Group(); lh.position.set(-.004, -.075, -.13); G.add(lh);
+  add(cap(.028, .05), glove, 0, -.012, 0, lh).rotation.x = Math.PI / 2; for (let k = 0; k < 3; k++) { const f = add(cap(.008, .028), glove, .026, .006, -.022 + k * .02, lh); f.rotation.x = Math.PI / 2; } add(cap(.009, .03), glove, -.027, .006, -.01, lh).rotation.x = Math.PI / 2;
+  const la = add(cap(.04, .3), sleeve, -.075, -.2, -.04); la.rotation.set(1.2, 0, .32);
+  // 銃口の光（まん中と、ブレーキの左右）
+  const fm = () => new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xffd28a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+  GUN.flash = fm(); GUN.flash.position.copy(GUN.muzzle); bar.add(GUN.flash); for (const sx of [-1, 1]) { const f = fm(); f.position.set(sx * .075, 0, -1.0); bar.add(f); GUN.side.push(f); }
   G.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
   VM.scene.add(G); VM.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1); VM.sun = new THREE.DirectionalLight(0xffffff, 2); VM.scene.add(VM.hemi, VM.sun, VM.sun.target);
   G.scale.setScalar(.9);
@@ -1263,28 +1278,32 @@ function gunLight() {
   VM.sun.color.copy(SKY.sun.color); VM.sun.intensity = Math.max(.5, SKY.sun.intensity * .9); _iq.copy(camera.quaternion).invert(); _sv.copy(SKY.U.uSun.value).applyQuaternion(_iq); VM.sun.position.copy(_sv).multiplyScalar(5); VM.sun.target.position.set(0, 0, 0);
   VM.scene.environment = scene.environment; VM.scene.environmentIntensity = scene.environmentIntensity;
 }
-// 1発うったあと：反動 → ボルトを起こす → 引く（からの薬きょうが飛ぶ） → おす → たおす
+// 1発うったあと（半自動）：大きな反動 → 銃身が下がってもどる → からの薬きょうが右へ飛ぶ → 構えなおす
 function gunAnim(dt) {
-  const G = GUN.g, e = 1.15 - G_.bolt, ss = s => s * s * (3 - 2 * s), seg = (a, b) => ss(clamp((e - a) / (b - a), 0, 1));
-  const kick = G_.bolt > 0 ? Math.max(0, 1 - e / .14) : 0, lift = seg(.16, .3) - seg(.72, .86), pull = seg(.32, .48) - seg(.54, .7), work = G_.bolt > 0 ? Math.sin(Math.PI * clamp((e - .1) / .85, 0, 1)) : 0;
-  if (G_.bolt > 0 && e > .45 && !G_.ejected) { G_.ejected = true; ejectShell(); }
-  if (G_.bolt <= 0) G_.ejected = false;
+  const G = GUN.g, e = SHOT_CD - G_.bolt, on = G_.bolt > 0;
+  const kick = on ? (e < .035 ? e / .035 : Math.exp(-(e - .035) * 6.5) * Math.cos((e - .035) * 8)) : 0, settle = on ? Math.sin(Math.PI * clamp(e / .9, 0, 1)) : 0;
+  GUN.bar.position.z = on ? .035 * (e < .025 ? e / .025 : Math.max(0, 1 - (e - .025) / .09)) : 0;
+  if (on && e > .03 && !G_.ejected) { G_.ejected = true; ejectShell(); }
+  if (!on) G_.ejected = false;
   const br = Math.sin(G_.swayT * 1.7) * .0025, wx = IN.look[0] * .00004;
-  const tall = VM.cam.aspect < 1, bx = tall ? .1 : .2, by = tall ? -.2 : -.175, r = ssf(clamp((G_.scA || 0) / .6, 0, 1)), arc = Math.sin(r * Math.PI);
-  G.position.set(lerp(bx, 0, r) - work * .02 + wx * (1 - r), lerp(by, -.0612, r) + arc * .025 - work * .035 + br * (1 - r) + kick * .01, lerp(-.64, -.27, r) + kick * .07 + G_.hideK * .05);
-  G.rotation.set((.02 + kick * .16 + work * .05) * (1 - r) - G_.hideK * .4 + arc * .06, (.07 + work * .05) * (1 - r), -work * .18 - arc * .12);
-  GUN.g.visible = (G_.scr === 'play' || G_.scr === 'pause') && (G_.scA || 0) < .62;
-  GUN.bolt.rotation.z = lift * 1.05; GUN.bolt.position.z = .07 + pull * .085;
-  GUN.flash.material.opacity = Math.max(0, 1 - e / .06) * (G_.bolt > 0 ? 1 : 0); GUN.flash.scale.setScalar(.18 + Math.random() * .12);
+  const tall = VM.cam.aspect < 1, bx = tall ? .1 : .21, by = tall ? -.2 : -.17, r = ssf(clamp((G_.scA || 0) / .6, 0, 1)), arc = Math.sin(r * Math.PI);
+  G.position.set(lerp(bx, 0, r) - settle * .01 + wx * (1 - r), lerp(by, -.0612, r) + arc * .025 - settle * .012 + br * (1 - r) + kick * .016, lerp(-.66, -.27, r) + kick * .12 + G_.hideK * .05);
+  G.rotation.set((.02 + kick * .26) * (1 - r) + kick * .05 * r - G_.hideK * .4 + arc * .06, (.15 + kick * .03) * (1 - r), -arc * .12 - kick * .04);
+  G.visible = (G_.scr === 'play' || G_.scr === 'pause') && (G_.scA || 0) < .62;
+  const fo = on ? Math.max(0, 1 - e / .05) : 0; GUN.flash.material.opacity = fo; GUN.flash.scale.setScalar(.22 + Math.random() * .12);
+  for (const f of GUN.side) { f.material.opacity = fo * .9; f.scale.set(.3 + Math.random() * .1, .12, 1); }
   for (let i = GUN.shells.length - 1; i >= 0; i--) { const S = GUN.shells[i]; S.t += dt; S.v.y -= 9.8 * dt; S.o.position.addScaledVector(S.v, dt); S.o.rotation.x += S.w * dt; S.o.rotation.z += S.w * .7 * dt; if (S.t > .9) { G.remove(S.o); GUN.shells.splice(i, 1); } }
-  for (let i = GUN.smoke.length - 1; i >= 0; i--) { const S = GUN.smoke[i]; S.t += dt; S.o.position.y += dt * .06; S.o.position.z -= dt * .05; S.o.scale.setScalar(.05 + S.t * .25); S.o.material.opacity = Math.max(0, .35 - S.t * .3); if (S.t > 1.2) { G.remove(S.o); GUN.smoke.splice(i, 1); } }
+  for (let i = GUN.smoke.length - 1; i >= 0; i--) { const S = GUN.smoke[i]; S.t += dt; S.o.position.addScaledVector(S.v, dt); S.v.multiplyScalar(Math.exp(-dt * 3)); S.o.scale.setScalar(.06 + S.t * .35); S.o.material.opacity = Math.max(0, .4 - S.t * .32); if (S.t > 1.3) { G.remove(S.o); GUN.smoke.splice(i, 1); } }
 }
-function ejectShell() {
-  const o = new THREE.Mesh(new THREE.CylinderGeometry(.0055, .0065, .062, 10).rotateX(Math.PI / 2), GUN.mats.brass); o.position.copy(GUN.port); GUN.g.add(o);
-  GUN.shells.push({ o, t: 0, v: V3(rr(.9, 1.3), rr(.7, 1), rr(-.1, .15)), w: rr(14, 22) }); AU.noise(.03, 5000, .04, 'bandpass', .5);
+const SHOT_CD = 1;   // 次をうてるまで（反動から構えなおす時間）
+function ejectShell() {   // 大きな薬きょう（約14cm）
+  const o = new THREE.Mesh(new THREE.CylinderGeometry(.0105, .0118, .13, 10).rotateX(Math.PI / 2), GUN.mats.brass); o.position.copy(GUN.port); GUN.g.add(o);
+  GUN.shells.push({ o, t: 0, v: V3(rr(1.3, 1.7), rr(.8, 1.1), rr(.1, .3)), w: rr(10, 16) });
 }
 function gunFire() {
-  G_.ejected = false; for (let k = 0; k < 3; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xc8c8c8, transparent: true, depthWrite: false, opacity: .35 })); s.position.copy(GUN.muzzle).add(V3(rr(-.02, .02), rr(0, .02), rr(-.03, .03))); GUN.g.add(s); GUN.smoke.push({ o: s, t: -k * .05 }); }
+  G_.ejected = false;
+  for (const [sx, n] of [[-1, 3], [1, 3], [0, 2]]) for (let k = 0; k < n; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xc8c4bc, transparent: true, depthWrite: false, opacity: .4 }));
+    s.position.set(sx * .07, rr(-.01, .02), -1.01 + rr(-.03, .03)); GUN.g.add(s); GUN.smoke.push({ o: s, t: -k * .04, v: V3(sx * rr(.6, 1.1), rr(.05, .2), sx ? rr(-.1, .2) : -rr(.3, .6)) }); }
 }
 // ---------- ミッション ----------
 const towardMe = (x, z) => Math.atan2(ME_POS.x - x, ME_POS.z - z);
@@ -1783,7 +1802,7 @@ function updateAim(dt) {
   G.swayT += dt; G.recoil = damp(G.recoil, 0, 6, dt);
   if (IN.breath && G.scoped && G.breath > 0) G.breath = Math.max(0, G.breath - dt / 3.5); else G.breath = Math.min(1, G.breath + dt / 5);
   G.bolt = Math.max(0, G.bolt - dt);
-  G.hideK = damp(G.hideK || 0, G.hide ? 1 : 0, 9, dt); camera.position.copy(ME_POS); camera.position.y -= G.hideK * 1.15; _e.set(G.pitch + swayP() - G.hideK * .25, G.yaw + swayY(), 0); camera.quaternion.setFromEuler(_e);
+  G.hideK = damp(G.hideK || 0, G.hide ? 1 : 0, 9, dt); camera.position.copy(ME_POS); camera.position.y -= G.hideK * 1.15; G.shake = Math.max(0, (G.shake || 0) - dt * 5); const shk = G.shake * G.shake * (G.scoped ? .004 : .012); _e.set(G.pitch + swayP() - G.hideK * .25 + rr(-shk, shk), G.yaw + swayY() + rr(-shk, shk), 0); camera.quaternion.setFromEuler(_e);
   scopeAnim(dt); gunLight(); gunAnim(dt);
   renderer.toneMappingExposure = (TODS[SKY.tod] || TODS[0]).exp * (G.scVis && G.M && G.M.nv ? 3 : 1); if (FX.bloom) FX.bloom.strength = (G.scVis && G.M && G.M.nv ? .25 : [.14, .24, .55][SKY.tod] || .2);
 }
@@ -1807,10 +1826,10 @@ function predictImpact() {   // 着弾予想（ふつう）：今のねらいで
 function fire() {
   if (G.phase !== 'play') return; if (G.hide) { msg('', '隠れているあいだは、うてません', 1); return; } if (G.bolt > 0) return; if (G.ammo <= 0) { AU.empty(); msg('', '弾がない', 1); return; }
   const d = aimDir(_dir.clone()), r = simShot(ME_POS, d);
-  G.ammo--; G.shots++; G.bolt = 1.15; G.recoil = G.scoped ? .025 : .06; AU.shot(); AU.bolt(); gunFire();
+  G.ammo--; G.shots++; G.bolt = SHOT_CD; G.recoil = G.scoped ? .045 : .09; G.shake = 1; AU.shot(); AU.action(); gunFire();
   const B = { r, t: 0, o: ME_POS.clone().addScaledVector(d, 1.2) };
   // 最後の悪者に当たるなら、弾を追うカメラ
-  if (SET.bcam && r.kind === 'person' && r.who.kind === 'crim' && crimsAlive() === 1 && r.t > .08) { G.phase = 'bullet'; G.bc = { B, t: 0, T: Math.min(2.2, 1.1 + r.t * 2.5), who: r.who, off: r.pos.clone().sub(r.who.p) }; setScope(false); GUN.g.visible = false; }
+  if (SET.bcam && r.kind === 'person' && r.who.kind === 'crim' && crimsAlive() === 1 && r.t > .08) { G.phase = 'bullet'; G.bc = { B, t: 0, T: Math.min(2.2, 1.1 + r.t * 2.5), who: r.who, off: r.pos.clone().sub(r.who.p) }; G.scoped = false; G.scA = 0; G.scVis = false; document.body.classList.remove('scoped'); GUN.g.visible = false; AU.scopeOut(); }
   G.bullets.push(B); tracer(B);
   // 音におどろく：悪者は気づく
   if (G.shots === 1) setTimeout(() => {}, 0);
