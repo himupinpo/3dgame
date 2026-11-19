@@ -548,7 +548,7 @@ function portWorkers(n) {
     const P = spawnPerson('civ', lerp(a[0], b[0], t), lerp(a[1], b[1], t), { st: 'walk', path: L, cloth: Math.random() < .6 ? [.95, .5, .08] : [.92, .82, .1] }); P.pi = (k + 1) % L.length; P.data.ws = 1.1 + Math.random() * .4; }
 }
 function genPort() {
-  portTextures(); const r = rng(505), M = CITY.mats, W = PORT.water;
+  portTextures(); const r = rng(505), M = CITY.mats, W = PORT.water; PORT.stacks = [];
   // 地面（陸）と海・岸壁
   const land = mk(uvScale(new THREE.PlaneGeometry(2400, 1200), 120, 60).rotateX(-Math.PI / 2), M.conc, 0, 0, W - 600); land.castShadow = false;
   const sea = mk(new THREE.PlaneGeometry(3000, 1500).rotateX(-Math.PI / 2), M.sea, 0, -2.4, W + 750); sea.castShadow = false; CITY.sea = sea;
@@ -559,7 +559,7 @@ function genPort() {
   // コンテナのヤード（まん中の取引の広場はあけておく）
   const cols = [[.72, .16, .12], [.14, .32, .62], [.2, .5, .3], [.85, .5, .12], [.86, .86, .84], [.42, .44, .46], [.16, .52, .56], [.6, .2, .36], [.8, .74, .2]], C = [];
   const open = (x, z) => x > -18 && x < 34 && z > -17 && z < 21;
-  const row = (x0, x1, z, maxH) => { for (let x = x0; x + 12.2 <= x1; x += 12.6) { const cx = x + 6.1; if (open(cx, z)) continue; const n = 1 + (r() * maxH | 0); for (let k = 0; k < n; k++) { const c = cols[r() * cols.length | 0]; C.push([cx, 1.3 + k * 2.6, z, 12.2, 2.6, 2.44, c]); } addBox(cx - 6.1, cx + 6.1, 0, n * 2.6, z - 1.22, z + 1.22); } };
+  const row = (x0, x1, z, maxH) => { for (let x = x0; x + 12.2 <= x1; x += 12.6) { const cx = x + 6.1; if (open(cx, z)) continue; const n = 1 + (r() * maxH | 0); for (let k = 0; k < n; k++) { const c = cols[r() * cols.length | 0]; C.push([cx, 1.3 + k * 2.6, z, 12.2, 2.6, 2.44, c]); } addBox(cx - 6.1, cx + 6.1, 0, n * 2.6, z - 1.22, z + 1.22); PORT.stacks.push([cx, z, n]); } };
   for (let zi = 0; zi < 9; zi++) { if (zi % 3 === 2) continue; row(-66, 96, -18 + zi * 5.6, 3); }
   // 倉庫（北）
   for (const [x0, x1] of [[-70, -22], [-10, 38], [50, 98]]) { const cx = (x0 + x1) / 2, w = x1 - x0; mk(uvScale(new THREE.BoxGeometry(w, 10, 18), w / 8, 10 / 8), M.shed, cx, 5, -43); addBox(x0, x1, 0, 10, -52, -34);
@@ -907,7 +907,7 @@ function updateSky(focus) {
   L.target.position.set(fx, fy, fz); L.position.set(fx + _sd.x * 700, fy + _sd.y * 700, fz + _sd.z * 700); L.target.updateMatrixWorld();
 }
 // =========================================================================================
-//  ゲーム：ミッション（10）、ねらう・スコープ・ゆれ・息を止める、弾（落ちる・風）、弾を追うカメラ、表示、音、メニュー
+//  ゲーム：ミッション（30）、ねらう・スコープ・ゆれ・息を止める、弾（落ちる・風）、弾を追うカメラ、表示、音、メニュー
 // =========================================================================================
 const UI = { playing: () => G.scr === 'play' && !G.paused };
 const G = { scr: 'title', paused: false, mi: 0, M: null, phase: 'intro', t: 0, left: 0, ammo: 0, shots: 0, hits: 0, scoped: false, zoom: 0, yaw: 0, pitch: 0, base: 0, swayT: 0, breath: 1, recoil: 0, bolt: 0, bullets: [], fx: [], wind: V3(), res: null, msgT: 0, bc: null, escaped: 0, endT: 0 };
@@ -948,6 +948,45 @@ function makeGun() {
 // ---------- ミッション ----------
 const towardMe = (x, z) => Math.atan2(ME_POS.x - x, ME_POS.z - z);
 function crimPatrol(a, b, sp = 1.2) { return (P, dt, W) => { if (P.alert) { if ((P.alertT -= dt) <= 0) { P.st = 'flee'; P.runTo = P.fleeTo; } return; } const t = P.data.leg ? b : a; if (moveTo(P, t[0], t[1], sp, dt)) { P.data.wait = (P.data.wait || 0) + dt; P.sp = 0; if (P.data.wait > 2.5) { P.data.leg = !P.data.leg; P.data.wait = 0; } } }; }
+// ---------- ミッションづくりの道具 ----------
+// しばらくかくれていて、時間が来たら出てくる
+function hideUntil(P, t) { P.gone = true; P.H.root.visible = false; P.data.appear = t; return P; }
+function appearStep(t) { for (const P of PEOPLE) if (P.data.appear && P.gone && !P.data.out && !P.down && t > P.data.appear) { P.data.out = 1; P.gone = false; P.H.root.visible = true; } }
+// 道を歩いて（気づくと走って）、さいごに着いたら失敗
+function walker(P, path, sp, why, run) { P.data.wk = 0; P.beh = (P, dt, W) => { if (P.gone) return; const D = P.data, w = path[D.wk]; if (moveTo(P, w[0], w[1], (P.alert ? (run || sp * 2.4) * (W.spK || 1) : sp), dt)) { if (++D.wk >= path.length) { D.wk = path.length - 1; P.gone = true; P.H.root.visible = false; if (why) fail(why); } } }; return P; }
+// 屋上の見張り：屋上のふちを行き来し、気づくと出入り口の小屋へにげる
+function roofGuard(bx, bz, x, z0, z1, hut, sp = 1.1) { const y = roofAt(bx, bz); boxM(3, 2.6, 3, CITY.mats.roofBox, hut[0], y + 1.3, hut[1]); const P = spawnPerson('crim', x, (z0 + z1) / 2, { y, st: 'script', fleeTo: [hut[0] - 2, hut[1]] }); P.beh = crimPatrol([x, z0], [x, z1], sp); return P; }
+// 人質をとっている悪者（人質と悪者が少しゆれる）
+function hostagePair(hx, hz, y = .15, k = 0) {
+  const a = towardMe(hx, hz), side = [Math.cos(a), -Math.sin(a)];
+  const H = spawnPerson('civ', hx, hz, { st: 'script', face: a, y, cloth: [.75, .72, .65] }); H.hostage = true; H.idleClip = 'Idle_Neutral';
+  const C = spawnPerson('crim', hx - Math.sin(a) * .55 + side[0] * .5, hz - Math.cos(a) * .55 + side[1] * .5, { st: 'script', face: a, y }); C.data.aim = 1;
+  for (const P of [H, C]) { P.data.x0 = P.p.x; P.data.z0 = P.p.z; P.beh = (P, dt, W) => { const s = Math.sin(W.t * .9 + k) * .9; P.p.x = P.data.x0 + side[0] * s; P.p.z = P.data.z0 + side[1] * s; P.face = a; P.sp = 0; }; }
+  return C;
+}
+// 敵の狙撃手（ときどき顔を出してねらう。長く出させるとうたれる）。spots：{ y, x, z:[z0,z1] } または { y, z, x:[x0,x1] }
+function sniperSetup(spots) {
+  for (const [w, d, dx, dz] of [[7, .35, -3.2, .3], [.35, 7, .3, -3.2]]) boxM(w, .95, d, CITY.mats.parapet, ME_POS.x + dx, ME_POS.y - 1.4 + .47, ME_POS.z + dz, false);   // 自分の前の低いかべ（「隠れる」で、このかげに）
+  const glint = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false })); CITY.grp.add(glint); G.glint = glint;
+  spots.forEach((S, k) => { const P = spawnPerson('crim', Array.isArray(S.x) ? (S.x[0] + S.x[1]) / 2 : S.x, Array.isArray(S.z) ? (S.z[0] + S.z[1]) / 2 : S.z, { y: S.y, st: 'script' }); P.data.aim = 1; P.data.spot = S; P.data.hideT = 2 + k * 3.2; P.data.vis = 0; P.gone = true; P.H.root.visible = false;
+    P.beh = P => { P.face = towardMe(P.p.x, P.p.z); P.sp = 0; }; });
+}
+function sniperUpdate(t, dt) {
+  const lim = [7, 4.2, 3.4][SET.diff] * (G.M.lv > 25 ? .9 : 1); let warn = 0;
+  for (const P of PEOPLE) { if (P.kind !== 'crim' || P.down || !P.data.spot) continue; const D = P.data, S = D.spot;
+    if (P.gone) { if ((D.hideT -= dt) <= 0) { P.gone = false; P.H.root.visible = true; if (Array.isArray(S.z)) P.p.z = rr(S.z[0], S.z[1]); else P.p.x = rr(S.x[0], S.x[1]); D.vis = 0; D.glT = 0; D.peek = (D.peek || 0) + 1; D.peekT = lim * rr(.5, .72); } continue; }
+    D.glT = (D.glT || 0) + dt;
+    if (G.hide) { D.vis = Math.max(0, D.vis - dt * 1.6); D.lost = (D.lost || 0) + dt; if (D.lost > 1.6) { P.gone = true; P.H.root.visible = false; D.hideT = rr(2, 4.5); D.lost = 0; } continue; }   // 見うしなった
+    D.lost = 0; D.vis += dt; warn = Math.max(warn, D.vis / lim);
+    if (D.vis > lim) { fail('敵の狙撃手にうたれてしまった…'); return; }
+    if (D.peek < 3 && !P.alert && D.vis > D.peekT) { P.gone = true; P.H.root.visible = false; D.hideT = rr(2.5, 5.5); }   // 少しのぞいて、またかくれる（3回目からは、ねらいつづける）
+  }
+  const g = G.glint, show = PEOPLE.find(P => P.kind === 'crim' && !P.down && !P.gone && P.data.spot && (P.data.glT < .5 || (P.data.vis > lim * .55 && P.data.vis < lim * .55 + .4)));
+  if (g) { if (show) { g.position.set(show.p.x, show.p.y + 1.55, show.p.z); g.material.opacity = .95; g.scale.setScalar(2 + Math.sin(t * 30) * .6); } else g.material.opacity = Math.max(0, g.material.opacity - dt * 4); }
+  if (warn > .55 && G.phase === 'play' && (G.warnT = (G.warnT || 0) - dt) <= 0) { G.warnT = 1; msg('', 'ねらわれている！　「隠れる」で身を守れ', .9, 'bad'); }
+}
+// 港：コンテナの山の上（高い山を、場所ごとに1つずつ）
+function stackTop(xmin, xmax) { const L = PORT.stacks.filter(s => s[0] > xmin && s[0] < xmax).sort((a, b) => b[2] - a[2] || Math.abs(a[1] - 4) - Math.abs(b[1] - 4)); return L[0]; }
 const MISSIONS = [
   { id: 'm1', name: '銀行強盗', tod: 0, time: 55, ammo: 8, wind: [1, 3], aim: [0, 1, 58],
     brief: ['<b>ひかり銀行</b>（広場の南）から、強盗が<b>3人</b>出てくる。黒い服で、じゅうとかばんを持っている。', '強盗は銀行の前の<b>黒いワゴン車</b>に乗ってにげようとしている。車に着く前に止めよう。', 'まわりには、ふつうの人も歩いている。まちがえてうたないように。'],
@@ -1019,28 +1058,9 @@ const MISSIONS = [
     brief: ['まわりのビルの屋上に、敵の<b>狙撃手が3人</b>かくれている。ふだんは屋上のかべにかくれて見えない。', 'ときどき<b>顔を出して、こちらをねらう</b>。そのときスコープが<b>キラッと光る</b>。顔を出しているうちにうとう。', '長く顔を出させておくと、<b>うたれてしまう</b>（画面に「ねらわれている！」と出る）。そのときは<b>「隠れる」ボタン</b>（PC は C キー）で屋上のかべのかげにしゃがもう。隠れていればうたれず、敵はあきらめて、またかくれる。もう一度押すと立ち上がる。'],
     setup() {
       spawnCivilians(18, { plaza: .4 });
-      // 自分の前の、低いかべ（「隠れる」でしゃがむと、このかげに入る）
-      for (const [w, d, dx, dz] of [[7, .35, -3.2, .3], [.35, 7, .3, -3.2]]) boxM(w, .95, d, CITY.mats.parapet, ME_POS.x + dx, ME_POS.y - 1.4 + .47, ME_POS.z + dz, false);
-      const glint = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false })); CITY.grp.add(glint); G.glint = glint;
-      const mk = (bx, bz, x, z0, z1, k) => { const y = roofAt(bx, bz), P = spawnPerson('crim', x, (z0 + z1) / 2, { y, st: 'script' }); P.data.aim = 1; P.data.z = [z0, z1]; P.data.hideT = 2 + k * 3.2; P.data.vis = 0; P.gone = true; P.H.root.visible = false;
-        P.beh = (P, dt) => { P.face = towardMe(P.p.x, P.p.z); P.sp = 0; }; return P; };
-      mk(94, -94, 64.6, -112, -80, 0); mk(188, 0, 158.6, -16, 16, 1); mk(0, -94, -29.4, -108, -82, 2);
+      sniperSetup([{ y: roofAt(94, -94), x: 64.6, z: [-112, -80] }, { y: roofAt(188, 0), x: 158.6, z: [-16, 16] }, { y: roofAt(0, -94), x: -29.4, z: [-108, -82] }]);
     },
-    update(t, dt) {
-      const lim = [7, 4.2, 3.4][SET.diff]; let warn = 0;
-      for (const P of PEOPLE) { if (P.kind !== 'crim' || P.down) continue; const D = P.data;
-        if (P.gone) { if ((D.hideT -= dt) <= 0) { P.gone = false; P.H.root.visible = true; P.p.z = rr(D.z[0], D.z[1]); D.vis = 0; D.glT = 0; D.peek = (D.peek || 0) + 1; } continue; }
-        D.glT = (D.glT || 0) + dt;
-        if (G.hide) { D.vis = Math.max(0, D.vis - dt * 1.6); D.lost = (D.lost || 0) + dt; if (D.lost > 1.6) { P.gone = true; P.H.root.visible = false; D.hideT = rr(2, 4.5); D.lost = 0; } continue; }   // 見うしなった
-        D.lost = 0; D.vis += dt; warn = Math.max(warn, D.vis / lim);
-        if (D.vis > lim) { fail('敵の狙撃手にうたれてしまった…'); return; }
-        if (D.peek < 3 && D.vis > rr(3.2, 4.2) && !P.alert && D.vis < lim - .6) { P.gone = true; P.H.root.visible = false; D.hideT = rr(2.5, 5.5); }   // 少しのぞいて、またかくれる
-      }
-      // スコープの光：顔を出した直後と、ねらいはじめに光る
-      const g = G.glint, show = PEOPLE.find(P => P.kind === 'crim' && !P.down && !P.gone && (P.data.glT < .5 || (P.data.vis > lim * .55 && P.data.vis < lim * .55 + .4)));
-      if (g) { if (show) { g.position.set(show.p.x, show.p.y + 1.55, show.p.z); g.material.opacity = .95; g.scale.setScalar(2 + Math.sin(t * 30) * .6); } else g.material.opacity = Math.max(0, g.material.opacity - dt * 4); }
-      if (warn > .55 && G.phase === 'play' && (G.warnT = (G.warnT || 0) - dt) <= 0) { G.warnT = 1; msg('', 'ねらわれている！　「隠れる」で身を守れ', .9, 'bad'); }
-    },
+    update: (t, dt) => sniperUpdate(t, dt),
   },
   { id: 'm8', name: '護送車をまもれ', tod: 0, time: 70, ammo: 8, wind: [1, 3], aim: [8, 1, 40],
     brief: ['銀行の前に止まった白い<b>護送車</b>を、悪者が<b>5人</b>、ちがう方向から順番におそいに来る。', '悪者が護送車にたどり着いたら失敗。気づかれると<b>走って</b>くる。', '護送車のそばの<b>青い服の警備員</b>はうたないように。広場には、ふつうの人もいる。'],
@@ -1099,16 +1119,134 @@ const MISSIONS = [
     update() { for (const P of PEOPLE) if (P.wanted && P.alert && P.st === 'wander') { P.st = 'flee'; P.runTo = P.fleeTo; } },
   },
 ];
-const ORDER = ['m1', 'm4', 'm2', 'm3', 'm5', 'm6', 'm8', 'm10', 'm9', 'm11', 'm7'];
+// ---------- 追加のミッション（12〜30）。下の ORDER で、やさしい順にならぶ ----------
+MISSIONS.push(
+  { id: 'm12', name: '屋上の泥棒', tod: 0, time: 75, ammo: 6, wind: [0, 2], aim: [0, 46, -94],
+    brief: ['北のビルの<b>屋上</b>で、泥棒が<b>2人</b>、ぬすんだ荷物を運んでいる。', '屋上の東はしの<b>出入り口</b>に着かれたら失敗。のんびり歩いているので、ゆっくりねらおう。'],
+    setup() { spawnCivilians(20, { plaza: .4 }); const y = roofAt(0, -94); boxM(3, 2.6, 3, CITY.mats.roofBox, 26, y + 1.3, -94);
+      for (let k = 0; k < 2; k++) walker(spawnPerson('crim', -24 + k * 4, -108 + k * 20, { y, bag: true, noGun: true, st: 'script' }), [[-6 + k * 3, -100 + k * 10], [24, -94]], .75, '泥棒ににげられた…', 2.4); },
+  },
+  { id: 'm13', name: '港の見回り', stage: 'port', tod: 0, time: 70, ammo: 6, wind: [1, 2], aim: [10, 1, 2],
+    brief: ['<b>港</b>のコンテナ置き場のまん中の広場を、じゅうを持った悪者が<b>3人</b>見回っている。', 'だれかをうつと、のこりはコンテナのかげへにげ出す。<b>オレンジ・黄色の上着</b>は港で働く人。'],
+    setup() { portWorkers(8);
+      for (const [a, b, f] of [[[-10, -8], [8, -10], [-20, -30]], [[24, 2], [26, 16], [40, -22]], [[2, 14], [16, 12], [-24, 26]]]) { const P = spawnPerson('crim', a[0], a[1], { st: 'script', fleeTo: f }); P.beh = crimPatrol(a, b, .9); } },
+  },
+  { id: 'm14', name: 'ひったくり', tod: 0, time: 50, ammo: 6, wind: [1, 2], aim: [10, 1, 10],
+    brief: ['広場で<b>ひったくり</b>が起きる！ かばんをうばった男が、東の道へ<b>走ってにげる</b>。', '東の道では、<b>仲間</b>がじゅうを持って待っている。ひったくりをうつと、仲間もにげ出す。', '走っている人は、少し先をねらうと当てやすい。'],
+    setup() { spawnCivilians(26, { plaza: .55 });
+      const S = hideUntil(spawnPerson('crim', -10, 6, { st: 'script', bag: true, noGun: true, cloth: [.3, .3, .34] }), 4); walker(S, [[10, 12], [34, 18], [62, 14]], 3, 'ひったくりににげられた…', 3.8);
+      const A = spawnPerson('crim', 58, 22, { st: 'script', fleeTo: [62, 60] }); A.beh = crimPatrol([58, 22], [58, 30], .7); },
+    update: t => appearStep(t),
+  },
+  { id: 'm15', name: 'コンテナの上の見張り', stage: 'port', tod: 1, time: 65, ammo: 7, wind: [2, 3], aim: [20, 8, 0],
+    brief: ['夕方の港。悪者の見張りが<b>3人</b>、つみ上げた<b>コンテナの上</b>に立っている。', '1人たおすと、ほかの見張りはコンテナから<b>おりて</b>にげようとする。高い所なので見つけやすい。'],
+    setup() { portWorkers(8);
+      for (const [x0, x1] of [[-70, -18], [34, 70], [70, 100]]) { const s = stackTop(x0, x1); if (!s) continue; const y = s[2] * 2.6, P = spawnPerson('crim', s[0], s[1], { y, st: 'script' });
+        P.beh = (P, dt, W) => { if (P.alert) { if ((P.alertT -= dt * .8) <= -2) { P.gone = true; P.H.root.visible = false; W.onEscape(P); } P.sp = 0; return; } moveTo(P, s[0] + Math.sin(W.t * .25 + s[0]) * 4.5, s[1], .8, dt); }; } },
+  },
+  { id: 'm16', name: '駐車場の車上荒らし', tod: 0, time: 70, ammo: 7, wind: [1, 3], aim: [94, 1, 94],
+    brief: ['南東の<b>駐車場</b>で、車上荒らしが<b>3人</b>、止めてある車を順番にのぞいている。', '遠いので、弾が少し落ちる。だれかをうつと、のこりは駐車場の外へにげる。'],
+    setup() { spawnCivilians(18, { plaza: .3, blocks: [[94, 0], [0, 94]] });
+      for (const [a, b, f] of [[[72, 76], [90, 76], [60, 140]], [[100, 106], [116, 106], [140, 120]], [[86, 92], [104, 92], [130, 60]]]) { const P = spawnPerson('crim', a[0], a[1], { st: 'script', fleeTo: f, bag: true }); P.beh = crimPatrol(a, b, .8); } },
+  },
+  { id: 'm17', name: '夜の広場', tod: 2, time: 70, ammo: 7, wind: [0, 2], aim: [0, 1, 0], nv: true,
+    brief: ['夜の<b>広場</b>に、じゅうを持った悪者が<b>3人</b>うろついている。まわりには、ふつうの人も少し。', 'スコープは<b>暗視</b>モード。だれかをうつと、のこりは広場の外へにげる。'],
+    setup() { spawnCivilians(10, { plaza: .7 });
+      for (const [a, b, f] of [[[-14, -12], [-4, -18], [-50, -20]], [[14, 4], [20, 16], [50, 12]], [[-8, 18], [6, 22], [-10, 50]]]) { const P = spawnPerson('crim', a[0], a[1], { st: 'script', fleeTo: f }); P.beh = crimPatrol(a, b, .9); } },
+  },
+  { id: 'm18', name: '貨物船の甲板', stage: 'port', tod: 0, time: 65, ammo: 7, wind: [2, 4], aim: [0, 9, 50],
+    brief: ['港の<b>貨物船の甲板</b>（岸壁がわのふち）を、悪者が<b>4人</b>見回っている。', 'だれかをうつと、のこりは船の<b>うしろの建物</b>へにげこむ。海風が強いので、風に気をつけて。'],
+    setup() { portWorkers(6);
+      for (const [x0, x1, k] of [[-40, -10, 0], [-5, 25, 1], [30, 60, 2], [62, 80, 3]]) { const P = spawnPerson('crim', (x0 + x1) / 2, 50.3, { y: 8.35, st: 'script' }); P.data.k = k;
+        P.beh = (P, dt, W) => { if (P.alert) { if ((P.alertT -= dt) > 0) { P.sp = 0; return; } if (moveTo(P, -64, 50.3, 3.2 * (W.spK || 1), dt)) { P.gone = true; P.H.root.visible = false; W.onEscape(P); } return; } moveTo(P, (x0 + x1) / 2 + Math.sin(W.t * .2 + k * 2) * (x1 - x0) / 2, 50.3, 1, dt); }; } },
+  },
+  { id: 'm19', name: 'にげる手配犯', tod: 1, time: 70, ammo: 5, wind: [1, 3], aim: [0, 1, 30], noMark: true,
+    brief: ['夕方。<b>指名手配犯</b>が、銀行の前から広場を通りぬけて、北へ行こうとしている。', '目じるし：<b style="color:#6aa8ff">青い服</b>と<b>黒いかばん</b>。青い服だけ・かばんだけの人もいる。', '30秒をすぎると、手配犯は<b>走り出す</b>。北の道に着かれたら失敗。'],
+    setup() { spawnCivilians(28, { plaza: .62 });
+      const T = spawnPerson('crim', 4, 62, { noGun: true, bag: true, cloth: [.12, .28, .66], st: 'script' }); T.wanted = true; walker(T, [[8, 30], [-6, 6], [-4, -26], [-2, -52]], 1.15, '指名手配犯ににげられた…', 3.4);
+      for (let i = 0; i < 3; i++) { const [x, z] = plazaPoint(); spawnPerson('civ', x, z, { st: 'wander', cloth: [.12, .28, .66] }); }
+      for (let i = 0; i < 3; i++) { const [x, z] = plazaPoint(); spawnPerson('civ', x, z, { st: 'wander', bag: true, cloth: [[.6, .2, .2], [.4, .4, .42], [.86, .74, .06]][i] }); } },
+    update(t) { const T = PEOPLE.find(P => P.wanted); if (T && t > 30 && !T.alert) { T.alert = true; T.alertT = 0; } },
+  },
+  { id: 'm20', name: '夕方の銀行強盗', tod: 1, time: 60, ammo: 8, wind: [1, 3], aim: [6, 1, 58],
+    brief: ['夕方、ひかり銀行に強盗。<b>4人</b>が2人ずつ出てきて、<b>黒いワゴン車</b>へ向かう。', '車の横には、じゅうを持った<b>運転手</b>が待っている。運転手もたおそう。', 'だれかをうつと、のこりは<b>走って</b>車へ向かう。'],
+    setup() { spawnCivilians(24, { plaza: .45, blocks: [[0, 94], [-94, 0], [94, 0], [0, -94]] }); car(26, 53.6, Math.PI / 2, 0x1a1a1e, true);
+      for (let i = 0; i < 4; i++) walker(hideUntil(spawnPerson('crim', (i % 2 ? .8 : -.8), 64.4, { bag: true, st: 'script' }), 3 + (i >> 1) * 7), [[6 + (i % 2) * 3, 59], [22.5, 54]], 1.5, '強盗に車でにげられた…', 3.2);
+      const D = spawnPerson('crim', 26, 51, { st: 'script' }); D.beh = (P, dt) => { P.face = P.alert ? towardMe(P.p.x, P.p.z) : Math.PI; P.sp = 0; }; },
+    update: t => appearStep(t),
+  },
+  { id: 'm21', name: '倉庫の前の取引', stage: 'port', tod: 2, time: 70, ammo: 8, wind: [0, 2], aim: [16, 1, -22], nv: true,
+    brief: ['夜の港。<b>倉庫の前の道</b>にトラックを止めて、悪者<b>5人</b>が取引をしている。', 'だれかをうつと、のこりは少しして<b>トラック</b>へ走る。トラックに乗りこまれて出発されたら失敗。', 'スコープは<b>暗視</b>モード。'],
+    setup() { portWorkers(4); for (const C of TRAFFIC) { C.stop = true; C.g.position.y = -50; }
+      const tr = [34, -22]; car(tr[0], tr[1], Math.PI / 2, 0x2a2a30, true);
+      [[4, -23], [10, -20.5], [16, -24], [22, -21], [27, -23.5]].forEach(([x, z], k) => { const P = spawnPerson('crim', x, z, { st: 'script', bag: k === 2 }); P.data.p0 = [x, z];
+        P.beh = (P, dt, W) => { const D = P.data; if (!P.alert) { moveTo(P, D.p0[0] + Math.sin(W.t * .3 + k) * 1.6, D.p0[1] + Math.cos(W.t * .35 + k) * .8, .5, dt); return; }
+          if ((P.alertT -= dt) > 0) { P.sp = 0; return; } if (!D.at) { if (moveTo(P, tr[0] - 3, tr[1] + (k - 2) * .5, 2.6 * (W.spK || 1), dt)) D.at = W.t; return; } P.sp = 0; if (W.t - D.at > 3.5) { P.gone = true; P.H.root.visible = false; W.onEscape(P); } }; }); },
+  },
+  { id: 'm22', name: '屋上の見張り（夕方）', tod: 1, time: 60, ammo: 8, wind: [2, 4], aim: [64, 40, -95],
+    brief: ['夕方。まわりの<b>4つの屋上</b>に、ライフルを持った見張りがいる（銀行の屋上にも）。', '1人たおすと、ほかの見張りはすぐに<b>屋上の出入り口</b>へにげる。手早く。'],
+    setup() { spawnCivilians(22, { plaza: .4 });
+      roofGuard(94, -94, 64.6, -112, -80, [88, -94], 1.3); roofGuard(188, 0, 158.6, -16, 16, [182, 0], 1.3); roofGuard(0, -94, -29.4, -108, -82, [-6, -94], 1.3);
+      const y = roofAt(0, 94); boxM(3, 2.6, 3, CITY.mats.roofBox, 20, y + 1.3, 96); const B = spawnPerson('crim', -20, 72, { y, st: 'script', fleeTo: [18, 96] }); B.beh = crimPatrol([-20, 72], [10, 72], 1.3); },
+  },
+  { id: 'm23', name: '港の人質', stage: 'port', tod: 1, time: 55, ammo: 5, wind: [1, 3], aim: [8, 1, 12],
+    brief: ['夕方の港。コンテナ置き場の広場で、悪者が<b>人質</b>をとっている。人質に当てないように。', 'まわりに<b>見張りが2人</b>。見張りは気づくと、コンテナのかげへにげる。'],
+    setup() { portWorkers(4); hostagePair(8, 12);
+      for (const [a, b, f] of [[[-8, -6], [-8, 6], [-24, -30]], [[26, -10], [30, 4], [44, -24]]]) { const P = spawnPerson('crim', a[0], a[1], { st: 'script', fleeTo: f }); P.beh = crimPatrol(a, b, .9); } },
+  },
+  { id: 'm24', name: '2人の爆弾犯', tod: 1, time: 50, ammo: 7, wind: [1, 3], aim: [0, 1, 0],
+    brief: ['夕方の広場。<b>爆弾を持った男が2人</b>、北と南から<b>噴水</b>へ向かっている。2人とも止めよう。', '見張りも<b>2人</b>。だれかをうつと、爆弾犯は<b>走り出す</b>。'],
+    setup() { spawnCivilians(30, { plaza: .62 });
+      for (const [x, z, tz] of [[-5, -44, -7.6], [6, 44, 7.6]]) { const B = spawnPerson('crim', x, z, { noGun: true, bag: true, st: 'script', cloth: [.36, .24, .14] }); B.beh = (P, dt) => { if (moveTo(P, 0, tz, P.alert ? 3.6 : 1.1, dt)) { P.sp = 0; fail('爆弾がしかけられてしまった…'); } }; }
+      for (const [x, z, fx] of [[-27, -14, -50], [26, 12, 50]]) { const P = spawnPerson('crim', x, z, { st: 'script', fleeTo: [fx, z] }); P.beh = crimPatrol([x, z], [x, z + 6], .9); } },
+  },
+  { id: 'm25', name: '岸壁の逃走', stage: 'port', tod: 0, time: 60, ammo: 8, wind: [2, 4], aim: [40, 1, 30],
+    brief: ['港の広場から、悪者<b>4人</b>が岸壁ぞいに<b>東の桟橋の船</b>へにげようとしている。', '船に着かれたら失敗。動いている人をねらう練習の、むずかしい版。'],
+    setup() { portWorkers(6);
+      for (let k = 0; k < 4; k++) walker(hideUntil(spawnPerson('crim', 20 + k * 3, 16, { st: 'script', bag: k % 2 === 0 }), 2 + k * 4), [[30, 22.8], [52, 22.8], [56, 32], [100, 32], [120, 42], [121, 60]], 2.6, '悪者に船でにげられた…', 3.4); },
+    update: t => appearStep(t),
+  },
+  { id: 'm26', name: '夜の護送車', tod: 2, time: 75, ammo: 9, wind: [0, 2], aim: [8, 1, 40], nv: true,
+    brief: ['夜。銀行の前の<b>護送車</b>を、悪者<b>6人</b>がつぎつぎにおそいに来る。', '<b>青い服の警備員</b>はうたないように。スコープは<b>暗視</b>モード。'],
+    setup() { spawnCivilians(10, { plaza: .4 }); car(12, 53.6, Math.PI / 2, 0xeeeef2, true);
+      for (const [x, z] of [[8.6, 57.6], [15.4, 57.6]]) { const P = spawnPerson('civ', x, z, { st: 'idle', cloth: [.12, .2, .52], face: Math.PI }); P.lookAt = [12, 40]; }
+      [[[-46, 24], [7.5, 51.5]], [[46, 30], [16.5, 51.5]], [[-18, -6], [9, 50.6]], [[28, -24], [15, 50.6]], [[-44, 52], [7, 53.8]], [[40, 52], [17, 53.8]]].forEach((r, i) => walker(hideUntil(spawnPerson('crim', r[0][0], r[0][1], { st: 'script' }), 3 + i * 7), [r[1]], 1.7, '護送車がおそわれた…', 3.4)); },
+    update: t => appearStep(t),
+  },
+  { id: 'm27', name: '夜の人質事件', tod: 2, time: 60, ammo: 6, wind: [0, 2], aim: [0, 1, 40], nv: true,
+    brief: ['夜。広場の南と、銀行の前で、悪者が<b>人質</b>をとっている（<b>2組</b>）。', '人質に当てないように。スコープは<b>暗視</b>モード。少しはなれた所に見張りが1人。'],
+    setup() { spawnCivilians(6, { plaza: 0, blocks: [[94, 0], [-94, 94]] }); hostagePair(-6, 24, .15, 0); hostagePair(10, 60, .15, 1.7);
+      const A = spawnPerson('crim', 24, 30, { st: 'script', fleeTo: [50, 40] }); A.beh = crimPatrol([24, 26], [24, 34], 1); },
+  },
+  { id: 'm28', name: '夜のボス', tod: 2, time: 70, ammo: 8, wind: [0, 2], aim: [10, 1, -40], nv: true,
+    brief: ['夜。悪者の<b>ボス</b>（白いスーツ）が<b>護衛4人</b>と、広場のまわりを歩いている。', '東の歩道の先の<b>黒い車</b>に乗られたら失敗。だれかをうつと、ボスは走り出す。スコープは<b>暗視</b>モード。'],
+    setup() { spawnCivilians(10, { plaza: .4 }); car(44, 36, 0, 0x101014);
+      const way = [[33, -40], [40, -33], [40, 32], [43.6, 33.4]], B = spawnPerson('crim', -6, -40, { noGun: true, bag: true, st: 'script', cloth: [.88, .88, .9] }); B.data.k = 0; B.face = Math.PI / 2;
+      B.beh = (P, dt) => { const w = way[P.data.k]; if (moveTo(P, w[0], w[1], P.alert ? 3.7 : 2, dt)) { if (++P.data.k >= way.length) { P.gone = true; P.H.root.visible = false; fail('ボスに車でにげられた…'); } } };
+      [[1.4, -1.2], [-1.4, -1.2], [0, 1.6], [0, -2.4]].forEach(([ox, oz]) => { const P = spawnPerson('crim', -6 + ox, -40 + oz, { st: 'script' });
+        P.beh = (P, dt) => { if (P.alert || B.down || B.gone) { P.face = towardMe(P.p.x, P.p.z); P.data.aim = 1; P.sp = 0; return; } const c = Math.cos(B.face), s = Math.sin(B.face); moveTo(P, B.p.x + ox * c + oz * s, B.p.z - ox * s + oz * c, 2.6, dt); }; }); },
+  },
+  { id: 'm29', name: '港の狙撃手', stage: 'port', tod: 2, time: 75, ammo: 8, wind: [1, 3], aim: [-10, 30, 40], cover: true, nv: true,
+    brief: ['夜の港。<b>クレーンの上</b>と<b>貨物船の上</b>に、敵の<b>狙撃手が3人</b>。ときどき顔を出してねらってくる。', 'スコープが<b>光った</b>所をすばやくねらおう。ねらわれたら<b>「隠れる」</b>（PC は C キー）。スコープは<b>暗視</b>モード。'],
+    setup() { portWorkers(4); sniperSetup([{ y: 40.1, x: -10, z: [22, 36] }, { y: 40.1, x: 40, z: [22, 36] }, { y: 26.2, z: 56, x: [-77, -67] }]); },
+    update: (t, dt) => sniperUpdate(t, dt),
+  },
+  { id: 'm30', name: '夜の狙撃手', tod: 2, time: 80, ammo: 9, wind: [1, 3], aim: [64, 40, -95], cover: true, nv: true,
+    brief: ['さいごのミッション。夜の町の<b>4つの屋上</b>に、敵の<b>狙撃手が4人</b>。', '顔を出すのはほんの少し。スコープが<b>光った</b>所をすばやく。ねらわれたら<b>「隠れる」</b>（PC は C キー）。スコープは<b>暗視</b>モード。'],
+    setup() { spawnCivilians(8, { plaza: .4 }); sniperSetup([{ y: roofAt(94, -94), x: 64.6, z: [-112, -80] }, { y: roofAt(188, 0), x: 158.6, z: [-16, 16] }, { y: roofAt(0, -94), x: -29.4, z: [-108, -82] }, { y: roofAt(0, 94), z: 70, x: [-24, 24] }]); },
+    update: (t, dt) => sniperUpdate(t, dt),
+  },
+);
+const ORDER = ['m1', 'm12', 'm4', 'm13', 'm2', 'm14', 'm3', 'm15', 'm5', 'm16', 'm17', 'm6', 'm18', 'm19', 'm8', 'm20', 'm21', 'm10', 'm22', 'm9', 'm11', 'm23', 'm24', 'm25', 'm26', 'm27', 'm28', 'm7', 'm29', 'm30'];
 MISSIONS.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)); MISSIONS.forEach((M, i) => { M.lv = i + 1; });
 // ---------- はじめる ----------
 function startMission(i) {
   AU.init(); G.mi = i; const M = G.M = MISSIONS[i];
-  clearPeople(); buildStage(M.stage || 'city'); W.spK = .82 + .035 * M.lv; W.reK = 1.45 - .045 * M.lv; setHide(false); document.body.classList.toggle('cover', !!M.cover); CITY.cars.splice(CITY.cars.length - (CITY.extraCars || 0)); for (const o of CITY.extra || []) CITY.grp.remove(o); CITY.extra = []; CITY.extraCars = 0; CITY.boxes.length = CITY.baseBoxes;
+  clearPeople(); buildStage(M.stage || 'city'); for (const C of TRAFFIC) C.stop = false; W.spK = .82 + .035 * M.lv; W.reK = 1.45 - .045 * M.lv; setHide(false); document.body.classList.toggle('cover', !!M.cover); CITY.cars.splice(CITY.cars.length - (CITY.extraCars || 0)); for (const o of CITY.extra || []) CITY.grp.remove(o); CITY.extra = []; CITY.extraCars = 0; CITY.boxes.length = CITY.baseBoxes;
   const nc = CITY.cars.length, ng = CITY.grp.children.length;
   setTOD(M.tod); M.setup(); CITY.extraCars = CITY.cars.length - nc; CITY.extra = CITY.grp.children.slice(ng);
   Object.assign(G, { phase: 'intro', t: 0, left: M.time, ammo: M.ammo, shots: 0, hits: 0, scoped: false, zoom: 1, breath: 1, recoil: 0, bolt: 0, bullets: [], escaped: 0, res: null, bc: null, endT: 0, alertAll: false });
-  for (const f of G.fx) scene.remove(f.o); G.fx = []; if (!M.id || M.id !== 'm7') G.glint = null; G.warnT = 0;
+  for (const f of G.fx) scene.remove(f.o); G.fx = []; if (!M.cover) G.glint = null; G.warnT = 0; G.boatT = 0;
   const D = DIFF[SET.diff], w = rr(M.wind[0], M.wind[1]) * (SET.diff === 0 ? 0 : 1), wa = rr(0, TAU); G.wind.set(Math.cos(wa) * w, 0, Math.sin(wa) * w);
   const a = M.aim; G.base = Math.atan2(-(a[0] - ME_POS.x), -(a[2] - ME_POS.z)); G.yaw = G.base; G.pitch = Math.atan2(a[1] - ME_POS.y, Math.hypot(a[0] - ME_POS.x, a[2] - ME_POS.z));
   $('scope').classList.toggle('nv', !!M.nv);
