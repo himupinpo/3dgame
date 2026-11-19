@@ -50,6 +50,7 @@ body.touch.playing .tb { display: flex; }
 #bFire { width: calc(92px * var(--bs)); height: calc(92px * var(--bs)); right: calc(22px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); font-size: calc(17px * var(--bs)); background: rgba(160,30,30,calc(var(--opa) * 1.1)); }
 #bScope { width: calc(66px * var(--bs)); height: calc(66px * var(--bs)); right: calc(126px * var(--bs) + 22px + env(safe-area-inset-right, 0px)); bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 #bZoom { width: calc(56px * var(--bs)); height: calc(56px * var(--bs)); right: calc(34px + env(safe-area-inset-right, 0px)); bottom: calc(128px * var(--bs) + 24px + env(safe-area-inset-bottom, 0px)); }
+#bHide { width: calc(66px * var(--bs)); height: calc(66px * var(--bs)); left: calc(24px + env(safe-area-inset-left, 0px)); bottom: calc(150px * var(--bs) + 70px + env(safe-area-inset-bottom, 0px)); background: rgba(40,80,60,calc(var(--opa) * 1.1)); } body:not(.cover) #bHide { display: none !important; } body.hiding #bHide { background: rgba(200,150,40,.8); }
 #bBreath { width: calc(66px * var(--bs)); height: calc(66px * var(--bs)); left: calc(24px + env(safe-area-inset-left, 0px)); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 #bPause { width: 44px; height: 44px; border-radius: 12px; left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); display: none; pointer-events: auto; font: 900 16px var(--f); color: #fff; background: rgba(0,0,0,.5); border: 2px solid rgba(255,255,255,.6); position: absolute; }
 body.playing #bPause { display: block; } body.hub #bPause { left: calc(64px + env(safe-area-inset-left, 0px)); }
@@ -89,7 +90,7 @@ input[type=range] { width: 150px; accent-color: var(--acc); }
   <canvas id="hc"></canvas>
   <div id="cross"></div>
   <div id="tArea"></div>
-  <div class="tb" data-b="fire" id="bFire">うつ</div><div class="tb" data-b="scope" id="bScope">スコープ</div><div class="tb" data-b="zoom" id="bZoom">ズーム</div><div class="tb" data-b="breath" id="bBreath">息を<br>止める</div>
+  <div class="tb" data-b="fire" id="bFire">うつ</div><div class="tb" data-b="scope" id="bScope">スコープ</div><div class="tb" data-b="zoom" id="bZoom">ズーム</div><div class="tb" data-b="breath" id="bBreath">息を<br>止める</div><div class="tb" data-b="hide" id="bHide">隠れる</div>
   <div id="hTop" class="hud"><div id="hMis"></div><div id="hLeft"></div></div>
   <div id="hTime" class="hud"></div><div id="hAmmo" class="hud"></div><div id="hWind" class="hud"></div>
   <div id="hBreath" class="hud"><div id="hBreathF"></div></div><div id="hHint" class="hud"></div>
@@ -145,6 +146,10 @@ input[type=range] { width: 150px; accent-color: var(--acc); }
 <script type="module">
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 // =========================================================================================
 //  屋上スナイパー — ビルの屋上から、武器を持った悪者だけをねらう（オリジナル作品）
 //  人のモデルは Quaternius「Ultimate Modular Men / Women」（CC0）。街・音はその場で作る。たおれるだけで、こわい表現はなし
@@ -176,9 +181,13 @@ try { const f = +localStorage.getItem('3dame-fps'); if (f === 30 || f === 60) FP
 const canvas = $('c'), hc = $('hc'), hx = hc.getContext('2d');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
-renderer.shadowMap.enabled = GFX() >= 2; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = GFX() >= 1; renderer.shadowMap.type = GFX() >= 2 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = GFX() >= 2;   // スマホ（ふつう）は影を3コマに1回だけ描きなおす
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, 16 / 9, .3, 6000); scene.add(camera);
+// 光のにじみ（夕方・夜の灯りや窓がふわっと光る）。軽い画質では使わない
+const FX = { comp: null, bloom: null, n: 0 };
+if (GFX() >= 1) { FX.comp = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType })); FX.comp.addPass(new RenderPass(scene, camera)); FX.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .3, .55, .9); FX.comp.addPass(FX.bloom); FX.comp.addPass(new OutputPass()); }
+function renderFrame() { FX.n++; if (!renderer.shadowMap.autoUpdate && FX.n % 3 === 0) renderer.shadowMap.needsUpdate = true; if (FX.comp) FX.comp.render(); else renderer.render(scene, camera); }
 scene.fog = new THREE.Fog(0xb8cde0, 500, 2600);
 let HUD_DPR = 1;
 function onResize() {
@@ -186,6 +195,7 @@ function onResize() {
   document.documentElement.style.setProperty('--sw', VW() / 100 + 'px');
   const g = GFX(), pr = Math.min(devicePixelRatio || 1, g >= 2 ? 2 : g === 1 ? 1.4 : 1);
   renderer.setPixelRatio(pr); renderer.setSize(VW(), VH(), false); camera.aspect = VW() / VH(); camera.updateProjectionMatrix();
+  if (FX.comp) { FX.comp.setPixelRatio(pr); FX.comp.setSize(VW(), VH()); const k = g >= 2 ? .5 : .35; FX.bloom.resolution.set(VW() * pr * k, VH() * pr * k); }
   HUD_DPR = Math.min(devicePixelRatio || 1, 2); hc.width = Math.round(VW() * HUD_DPR); hc.height = Math.round(VH() * HUD_DPR);
 }
 addEventListener('resize', () => setTimeout(onResize, 30));
@@ -197,14 +207,14 @@ function noise2(seed) {
   return (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy); return lerp(lerp(at(xi, yi), at(xi + 1, yi), u), lerp(at(xi, yi + 1), at(xi + 1, yi + 1), u), v); };
 }
 // ---------- 入力 ----------
-const KEYS = { fire: ['KeyF'], scope: ['Space', 'KeyE'], zoom: ['KeyZ'], breath: ['ShiftLeft', 'ShiftRight'], pause: ['Escape', 'KeyP'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'] };
+const KEYS = { hide: ['KeyC', 'ControlLeft'], fire: ['KeyF'], scope: ['Space', 'KeyE'], zoom: ['KeyZ'], breath: ['ShiftLeft', 'ShiftRight'], pause: ['Escape', 'KeyP'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'] };
 const IN = { look: [0, 0], kb: new Set(), ev: [], breath: false, touchBreath: false, padPrev: [], lastDev: IS_TOUCH ? 'touch' : 'kb', pad: null };
 const keyAct = c => { for (const k in KEYS) if (KEYS[k].includes(c)) return k; return null; };
 addEventListener('keydown', e => {
   if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   const a = keyAct(e.code); if (a) e.preventDefault(); IN.lastDev = 'kb';
   if (e.repeat) return; IN.kb.add(e.code);
-  if (a && ['fire', 'scope', 'zoom', 'pause'].includes(a)) IN.ev.push(a);
+  if (a && !e.repeat && ['fire', 'scope', 'zoom', 'pause', 'hide'].includes(a)) IN.ev.push(a);
 });
 addEventListener('keyup', e => IN.kb.delete(e.code));
 addEventListener('blur', () => IN.kb.clear());
@@ -318,7 +328,9 @@ const CITY = { U: { uNight: { value: 0 }, uCrown: { value: 0 } }, grp: new THREE
 const TEX = {};
 const BC = [-188, -94, 0, 94, 188], BH = 35, LOT = 31;
 const BANK = { x: 0, z: 94, door: V3(0, .15, 64.6) }, PARK = { x: 94, z: 94 }, ME = { x: -94, z: -94, h: 72 };
-const ME_POS = V3(-63.5, 72.15 + 1.4, -63.5);
+const ME_POS = V3(-63.5, 72.15 + 1.4, -63.5);   // あなたのいる所（ステージごとに変わる）
+const STAGE = { id: '', water: null };
+const STAGES = { city: { name: '中央広場の町', perch: [-63.5, 72.15 + 1.4, -63.5] }, port: { name: '港の倉庫街', perch: [-96.5, 48.15 + 1.4, -56.5] } };
 // 区画ごとのビルの高さ（ねらう線をふさがないように決めてある）。0：広場など
 const BLK_H = { '-188,-188': 60, '-94,-188': 45, '0,-188': 34, '94,-188': 70, '188,-188': 50, '-188,-94': 40, '-94,-94': 72, '0,-94': 46, '94,-94': 40, '188,-94': 65, '-188,0': 55, '-94,0': 28, '0,0': 0, '94,0': 40, '188,0': 55, '-188,94': 36, '-94,94': 30, '0,94': 24, '94,94': 0, '188,94': 48, '-188,188': 50, '-94,188': 64, '0,188': 70, '94,188': 80, '188,188': 90 };
 const SINGLE = ['-94,-94', '0,-94', '94,-94', '188,0', '0,94'];   // 1つのビル（屋上を使う区画）
@@ -342,9 +354,11 @@ const L = o => new THREE.MeshLambertMaterial(o), S = o => new THREE.MeshStandard
 function cityMats() {
   for (let s = 0; s < 4; s++) CITY.mats['b' + s] = bldMat(s);
   const po = (m, f) => { m.polygonOffset = true; m.polygonOffsetFactor = f; m.polygonOffsetUnits = f; return m; };
-  Object.assign(CITY.mats, { walk: L({ map: TEX.walk }), asph: L({ map: TEX.asph }), lane: po(L({ map: TEX.lane, transparent: false }), -2), cross: po(L({ map: TEX.cross }), -3), grass: L({ map: TEX.grass }), tile: L({ map: TEX.tile }), park: L({ map: TEX.park }),
+  Object.assign(CITY.mats, { walk: L({ map: TEX.walk }), asph: L({ map: TEX.asph }), lane: po(L({ map: TEX.lane, transparent: false }), -2), cross: po(L({ map: TEX.cross }), -3), grass: po(L({ map: TEX.grass }), -2), tile: L({ map: TEX.tile }), park: L({ map: TEX.park }),
     pole: S({ color: 0x3a3e44, roughness: .5, metalness: .6 }), lamp: L({ color: 0xfff2d0, emissive: 0xffe0a0, emissiveIntensity: .2 }), trunk: L({ color: 0x5a4030 }), leaf: L({ color: 0x4a7a3a }), stone: L({ color: 0xd8d2c4 }), dark: L({ color: 0x2a2c30 }),
-    water: S({ color: 0x4a8ab0, roughness: .1, metalness: .2 }), roofBox: L({ color: 0x9a9a98 }), parapet: L({ color: 0xbab6ae }), bench: L({ color: 0x8a5a3a }) });
+    water: S({ color: 0x4a8ab0, roughness: .1, metalness: .2 }), roofBox: L({ color: 0x9a9a98 }), parapet: L({ color: 0xbab6ae }), bench: L({ color: 0x8a5a3a }), leaf2: L({ color: 0x6a9a4a }),
+    roofGear: S({ color: 0xa4a6a8, roughness: .6, metalness: .4 }), tank: S({ color: 0x8a8e94, roughness: .5, metalness: .5 }),
+    pool: new THREE.MeshBasicMaterial({ map: TEX.glow, color: 0xffb860, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }) });
 }
 function mk(geo, mat, x, y, z, p = CITY.grp) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; p.add(m); return m; }
 function boxM(w, h, d, mat, x, y, z, solid = true) { const m = mk(new THREE.BoxGeometry(w, h, d), mat, x, y, z); if (solid) addBox(x - w / 2, x + w / 2, y - h / 2, y + h / 2, z - d / 2, z + d / 2); return m; }
@@ -381,7 +395,8 @@ function genDistrict() {
   const pm = new THREE.InstancedMesh(pg, M.pole, poles.length), q = new THREE.Quaternion(), m4 = new THREE.Matrix4();
   poles.forEach(([x, z], i) => { const a = Math.atan2(-(x - Math.round(x / 94) * 94), -(z - Math.round(z / 94) * 94)); pm.setMatrixAt(i, m4.compose(V3(x, .15, z), q.setFromAxisAngle(V3(0, 1, 0), a), V3(1, 1, 1))); lamps.push([x + Math.sin(a) * 1.1, 6.9, z + Math.cos(a) * 1.1]); }); pm.castShadow = true; G.add(pm);
   const tg = new THREE.IcosahedronGeometry(1.9, 1).translate(0, 4.6, 0), tm = new THREE.InstancedMesh(tg, M.leaf, trees.length), trk = new THREE.InstancedMesh(new THREE.CylinderGeometry(.13, .18, 3, 6).translate(0, 1.5, 0), M.trunk, trees.length);
-  trees.forEach(([x, z], i) => { const s = .8 + r() * .5; m4.compose(V3(x, .15, z), q.identity(), V3(s, s, s)); tm.setMatrixAt(i, m4); trk.setMatrixAt(i, m4); }); tm.castShadow = trk.castShadow = true; G.add(tm, trk);
+  const tm2 = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.35, 1).translate(.7, 5.7, .35), M.leaf2, trees.length), tc = new THREE.Color();
+  trees.forEach(([x, z], i) => { const s = .8 + r() * .5; m4.compose(V3(x, .15, z), q.setFromAxisAngle(V3(0, 1, 0), r() * TAU), V3(s, s * (.9 + r() * .25), s)); tm.setMatrixAt(i, m4); tm2.setMatrixAt(i, m4); trk.setMatrixAt(i, m4); tm.setColorAt(i, tc.setHSL(.27 + r() * .06, .45, .3 + r() * .1)); }); tm.castShadow = tm2.castShadow = trk.castShadow = true; G.add(tm, tm2, trk);
   CITY.lamps = lamps;
   // まわりの町（遠く）
   for (let i = 0; i < 900; i++) { const a = r() * TAU, d = 250 + Math.pow(r(), .7) * 700, x = Math.cos(a) * d, z = Math.sin(a) * d, w = 20 + r() * 40, hh = 12 + Math.pow(r(), 1.5) * (d < 450 ? 110 : 60), s = r() < .5 ? 1 : [0, 2, 3][r() * 3 | 0]; putBld(s, x, z, w, 20 + r() * 40, hh, s === 1 ? BRICKS[r() * BRICKS.length | 0] : [.9, .93, .96], 0, hh > 90 && r() < .4 ? [hh - 12, r() * 3 | 0] : [0, 0]); }
@@ -395,7 +410,7 @@ function roofStuff(bx, bz, w, h, mine) {
 }
 function plaza() {
   const M = CITY.mats, G = CITY.grp;
-  const gr = mk(uvScale(new THREE.CircleGeometry(14, 40).rotateX(-Math.PI / 2), 4, 4), M.grass, -18, .16, -18); gr.castShadow = false; const gr2 = gr.clone(); gr2.position.set(18, .16, -18); G.add(gr2);
+  const gr = mk(uvScale(new THREE.CircleGeometry(14, 40).rotateX(-Math.PI / 2), 4, 4), M.grass, -18, .24, -18); gr.castShadow = false; const gr2 = gr.clone(); gr2.position.set(18, .24, -18); G.add(gr2);
   mk(new THREE.CylinderGeometry(6, 6.4, .8, 32), M.stone, 0, .55, 0); mk(new THREE.CylinderGeometry(5.4, 5.4, .1, 32), M.water, 0, .9, 0); mk(new THREE.CylinderGeometry(.7, 1, 2.4, 12), M.stone, 0, 1.6, 0); mk(new THREE.CylinderGeometry(1.8, 1.4, .3, 16), M.stone, 0, 2.9, 0);
   addBox(-6, 6, 0, 1, -6, 6);
   const tr = [[-26, -26], [26, -26], [-26, 26], [26, 26], [-26, 0], [26, 0], [0, -26], [0, 26], [-12, 22], [12, 22]];
@@ -457,20 +472,129 @@ function cityLights() {
   const cars = []; for (const C of CITY.cars) cars.push(C.g.position); CITY.lights.carPts = null;
 }
 function setCityNight(n, dusk) {
-  CITY.U.uNight.value = n; CITY.U.uCrown.value = n * .9;
+  CITY.U.uNight.value = n; CITY.U.uCrown.value = n * .9; CITY.mats.pool.opacity = n > .3 ? .5 * n : 0; if (CITY.pools) CITY.pools.visible = n > .3;
   for (let s = 0; s < 4; s++) CITY.mats['b' + s].emissiveIntensity = n * 1.25 + dusk * .25;
   CITY.lights.street.visible = n > .3; CITY.mats.lamp.emissiveIntensity = n > .3 ? 1.5 : .2;
 }
-function buildCity() { cityTextures(); cityMats(); genDistrict(); genTraffic(); buildingMeshes(); cityLights(); CITY.grp.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !o.parent.isGroup) { o.matrixAutoUpdate = false; o.updateMatrix(); } }); scene.add(CITY.grp); }
+// ---------- ステージ：町 または 港。ミッションごとに作りなおす ----------
+function buildCity() { cityTextures(); cityMats(); buildStage('city'); }
+function buildStage(id) {
+  if (STAGE.id === id) return false;
+  if (CITY.grp.parent) scene.remove(CITY.grp);
+  const keep = new Set(); for (const k in CAR_GEO) for (const g of Object.values(CAR_GEO[k])) keep.add(g);
+  CITY.grp.traverse(o => { if (o.geometry && !keep.has(o.geometry)) o.geometry.dispose(); });
+  CITY.grp = new THREE.Group(); CITY.boxes.length = 0; CITY.cars.length = 0; TRAFFIC.length = 0; CITY.bld = [[], [], [], []]; CITY.wins = []; CITY.lamps = []; CITY.pools = null; CITY.sea = null; CITY.extra = []; CITY.extraCars = 0;
+  STAGE.id = id; STAGE.water = id === 'port' ? PORT.water : null; ME_POS.set(...STAGES[id].perch);
+  if (id === 'port') genPort(); else { genDistrict(); genTraffic(); }
+  buildingMeshes(); roofClutter(); cityLights(); lightPools();
+  CITY.grp.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !o.parent.isGroup) { o.matrixAutoUpdate = false; o.updateMatrix(); } }); scene.add(CITY.grp);
+  CITY.baseBoxes = CITY.boxes.length; if (SKY.tod >= 0) { const T = TODS[SKY.tod]; setCityNight(T.night, T.dusk); }
+  return true;
+}
+// 屋上の設備（室外機・水そう・小屋・アンテナ）。ねらう屋上（大きな1つのビル）にはのせない。当たりはなし（見た目だけ）
+function roofClutter() {
+  const r = rng(909), ac = [], tk = [], hut = [], ant = [];
+  for (const L of CITY.bld) for (const b of L) {
+    const [x, y, z, sx, h, sz] = b; if (Math.hypot(x, z) > 520 || h < 8 || sx > 55 || sz > 55 || sx < 8 || sz < 8) continue; const top = y + h / 2, n = 1 + (r() * Math.min(5, sx * sz / 250) | 0);
+    for (let k = 0; k < n; k++) { const px = x + (r() - .5) * (sx - 5), pz = z + (r() - .5) * (sz - 5), t = r();
+      if (t < .5) ac.push([px, top, pz, 1.6 + r() * 1.4, .9 + r() * .6, 1.2 + r() * 1.2]); else if (t < .72) tk.push([px, top, pz, 1 + r() * .7, 1.6 + r() * 1.4]); else if (t < .9) hut.push([px, top, pz, 2.6 + r() * 2, 2.2 + r() * .8, 2.4 + r() * 2]); else ant.push([px, top, pz, 4 + r() * 8]); }
+  }
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), M = CITY.mats, add = (geo, mat, list, f) => { if (!list.length) return; const im = new THREE.InstancedMesh(geo, mat, list.length); list.forEach((v, i) => im.setMatrixAt(i, f(v))); im.castShadow = true; im.receiveShadow = true; CITY.grp.add(im); };
+  add(new THREE.BoxGeometry(1, 1, 1).translate(0, .5, 0), M.roofGear, ac, v => m4.compose(V3(v[0], v[1], v[2]), q.identity(), V3(v[3], v[4], v[5])));
+  add(new THREE.CylinderGeometry(1, 1, 1, 12).translate(0, .5, 0), M.tank, tk, v => m4.compose(V3(v[0], v[1], v[2]), q.identity(), V3(v[3], v[4], v[3])));
+  add(new THREE.BoxGeometry(1, 1, 1).translate(0, .5, 0), M.roofBox, hut, v => m4.compose(V3(v[0], v[1], v[2]), q.identity(), V3(v[3], v[4], v[5])));
+  add(new THREE.CylinderGeometry(.06, .1, 1, 5).translate(0, .5, 0), M.pole, ant, v => m4.compose(V3(v[0], v[1], v[2]), q.identity(), V3(1, v[3], 1)));
+}
+// 夜：街灯の下の光だまり
+function lightPools() {
+  const L = CITY.lamps.concat(CITY.wins).filter(p => p[1] < 30); if (!L.length) return;
+  const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), CITY.mats.pool, L.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+  L.forEach((p, i) => { const s = Math.min(26, p[1] * 2.4 + 4); im.setMatrixAt(i, m4.compose(V3(p[0], .3, p[2]), q, V3(s, 1, s))); }); im.renderOrder = 2; im.frustumCulled = false; im.visible = false; CITY.grp.add(im); CITY.pools = im;
+}
 // 弾の線と、ビル・車・地面の当たり（いちばん近い所までの長さ）
 function rayWorld(o, d, maxT) {
   let best = maxT, kind = null;
-  if (d.y < 0) { const t = -o.y / d.y; if (t > 0 && t < best) { best = t; kind = 'ground'; } }
+  if (d.y < 0) { let t = -o.y / d.y; if (STAGE.water !== null && o.z + d.z * t > STAGE.water) t = (-2.4 - o.y) / d.y; if (t > 0 && t < best) { best = t; kind = 'ground'; } }   // 港：岸壁の先は海の面
   const test = b => { let t0 = 0, t1 = best; for (let a = 0; a < 3; a++) { const oa = a === 0 ? o.x : a === 1 ? o.y : o.z, da = a === 0 ? d.x : a === 1 ? d.y : d.z, lo = b[a * 2], hi = b[a * 2 + 1];
     if (Math.abs(da) < 1e-9) { if (oa < lo || oa > hi) return -1; continue; } let ta = (lo - oa) / da, tb = (hi - oa) / da; if (ta > tb) { const x = ta; ta = tb; tb = x; } t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) return -1; } return t0; };
   for (const b of CITY.boxes) { const t = test(b); if (t > .5 && t < best) { best = t; kind = 'wall'; } }
   for (const C of CITY.cars) { const t = test(carBox(C)); if (t > 0 && t < best) { best = t; kind = 'car'; } }
   return { t: best, kind };
+}
+// =========================================================================================
+//  港の倉庫街：海（南）・岸壁・コンテナのならぶヤード・ガントリークレーン・貨物船・倉庫・東の桟橋と小さな船・遠くの町と灯台
+//  あなたは北西の「港の管理塔」の屋上から。x＝東、z＝南、y＝上（m）。岸壁は z＝40（その先は海、水面は y＝-2.4）
+// =========================================================================================
+const PORT = { water: 40, deal: [12, 4], boat: [131, 62], truck: [104, 30] };
+function portTextures() {
+  if (TEX.cont) return;
+  { const [c, g] = cvs(256, 64); g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 64); for (let x = 0; x < 256; x += 6) { g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(x, 0, 2, 64); g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(x + 3, 0, 1, 64); }
+    g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(0, 0, 256, 3); g.fillRect(0, 61, 256, 3); g.fillRect(0, 0, 3, 64); g.fillRect(253, 0, 3, 64); for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(120,70,40,${Math.random() * .25})`; g.fillRect(Math.random() * 256, Math.random() * 64, 3 + Math.random() * 8, 1 + Math.random() * 3); } TEX.cont = ctex(c); }
+  { const [c, g] = cvs(128, 128); g.fillStyle = '#b4b8bc'; g.fillRect(0, 0, 128, 128); for (let x = 0; x < 128; x += 8) { g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(x, 0, 3, 128); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x + 4, 0, 1, 128); } TEX.shed = ctex(c); }
+  { const N = 256, [c, g] = cvs(N, N), d = g.createImageData(N, N), n1 = noise2(91); for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const f = (u, v) => n1(u / 11, v / 7) * .6 + n1(u / 5 + 30, v / 3.4) * .4, hx = f(x + 1, y) - f(x - 1, y), hy = f(x, y + 1) - f(x, y - 1), o = (y * N + x) * 4; d.data[o] = 128 + hx * 170; d.data[o + 1] = 128 + hy * 170; d.data[o + 2] = 255; d.data[o + 3] = 255; }
+    g.putImageData(d, 0, 0); TEX.wave = ctex(c, { lin: true }); TEX.wave.repeat.set(70, 70); }
+  { const [c, g] = cvs(256, 256); g.fillStyle = '#8c8c88'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 3200; i++) { const v = Math.random() * 255 | 0; g.fillStyle = `rgba(${v},${v},${v},.12)`; g.fillRect(Math.random() * 256 | 0, Math.random() * 256 | 0, 2, 2); }
+    g.strokeStyle = 'rgba(60,60,60,.45)'; g.lineWidth = 2; for (let i = 0; i <= 256; i += 64) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, 256); g.moveTo(0, i); g.lineTo(256, i); g.stroke(); } for (let i = 0; i < 14; i++) { g.fillStyle = 'rgba(40,40,40,.18)'; g.beginPath(); g.ellipse(Math.random() * 256, Math.random() * 256, 8 + Math.random() * 20, 4 + Math.random() * 10, Math.random() * 3, 0, TAU); g.fill(); } TEX.conc = ctex(c); }
+  const M = CITY.mats;
+  Object.assign(M, { cont: S({ map: TEX.cont, roughness: .55, metalness: .35 }), shed: S({ map: TEX.shed, roughness: .5, metalness: .55 }), conc: L({ map: TEX.conc }),
+    sea: S({ color: 0x1a4560, roughness: .08, metalness: .25, normalMap: TEX.wave, normalScale: new THREE.Vector2(.55, .55), envMapIntensity: 1.3 }),
+    crane: S({ color: 0xd8402a, roughness: .5, metalness: .4 }), craneW: S({ color: 0xe6e6e2, roughness: .5, metalness: .3 }), hull: S({ color: 0x1c3450, roughness: .5, metalness: .3 }), hullR: S({ color: 0x8a2a22, roughness: .6 }),
+    white: S({ color: 0xeeeeea, roughness: .55 }), wood: L({ color: 0x7a5a3a }), rock: L({ color: 0x7a7670 }), yel: L({ color: 0xe8c030 }) });
+}
+// 港で働く人（オレンジ・黄色の上着）：決まった道を歩く
+function portWorkers(n) {
+  const loops = [[[-14, -22], [34, -22], [34, 22], [-14, 22]], [[-60, 30], [90, 30], [90, 36], [-60, 36]], [[-70, -28], [96, -28]], [[100, 24], [100, 38], [112, 38]]];
+  for (let i = 0; i < n; i++) { const L = loops[i % loops.length], k = (Math.random() * L.length) | 0, a = L[k], b = L[(k + 1) % L.length], t = Math.random();
+    const P = spawnPerson('civ', lerp(a[0], b[0], t), lerp(a[1], b[1], t), { st: 'walk', path: L, cloth: Math.random() < .6 ? [.95, .5, .08] : [.92, .82, .1] }); P.pi = (k + 1) % L.length; P.data.ws = 1.1 + Math.random() * .4; }
+}
+function genPort() {
+  portTextures(); const r = rng(505), M = CITY.mats, W = PORT.water;
+  // 地面（陸）と海・岸壁
+  const land = mk(uvScale(new THREE.PlaneGeometry(2400, 1200), 120, 60).rotateX(-Math.PI / 2), M.conc, 0, 0, W - 600); land.castShadow = false;
+  const sea = mk(new THREE.PlaneGeometry(3000, 1500).rotateX(-Math.PI / 2), M.sea, 0, -2.4, W + 750); sea.castShadow = false; CITY.sea = sea;
+  boxM(2400, 2.6, 1.4, M.stone, 0, -1.2, W + .7, false); boxM(2400, .14, .5, M.yel, 0, .07, W - .6, false);
+  for (let x = -200; x <= 200; x += 18) boxM(.6, .7, .6, M.dark, x, .35, W - .5, false);   // 船をつなぐ柱
+  // 港の管理塔（あなたのビル）
+  putBld(3, -110, -70, 28, 28, 48, [.93, .93, .9]); roofStuff(-110, -70, 28, 48, true);
+  // コンテナのヤード（まん中の取引の広場はあけておく）
+  const cols = [[.72, .16, .12], [.14, .32, .62], [.2, .5, .3], [.85, .5, .12], [.86, .86, .84], [.42, .44, .46], [.16, .52, .56], [.6, .2, .36], [.8, .74, .2]], C = [];
+  const open = (x, z) => x > -18 && x < 34 && z > -17 && z < 21;
+  const row = (x0, x1, z, maxH) => { for (let x = x0; x + 12.2 <= x1; x += 12.6) { const cx = x + 6.1; if (open(cx, z)) continue; const n = 1 + (r() * maxH | 0); for (let k = 0; k < n; k++) { const c = cols[r() * cols.length | 0]; C.push([cx, 1.3 + k * 2.6, z, 12.2, 2.6, 2.44, c]); } addBox(cx - 6.1, cx + 6.1, 0, n * 2.6, z - 1.22, z + 1.22); } };
+  for (let zi = 0; zi < 9; zi++) { if (zi % 3 === 2) continue; row(-66, 96, -18 + zi * 5.6, 3); }
+  // 倉庫（北）
+  for (const [x0, x1] of [[-70, -22], [-10, 38], [50, 98]]) { const cx = (x0 + x1) / 2, w = x1 - x0; mk(uvScale(new THREE.BoxGeometry(w, 10, 18), w / 8, 10 / 8), M.shed, cx, 5, -43); addBox(x0, x1, 0, 10, -52, -34);
+    const roof = mk(uvScale(new THREE.CylinderGeometry(9.6, 9.6, w, 3, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).scale(1, .35, 1), w / 8, 2), M.shed, cx, 10, -43); roof.rotation.y = 0;
+    for (let k = 0; k < 3; k++) boxM(5, 4.4, .2, M.dark, x0 + 8 + k * (w - 16) / 2, 2.2, -33.9, false); }
+  // ガントリークレーン（岸壁の上）
+  for (const x of [-60, -10, 40]) {
+    for (const [dx, dz] of [[-7, 26], [7, 26], [-7, 38], [7, 38]]) boxM(1.2, 38, 1.2, M.crane, x + dx, 19, dz);
+    boxM(16, 2.2, 66, M.craneW, x, 39, 50, false); boxM(1, 1, 66, M.crane, x - 7.5, 40.6, 50, false); boxM(1, 1, 66, M.crane, x + 7.5, 40.6, 50, false);
+    for (const dz of [26, 38]) boxM(15.2, 1.4, 1.2, M.crane, x, 30, dz, false);
+    boxM(4, 3, 4, M.white, x, 36, 44, false); boxM(3, 6, 3, M.crane, x, 44, 24, false);
+    for (let k = 0; k < 5; k++) mk(new THREE.CylinderGeometry(.12, .12, 9, 5), M.dark, x + (k % 2 ? 3 : -3), 44, 30 + k * 9).rotation.x = .6;
+  }
+  // 貨物船（岸壁につながっている）
+  boxM(170, 10.4, 24, M.hull, 0, 2.8, 61); boxM(170.2, 2.4, 24.2, M.hullR, 0, -1.3, 61, false); boxM(171, .5, 24.6, M.white, 0, 8.1, 61, false);
+  const bow = mk(new THREE.CylinderGeometry(12, 12, 10.4, 3, 1, false, -Math.PI / 2, Math.PI).scale(.9, 1, 1), M.hull, 85, 2.8, 61); bow.rotation.y = 0;
+  putBld(3, -72, 61, 14, 20, 18, [.96, .96, .95], 8.15); boxM(4, 7, 4, M.hullR, -77, 29.6, 61, false);
+  for (let x = -55; x < 78; x += 12.6) { const n = 1 + (r() * 3 | 0); for (const z of [52, 55, 58, 61, 64, 67, 70]) for (let k = 0; k < n; k++) C.push([x, 9.6 + k * 2.6, z, 12.2, 2.6, 2.44, cols[r() * cols.length | 0]]); }
+  // 東の小さな桟橋と船（密輸船）
+  boxM(8, .4, 36, M.wood, 120, -.2, 58, false); addBox(116, 124, -1.2, 0, 40, 76); for (let z = 42; z < 76; z += 4) for (const dx of [-3.6, 3.6]) mk(new THREE.CylinderGeometry(.2, .2, 3, 6), M.wood, 120 + dx, -1.6, z);
+  const [bx, bz] = PORT.boat; boxM(6, 3.2, 16, M.white, bx, -.6, bz); boxM(6.2, .6, 16.2, M.hull, bx, -1.9, bz, false); boxM(4, 2.4, 5, M.white, bx, 2.2, bz + 4); boxM(4.2, .3, 5.2, M.hull, bx, 3.5, bz + 4, false);
+  // 灯台と防波堤（南東）、ブイ
+  boxM(260, 3, 8, M.rock, 300, -1, 260, false); mk(new THREE.CylinderGeometry(2.2, 3, 24, 16), M.white, 180, 10.6, 260); mk(new THREE.CylinderGeometry(2.25, 2.6, 4, 16), M.hullR, 180, 8, 260); mk(new THREE.CylinderGeometry(2.6, 2.6, 2.4, 16), M.dark, 180, 23.6, 260); CITY.wins.push([180, 23.8, 260]);
+  // 照明のやぐら（夜の光）
+  for (const [x, z] of [[-20, -20], [36, -20], [-20, 23], [36, 23], [-66, 26], [96, 26], [-66, -24], [96, -24], [110, 40]]) { mk(new THREE.CylinderGeometry(.25, .35, 22, 8), M.pole, x, 11, z); boxM(3, .8, 1.2, M.dark, x, 22.2, z, false); CITY.wins.push([x, 21.8, z]); }
+  for (const x of [-180, -120, -60, 0, 60, 120, 180]) { mk(new THREE.CylinderGeometry(.1, .14, 8, 6), M.pole, x, 4, -30); CITY.lamps.push([x, 8, -30]); }
+  // まわりの町（北の遠く）と丘
+  for (let i = 0; i < 520; i++) { const a = Math.PI + .15 + r() * (Math.PI - .3), d = 260 + Math.pow(r(), .7) * 700, x = Math.cos(a) * d, z = Math.sin(a) * d - 60, w = 18 + r() * 36, hh = 10 + Math.pow(r(), 1.6) * (d < 450 ? 80 : 50), s = r() < .5 ? 1 : [0, 2, 3][r() * 3 | 0]; putBld(s, x, z, w, 18 + r() * 34, hh, s === 1 ? BRICKS[r() * BRICKS.length | 0] : [.9, .93, .96], 0); }
+  for (let i = 0; i < 9; i++) { const x = -900 + i * 230 + r() * 80, h = 90 + r() * 140; mk(new THREE.ConeGeometry(220 + r() * 120, h, 7), M.leaf, x, h / 2 - 4, -1150 - r() * 200).castShadow = false; }
+  // コンテナ（まとめて1つ）
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), M.cont, C.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color();
+  C.forEach((c, i) => { im.setMatrixAt(i, m4.compose(V3(c[0], c[1], c[2]), q, V3(c[3], c[4], c[5]))); im.setColorAt(i, col.setRGB(...c[6])); }); im.castShadow = im.receiveShadow = true; CITY.grp.add(im);
+  // 岸壁の道を走るトラック
+  const tc = [0xd8d8dc, 0x2a4a8a, 0xa02a2a, 0x3a6a4a, 0x2a2a2e];
+  for (let i = 0; i < 6; i++) { const dir = i % 2 ? 1 : -1, Cr = car(0, 0, 0, tc[i % tc.length], i % 3 === 0); Cr.ax = 'z'; Cr.lane = -26 + dir * 3.2; Cr.dir = dir; Cr.s = rr(-240, 240); Cr.v = rr(6, 10); TRAFFIC.push(Cr); }
 }
 // =========================================================================================
 //  キャラクター：Quaternius（CC0）の4人。待機・歩き・走りのクリップに、ジャンプ・落下・ぶら下がり・よじ登り・はしご・着地の形を骨を回して足す
@@ -685,7 +809,7 @@ function updatePerson(P, dt, W) {
   P.sp = 0;
   if (P.st === 'walk' && P.path) { const t = P.path[P.pi]; if (moveTo(P, t[0], t[1], P.data.ws || 1.35, dt)) P.pi = (P.pi + 1) % P.path.length; }
   else if (P.st === 'wander') { if (!P.tgt || P.wait > 0) { P.wait -= dt; if (!P.tgt || P.wait <= 0 && P.wait > -1) { P.tgt = plazaPoint(); P.wait = -2; } } else if (moveTo(P, P.tgt[0], P.tgt[1], 1.25, dt)) { P.tgt = null; P.wait = rr(1, 5); } }
-  else if (P.st === 'run' || P.st === 'flee') { const t = P.runTo; if (t && moveTo(P, t[0], t[1], P.st === 'flee' ? 3.4 : 4.2, dt)) { if (P.st === 'flee') { P.gone = true; P.H.root.visible = false; W.onEscape && W.onEscape(P); } else { P.st = P.path ? 'walk' : 'idle'; P.calmT = 0; } } }
+  else if (P.st === 'run' || P.st === 'flee') { const t = P.runTo; if (t && moveTo(P, t[0], t[1], P.st === 'flee' ? 3.4 * (W.spK || 1) : 4.2, dt)) { if (P.st === 'flee') { P.gone = true; P.H.root.visible = false; W.onEscape && W.onEscape(P); } else { P.st = P.path ? 'walk' : 'idle'; P.calmT = 0; } } }
   else if (P.st === 'script' && P.beh) P.beh(P, dt, W);
   if (P.st === 'idle' && P.lookAt) P.face = P.face + angDiff(P.face, Math.atan2(P.lookAt[0] - P.p.x, P.lookAt[1] - P.p.z)) * Math.min(1, dt * 4);
   const c = P.sp > 3 ? 'Run' : P.sp > .3 ? 'Walk' : P.idleClip || 'Idle'; setClip(P, c);
@@ -701,7 +825,7 @@ function poseHuman(P, clip, loop) {
 function alarm(x, z, R, W) {
   for (const P of PEOPLE) { if (P.down || P.gone) continue; const d = Math.hypot(P.p.x - x, P.p.z - z);
     if (P.kind === 'civ' && d < R && P.st !== 'run' && !(P.hostage && PEOPLE.some(Q => Q.kind === 'crim' && Q.data.aim && !Q.down))) { const a = Math.atan2(P.p.x - x, P.p.z - z) + rr(-.6, .6), L = rr(18, 32); P.st = 'run'; P.runTo = [P.p.x + Math.sin(a) * L, P.p.z + Math.cos(a) * L]; }
-    if (P.kind === 'crim' && !P.alert && (d < R * 2.5 || W.alertAll)) { P.alert = true; P.alertT = rr(1.3, 2.4); } }
+    if (P.kind === 'crim' && !P.alert && (d < R * 2.5 || W.alertAll)) { P.alert = true; P.alertT = rr(1.3, 2.4) * (W.reK || 1); } }
 }
 // 当たり：線（o, d、長さ maxT）といちばん近い人
 const _hc = V3(), _ha = V3(), _hb = V3();
@@ -748,7 +872,7 @@ function makeSky() {
   SKY.pm = new THREE.PMREMGenerator(renderer);
   SKY.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1); scene.add(SKY.hemi);
   const L = SKY.sun = new THREE.DirectionalLight(0xffffff, 2); L.castShadow = renderer.shadowMap.enabled;
-  const S = L.shadow; S.mapSize.set(GFX() >= 3 ? 4096 : 2048, GFX() >= 3 ? 4096 : 2048); S.camera.left = S.camera.bottom = -260; S.camera.right = S.camera.top = 260; S.camera.near = 20; S.camera.far = 1600; S.bias = -.0006; S.normalBias = .6;
+  const S = L.shadow; S.mapSize.set(GFX() >= 3 ? 4096 : 2048, GFX() >= 3 ? 4096 : 2048); if (GFX() >= 1 && GFX() < 2) S.radius = 1; S.camera.left = S.camera.bottom = -260; S.camera.right = S.camera.top = 260; S.camera.near = 20; S.camera.far = 1600; S.bias = -.0006; S.normalBias = .6;
   scene.add(L, L.target);
   // 星
   const r = rng(3), pos = [], col = []; for (let i = 0; i < 2600; i++) { const a = r() * TAU, y = Math.pow(r(), .7), q = Math.sqrt(1 - y * y), k = .5 + r() * .5; pos.push(Math.cos(a) * q * 4200, y * 4200, Math.sin(a) * q * 4200); col.push(k, k, k * (.9 + r() * .2)); }
@@ -767,7 +891,8 @@ function setTOD(i) {
   scene.fog.color.setHex(T.fog); scene.fog.near = T.fogN; scene.fog.far = T.fogF;
   SKY.hemi.color.setHex(T.hemS); SKY.hemi.groundColor.setHex(T.hemG); SKY.hemi.intensity = T.hemI;
   SKY.sun.color.setHex(T.sunC); SKY.sun.intensity = T.sunI; SKY.sun.castShadow = renderer.shadowMap.enabled && !T.night;
-  renderer.toneMappingExposure = T.exp; SKY.stars.visible = T.night > .5;
+  renderer.toneMappingExposure = T.exp; SKY.stars.visible = T.night > .5; renderer.shadowMap.needsUpdate = true;
+  if (FX.bloom) { FX.bloom.strength = [.14, .24, .55][i]; FX.bloom.threshold = [.94, .9, .76][i]; FX.bloom.radius = .55; }
   SKY.cloudMat.color.setHex(T.cloud); SKY.cloudMat.opacity = T.night ? .35 : .85;
   if (SKY.env) SKY.env.dispose(); SKY.env = SKY.pm.fromScene(SKY.envScene, 0, .1, 100).texture; scene.environment = SKY.env;
   scene.environmentIntensity = T.night ? .35 : 1;
@@ -865,15 +990,20 @@ const MISSIONS = [
     },
     update(t, dt) { for (const P of PEOPLE) if (P.wanted && P.alert && P.st === 'wander') { P.st = 'flee'; P.runTo = P.fleeTo; } },
   },
-  { id: 'm5', name: '夜の取引', tod: 2, time: 60, ammo: 8, wind: [1, 3], aim: [94, 1, 94], nv: true,
-    brief: ['夜の<b>駐車場</b>（広場の南東）で、悪者<b>4人</b>があやしい取引をしている。', '気づかれると、<b>ワゴン車と車</b>に乗ってにげてしまう。時間がたっても出発してしまう。', 'スコープは夜でも見える<b>暗視</b>モードになる。'],
+  { id: 'm5', name: '港の夜の取引', stage: 'port', tod: 2, time: 80, ammo: 10, wind: [0, 2], aim: [12, 1, 4], nv: true, slowAlert: 1.9,
+    brief: ['夜の<b>港</b>。コンテナのあいだの広場で、悪者<b>4人</b>があやしい取引をしている。照明のやぐらの光で、夜でも見える。', '1人たおすと、ほかの悪者は<b>少しのあいだ</b>立ち止まってから、<b>黒いワゴン車</b>へ走る。車に乗りこんでも、出発まで少し時間がある。', 'スコープは<b>暗視</b>モード。あわてずに、1人ずつ。'],
     setup() {
-      spawnCivilians(10, { plaza: .3, blocks: [[0, 94], [94, 0]] });
-      car(84, 92, 0, 0x1a1a1e, true); car(106, 97, Math.PI, 0x3a3a40);
-      const mk = (x, z, to) => { const P = spawnPerson('crim', x, z, { st: 'script', fleeTo: to }); P.beh = crimPatrol([x, z], [x + rr(-3, 3), z + rr(-3, 3)], .9); P.data.leave = 46 + rr(0, 4); return P; };
-      mk(80, 104, [85.5, 89.5]); mk(91, 80, [85.5, 89.5]); mk(112, 85, [104.5, 95]); mk(100, 110, [104.5, 95]);
+      portWorkers(6);
+      car(17, 12, -Math.PI / 2 + .25, 0x1a1a1e, true); const door = [14.6, 10.6];
+      const mk = (x, z, k) => { const P = spawnPerson('crim', x, z, { st: 'script' }); P.data.k = k; P.data.p0 = [x, z];
+        P.beh = (P, dt, W) => { const D = P.data;
+          if (!P.alert) { const t = W.t * .35 + k * 1.7; moveTo(P, D.p0[0] + Math.sin(t) * 2.2, D.p0[1] + Math.cos(t * .8) * 1.6, .6, dt); return; }
+          if ((P.alertT -= dt) > 0) { P.sp = 0; P.face = towardMe(P.p.x, P.p.z) + Math.sin(W.t * 3 + k) * .8; return; }   // あたりを見回す
+          if (!D.at) { if (moveTo(P, door[0] + (k - 1.5) * .6, door[1], 2.3, dt)) D.at = W.t; return; }
+          P.sp = 0; if (W.t - D.at > 4.5) { P.gone = true; P.H.root.visible = false; W.onEscape(P); } }; return P; };
+      mk(6, 0, 0); mk(19, -2, 1); mk(9, 9, 2); mk(23, 7, 3);
     },
-    update(t) { for (const P of PEOPLE) if (P.kind === 'crim' && !P.alert && P.data.leave && t > P.data.leave) { P.alert = true; P.alertT = 0; } },
+    update(t) { for (const P of PEOPLE) if (P.kind === 'crim' && !P.alert && t > 72) { P.alert = true; P.alertT = 0; } },
   },
   // ---------- ここから追加のミッション ----------
   { id: 'm6', name: '爆弾犯を止めろ', tod: 1, time: 45, ammo: 6, wind: [1, 3], aim: [0, 1, -22],
@@ -885,10 +1015,12 @@ const MISSIONS = [
       for (const [x, z, fx] of [[-27, -14, -50], [26, 12, 50]]) { const P = spawnPerson('crim', x, z, { st: 'script', fleeTo: [fx, z] }); P.beh = crimPatrol([x, z], [x, z + 6], .9); }
     },
   },
-  { id: 'm7', name: '屋上の狙撃手', tod: 1, time: 60, ammo: 7, wind: [2, 4], aim: [64, 40, -95],
-    brief: ['まわりのビルの屋上に、敵の<b>狙撃手が3人</b>かくれている。ふだんは屋上のかべにかくれて見えない。', 'ときどき<b>顔を出して、こちらをねらう</b>。そのときスコープが<b>キラッと光る</b>。顔を出しているうちにうとう。', '長く顔を出させておくと、<b>うたれてしまう</b>（画面に「ねらわれている！」と出る）。'],
+  { id: 'm7', name: '屋上の狙撃手', tod: 1, time: 70, ammo: 7, wind: [2, 4], aim: [64, 40, -95], cover: true,
+    brief: ['まわりのビルの屋上に、敵の<b>狙撃手が3人</b>かくれている。ふだんは屋上のかべにかくれて見えない。', 'ときどき<b>顔を出して、こちらをねらう</b>。そのときスコープが<b>キラッと光る</b>。顔を出しているうちにうとう。', '長く顔を出させておくと、<b>うたれてしまう</b>（画面に「ねらわれている！」と出る）。そのときは<b>「隠れる」ボタン</b>（PC は C キー）で屋上のかべのかげにしゃがもう。隠れていればうたれず、敵はあきらめて、またかくれる。もう一度押すと立ち上がる。'],
     setup() {
       spawnCivilians(18, { plaza: .4 });
+      // 自分の前の、低いかべ（「隠れる」でしゃがむと、このかげに入る）
+      for (const [w, d, dx, dz] of [[7, .35, -3.2, .3], [.35, 7, .3, -3.2]]) boxM(w, .95, d, CITY.mats.parapet, ME_POS.x + dx, ME_POS.y - 1.4 + .47, ME_POS.z + dz, false);
       const glint = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false })); CITY.grp.add(glint); G.glint = glint;
       const mk = (bx, bz, x, z0, z1, k) => { const y = roofAt(bx, bz), P = spawnPerson('crim', x, (z0 + z1) / 2, { y, st: 'script' }); P.data.aim = 1; P.data.z = [z0, z1]; P.data.hideT = 2 + k * 3.2; P.data.vis = 0; P.gone = true; P.H.root.visible = false;
         P.beh = (P, dt) => { P.face = towardMe(P.p.x, P.p.z); P.sp = 0; }; return P; };
@@ -898,14 +1030,16 @@ const MISSIONS = [
       const lim = [7, 4.2, 3.4][SET.diff]; let warn = 0;
       for (const P of PEOPLE) { if (P.kind !== 'crim' || P.down) continue; const D = P.data;
         if (P.gone) { if ((D.hideT -= dt) <= 0) { P.gone = false; P.H.root.visible = true; P.p.z = rr(D.z[0], D.z[1]); D.vis = 0; D.glT = 0; D.peek = (D.peek || 0) + 1; } continue; }
-        D.vis += dt; D.glT = (D.glT || 0) + dt; warn = Math.max(warn, D.vis / lim);
+        D.glT = (D.glT || 0) + dt;
+        if (G.hide) { D.vis = Math.max(0, D.vis - dt * 1.6); D.lost = (D.lost || 0) + dt; if (D.lost > 1.6) { P.gone = true; P.H.root.visible = false; D.hideT = rr(2, 4.5); D.lost = 0; } continue; }   // 見うしなった
+        D.lost = 0; D.vis += dt; warn = Math.max(warn, D.vis / lim);
         if (D.vis > lim) { fail('敵の狙撃手にうたれてしまった…'); return; }
         if (D.peek < 3 && D.vis > rr(3.2, 4.2) && !P.alert && D.vis < lim - .6) { P.gone = true; P.H.root.visible = false; D.hideT = rr(2.5, 5.5); }   // 少しのぞいて、またかくれる
       }
       // スコープの光：顔を出した直後と、ねらいはじめに光る
       const g = G.glint, show = PEOPLE.find(P => P.kind === 'crim' && !P.down && !P.gone && (P.data.glT < .5 || (P.data.vis > lim * .55 && P.data.vis < lim * .55 + .4)));
       if (g) { if (show) { g.position.set(show.p.x, show.p.y + 1.55, show.p.z); g.material.opacity = .95; g.scale.setScalar(2 + Math.sin(t * 30) * .6); } else g.material.opacity = Math.max(0, g.material.opacity - dt * 4); }
-      if (warn > .55 && G.phase === 'play' && (G.warnT = (G.warnT || 0) - dt) <= 0) { G.warnT = 1; msg('', 'ねらわれている！', .9, 'bad'); }
+      if (warn > .55 && G.phase === 'play' && (G.warnT = (G.warnT || 0) - dt) <= 0) { G.warnT = 1; msg('', 'ねらわれている！　「隠れる」で身を守れ', .9, 'bad'); }
     },
   },
   { id: 'm8', name: '護送車をまもれ', tod: 0, time: 70, ammo: 8, wind: [1, 3], aim: [8, 1, 40],
@@ -932,6 +1066,27 @@ const MISSIONS = [
         P.beh = (P, dt) => { if (P.alert || B.down || B.gone) { P.face = towardMe(P.p.x, P.p.z); P.data.aim = 1; P.sp = 0; return; } const c = Math.cos(B.face), s = Math.sin(B.face); moveTo(P, B.p.x + ox * c + oz * s, B.p.z - ox * s + oz * c, 2.6, dt); }; });
     },
   },
+  { id: 'm11', name: '密輸船', stage: 'port', tod: 1, time: 75, ammo: 8, wind: [2, 4], aim: [118, 1, 48],
+    brief: ['夕方の港。東の<b>桟橋</b>に止めた小さな船から、悪者が<b>木箱</b>をトラックへ運んでいる。船の上に<b>2人</b>、運ぶ人が<b>3人</b>。', 'だれかをうつと、運ぶ人は<b>トラック</b>へ、船の2人は<b>船を出そう</b>とする。トラックが出るか、船が出たら失敗。', '<b>オレンジ・黄色の上着</b>の人は、港で働く人。遠いので、弾が落ちる分と風に気をつけて。'],
+    setup() {
+      portWorkers(9);
+      const [tx, tz] = PORT.truck; car(tx, tz, 0, 0x2a2a30, true); const door = [tx + 1.6, tz - 1];
+      const [bx, bz] = PORT.boat;
+      // 船の前の甲板（うしろは操舵室）
+      for (const [dz, k] of [[-1.5, 0], [-6, 1]]) { const P = spawnPerson('crim', bx + (k ? 1.2 : -1.2), bz + dz, { st: 'script', y: 1.05 }); P.data.boat = 1;
+        P.beh = (P, dt, W) => { P.sp = 0; P.face = P.alert ? towardMe(P.p.x, P.p.z) : -Math.PI / 2 + Math.sin(W.t * .4 + k) * .6; }; }
+      const path = [[120, 70], [120, 44], [door[0] - 1, door[1] - 4], [120, 44]];
+      for (let k = 0; k < 3; k++) { const P = spawnPerson('crim', 120, 70 - k * 9, { st: 'script', bag: true, noGun: k === 1 }); P.data.i = k === 0 ? 0 : 1; P.data.wait = k * 3;
+        P.beh = (P, dt, W) => { const D = P.data;
+          if (P.alert) { if ((P.alertT -= dt) > 0) { P.sp = 0; return; } if (!D.at) { if (moveTo(P, door[0], door[1] + k * .5, 3, dt)) { D.at = W.t; P.gone = true; P.H.root.visible = false; } } return; }
+          if (D.wait > 0) { D.wait -= dt; P.sp = 0; return; } const w = path[D.i]; if (moveTo(P, w[0], w[1], 1.35, dt)) { D.i = (D.i + 1) % path.length; if (D.i === 0 || D.i === 3) D.wait = 1.5; } }; }
+    },
+    update(t, dt) {
+      const C = PEOPLE.filter(P => P.kind === 'crim'), boat = C.filter(P => P.data.boat && !P.down), carry = C.filter(P => !P.data.boat && !P.down);
+      if (boat.length && boat[0].alert) { G.boatT = (G.boatT || 0) + dt; if (G.boatT > 11) { for (const P of boat) { P.gone = true; P.H.root.visible = false; } fail('密輸船ににげられた…'); return; } if (G.boatT > 7 && (G.bmsg = (G.bmsg || 0) - dt) <= 0) { G.bmsg = 2; msg('', '船のエンジンがかかった！', 1.2, 'bad'); } }
+      const inTruck = carry.filter(P => P.data.at); if (carry.length && inTruck.length === carry.length && t - Math.max(...inTruck.map(P => P.data.at)) > 3) fail('トラックでにげられた…');
+    },
+  },
   { id: 'm10', name: '3人の手配犯', tod: 1, time: 85, ammo: 6, wind: [1, 3], aim: [0, 1, 0], noMark: true,
     brief: ['夕方の広場の人ごみに、<b>指名手配犯が3人</b>まぎれている。3人とも<b>黒いかばん</b>を持っている。', '目じるし：<b style="color:#ff6a5a">赤い服</b>＋かばん、<b>白い服</b>＋かばん、<b style="color:#5ad06a">緑の服</b>＋かばん。', '同じ色の服だけの人・かばんだけの人もいる。だれかをうつと、のこりの手配犯は広場から出ていこうとする。'],
     setup() {
@@ -944,10 +1099,12 @@ const MISSIONS = [
     update() { for (const P of PEOPLE) if (P.wanted && P.alert && P.st === 'wander') { P.st = 'flee'; P.runTo = P.fleeTo; } },
   },
 ];
+const ORDER = ['m1', 'm4', 'm2', 'm3', 'm5', 'm6', 'm8', 'm10', 'm9', 'm11', 'm7'];
+MISSIONS.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)); MISSIONS.forEach((M, i) => { M.lv = i + 1; });
 // ---------- はじめる ----------
 function startMission(i) {
   AU.init(); G.mi = i; const M = G.M = MISSIONS[i];
-  clearPeople(); CITY.cars.splice(CITY.cars.length - (CITY.extraCars || 0)); for (const o of CITY.extra || []) CITY.grp.remove(o); CITY.extra = []; CITY.extraCars = 0; CITY.boxes.length = CITY.baseBoxes;
+  clearPeople(); buildStage(M.stage || 'city'); W.spK = .82 + .035 * M.lv; W.reK = 1.45 - .045 * M.lv; setHide(false); document.body.classList.toggle('cover', !!M.cover); CITY.cars.splice(CITY.cars.length - (CITY.extraCars || 0)); for (const o of CITY.extra || []) CITY.grp.remove(o); CITY.extra = []; CITY.extraCars = 0; CITY.boxes.length = CITY.baseBoxes;
   const nc = CITY.cars.length, ng = CITY.grp.children.length;
   setTOD(M.tod); M.setup(); CITY.extraCars = CITY.cars.length - nc; CITY.extra = CITY.grp.children.slice(ng);
   Object.assign(G, { phase: 'intro', t: 0, left: M.time, ammo: M.ammo, shots: 0, hits: 0, scoped: false, zoom: 1, breath: 1, recoil: 0, bolt: 0, bullets: [], escaped: 0, res: null, bc: null, endT: 0, alertAll: false });
@@ -978,6 +1135,8 @@ function showResult() {
   $('rNext').style.display = R.ok && G.mi < MISSIONS.length - 1 ? '' : 'none';
   show('result');
 }
+// ---------- 隠れる ----------
+function setHide(on) { G.hide = !!on; document.body.classList.toggle('hiding', G.hide); if (G.hide && G.scoped) setScope(false); const b = $('bHide'); if (b) b.innerHTML = G.hide ? '立つ' : '隠れる'; }
 // ---------- ねらう ----------
 function setScope(on) { G.scoped = on; document.body.classList.toggle('scoped', on); GUN.g.visible = !on; updateMilDots(); }
 function fovNow() { return G.scoped ? ZOOMS[G.zoom] : ZOOMS[0]; }
@@ -998,10 +1157,10 @@ function updateAim(dt) {
   G.swayT += dt; G.recoil = damp(G.recoil, 0, 6, dt);
   if (IN.breath && G.scoped && G.breath > 0) G.breath = Math.max(0, G.breath - dt / 3.5); else G.breath = Math.min(1, G.breath + dt / 5);
   G.bolt = Math.max(0, G.bolt - dt);
-  camera.position.copy(ME_POS); _e.set(G.pitch + swayP(), G.yaw + swayY(), 0); camera.quaternion.setFromEuler(_e);
+  G.hideK = damp(G.hideK || 0, G.hide ? 1 : 0, 9, dt); camera.position.copy(ME_POS); camera.position.y -= G.hideK * 1.15; _e.set(G.pitch + swayP() - G.hideK * .25, G.yaw + swayY(), 0); camera.quaternion.setFromEuler(_e);
   const f = fovNow(); if (Math.abs(camera.fov - f) > .01) { camera.fov = f; camera.updateProjectionMatrix(); }
   GUN.g.position.set(.22, -.2 + G.bolt * .015, -.36 + Math.max(0, G.bolt - .8) * .22); GUN.g.rotation.x = Math.max(0, G.bolt - .7) * .25;
-  renderer.toneMappingExposure = (TODS[SKY.tod] || TODS[0]).exp * (G.scoped && G.M && G.M.nv ? 2.6 : 1);
+  renderer.toneMappingExposure = (TODS[SKY.tod] || TODS[0]).exp * (G.scoped && G.M && G.M.nv ? 3 : 1); if (FX.bloom) FX.bloom.strength = (G.scoped && G.M && G.M.nv ? .25 : [.14, .24, .55][SKY.tod] || .2);
 }
 // ---------- 弾 ----------
 function simShot(o, d, step = 1 / 400) {   // 弾の通り道：いちばん先に当たる所
@@ -1021,7 +1180,7 @@ function predictImpact() {   // 着弾予想（ふつう）：今のねらいで
   if (!PRED.p) return null; const d = aimDir(_dir.clone()), L = PRED.p.distanceTo(ME_POS); return ME_POS.clone().addScaledVector(d.add(PRED.off).normalize(), L);
 }
 function fire() {
-  if (G.phase !== 'play') return; if (G.bolt > 0) return; if (G.ammo <= 0) { AU.empty(); msg('', '弾がない', 1); return; }
+  if (G.phase !== 'play') return; if (G.hide) { msg('', '隠れているあいだは、うてません', 1); return; } if (G.bolt > 0) return; if (G.ammo <= 0) { AU.empty(); msg('', '弾がない', 1); return; }
   const d = aimDir(_dir.clone()), r = simShot(ME_POS, d);
   G.ammo--; G.shots++; G.bolt = 1.15; G.recoil = G.scoped ? .025 : .06; AU.shot(); AU.bolt();
   const B = { r, t: 0, o: ME_POS.clone().addScaledVector(d, 1.2) };
@@ -1038,7 +1197,7 @@ function impact(B) {
     const P = r.who; P.down = true; P.ct = 0; P.prev = null; P.sp = 0; G.hits++; AU.hit();
     if (P.kind === 'civ') { fail(P.hostage ? '人質に当たってしまった…' : 'ふつうの人に当たってしまった…'); }
     else { hitMark(); if (crimsAlive() === 0) win(); else { const left = crimsAlive(); msg('', `命中！ のこり ${left} 人`, 1.2); } }
-    alarm(r.pos.x, r.pos.z, 26, W); for (const Q of PEOPLE) if (Q.kind === 'crim' && !Q.down && !Q.alert) { Q.alert = true; Q.alertT = rr(1.2, 2.2); }
+    alarm(r.pos.x, r.pos.z, 26, W); for (const Q of PEOPLE) if (Q.kind === 'crim' && !Q.down && !Q.alert) { Q.alert = true; Q.alertT = rr(1.2, 2.2) * (W.reK || 1) * (G.M.slowAlert || 1); }
   } else { puff(r.pos); AU.thud(); if (r.kind !== 'none') alarm(r.pos.x, r.pos.z, 14, W); for (const Q of PEOPLE) if (Q.kind === 'crim' && !Q.down && !Q.alert && Q.p.distanceTo(r.pos) < 18) { Q.alert = true; Q.alertT = rr(1.4, 2.4); } }
 }
 function hitMark() { const h = $('hitMark'); h.style.transition = 'none'; h.style.opacity = 1; requestAnimationFrame(() => { h.style.transition = 'opacity .8s'; h.style.opacity = 0; }); }
@@ -1084,7 +1243,7 @@ function updateHud() {
     $('sRange').textContent = dist < 1199 ? '距離 ' + Math.round(dist) + 'm' : '距離 ---';
     const rel = Math.atan2(G.wind.x, G.wind.z) - (G.yaw + Math.PI), arrows = ['↓', '↙', '←', '↖', '↑', '↗', '→', '↘'], ai = ((Math.round(-rel / (TAU / 8)) % 8) + 8) % 8;
     $('sWind').textContent = '風 ' + (ws < .2 ? 'なし' : arrows[ai] + ' ' + ws.toFixed(1)); $('sZoom').textContent = (G.zoom === 1 ? '4' : '10') + '倍'; }
-  const hint = !G.scoped ? (IN.lastDev === 'touch' ? 'スコープボタンで、のぞく' : '右クリック／スペースでスコープ') : G.breath > .3 && !IN.breath ? (IN.lastDev === 'touch' ? '「息を止める」でゆれが止まる' : 'Shift でゆれが止まる') : '';
+  const hint = G.hide ? '隠れている（うたれない）。「立つ」で起き上がる' : !G.scoped ? (IN.lastDev === 'touch' ? 'スコープボタンで、のぞく' : '右クリック／スペースでスコープ') : G.breath > .3 && !IN.breath ? (IN.lastDev === 'touch' ? '「息を止める」でゆれが止まる' : 'Shift でゆれが止まる') : '';
   if (hint !== HK) { HK = hint; $('hHint').textContent = hint; $('hHint').style.display = hint ? '' : 'none'; }
 }
 // ---------- 画面 ----------
@@ -1109,12 +1268,12 @@ function openSettings(back) {
 function drawMissions() {
   const b = loadBest(), el = $('misList'); el.innerHTML = '';
   MISSIONS.forEach((M, i) => { const o = b[M.id] || {}, locked = i > 0 && !(b[MISSIONS[i - 1].id] || {}).stars && !(o.stars), btn = document.createElement('button'); btn.className = 'btn'; btn.disabled = locked;
-    btn.innerHTML = `<div class="mis"><div class="n">${i + 1}</div><div class="tx">${M.name}<small>${locked ? '前のミッションをクリアすると選べる' : ['昼', '夕方', '夜'][M.tod] + '・制限時間 ' + M.time + '秒・弾 ' + M.ammo + '発'}</small></div><div class="st">${o.stars ? '★'.repeat(o.stars) + '☆'.repeat(3 - o.stars) : ''}</div></div>`;
+    btn.innerHTML = `<div class="mis"><div class="n">${i + 1}</div><div class="tx">${M.name}<small>${locked ? '前のミッションをクリアすると選べる' : STAGES[M.stage || 'city'].name + '・' + ['昼', '夕方', '夜'][M.tod] + '・' + M.time + '秒・弾 ' + M.ammo + '発'}</small></div><div class="st">${o.stars ? '★'.repeat(o.stars) + '☆'.repeat(3 - o.stars) : ''}</div></div>`;
     btn.onclick = () => openBrief(i); el.appendChild(btn); });
   show('misSel');
 }
 function openBrief(i) { const M = MISSIONS[i]; G.mi = i; $('bTitle').textContent = 'ミッション ' + (i + 1) + '：' + M.name; $('brief').innerHTML = M.brief.map(t => `<p>${t}</p>`).join('') + `<p style="opacity:.8;font-size:13px">制限時間 ${M.time}秒・弾 ${M.ammo}発・むずかしさ「${DIFF[SET.diff].name}」</p>`; show('briefing'); }
-function toTitle() { G.M = null; G.scoped = false; clearPeople(); document.body.classList.remove('scoped'); setTOD(0); spawnCivilians(30, { plaza: .5 }); show('title'); G.phase = 'title'; }
+function toTitle() { G.M = null; G.scoped = false; setHide(false); clearPeople(); document.body.classList.remove('scoped', 'cover'); setTOD(0); if (STAGE.id === 'port') portWorkers(18); else spawnCivilians(30, { plaza: .5 }); show('title'); G.phase = 'title'; }
 function wireUI() {
   const on = (id, f) => $(id).addEventListener('click', () => { AU.init(); f(); });
   on('tPlay', drawMissions); on('tSet', () => openSettings('title')); on('tHow', () => { SET_BACK = 'title'; show('how'); });
@@ -1132,6 +1291,8 @@ function tick(dt) {
     if (e === 'pause') { if (G.scr === 'play') pause(true); else if (G.scr === 'pause') pause(false); continue; }
     if (!UI.playing() || G.phase === 'bullet') continue;
     if (e === 'fire') fire();
+    if (e === 'hide') { if (G.M.cover) { setHide(!G.hide); AU.scope(); } continue; }
+    if (G.hide && (e === 'scope' || e === 'zoom' || e === 'zoomIn')) { setHide(false); continue; }
     if (e === 'scope') { setScope(!G.scoped); AU.scope(); }
     if (e === 'zoom') { if (!G.scoped) setScope(true); else G.zoom = G.zoom === 1 ? 2 : 1; updateMilDots(); AU.scope(); }
     if (e === 'zoomIn') { if (!G.scoped) setScope(true); else G.zoom = 2; updateMilDots(); }
@@ -1162,7 +1323,7 @@ function frame(t) {
   if (!RUN) return; requestAnimationFrame(frame);
   if (FPS_CAP && t - LASTT < 1000 / FPS_CAP - 2) return;
   const dt = Math.min(.05, Math.max(.001, (t - LASTT) / 1000)); LASTT = t;
-  tick(dt); renderer.render(scene, camera);
+  tick(dt); renderFrame();
 }
 async function boot() {
   const say = t => { $('loadmsg').textContent = t; };
@@ -1174,12 +1335,12 @@ async function boot() {
     onResize(); addEventListener('resize', () => setTimeout(updateMilDots, 60)); say('町を作っています…'); await nextFrame();
     loadChars(); buildCity(); CITY.baseBoxes = CITY.boxes.length; makeSky(); makeGun();
     say('人を集めています…'); await nextFrame();
-    wireUI(); toTitle(); tick(1 / 60); renderer.compile(scene, camera); renderer.render(scene, camera);
+    wireUI(); toTitle(); tick(1 / 60); renderer.compile(scene, camera); renderer.shadowMap.needsUpdate = true; renderFrame();
     $('loading').style.display = 'none'; LASTT = performance.now(); requestAnimationFrame(frame);
     addEventListener('pointerdown', () => AU.init(), { once: true }); addEventListener('keydown', () => AU.init(), { once: true });
   } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
 }
-window.__SN2 = { loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => renderer.render(scene, camera), G, IN, SET, PEOPLE, CITY, MISSIONS, startMission, fire, setScope, camera, scene, renderer, simShot, ME_POS, W, crimsAlive };
+window.__SN2 = { loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { renderer.shadowMap.needsUpdate = true; renderFrame(); }, G, IN, SET, PEOPLE, CITY, MISSIONS, STAGE, buildStage, setHide, PORT, startMission, fire, setScope, camera, scene, renderer, simShot, ME_POS, W, crimsAlive };
 boot();
 </script>
 <script id="cljson" type="application/json">{"chars":{"W_Adventurer":{"gender":"W","mats":[["Skin",0.6172,0.4179,0.2384],["White",0.4575,0.4575,0.4575],["Brown2",0.1065,0.0763,0.032],["LightGreen",0.0985,0.0848,0.0371],["Gold",0.4287,0.2423,0.0666],["Green",0.0607,0.0505,0.0189],["Brown_02",0.1789,0.1268,0.0513],["Hair_Brown",0.0482,0.0343,0.0222],["Brown",0.0311,0.0182,0.0113]],"bones":[["Root",-1,0,0,0.072289,0,0,0,1,1,1,1],["Body",0,0.000453,0.937146,-0.003995,0,0.23553,0,0.971867,1,1,1],["Hips",1,-0.000797,0.028695,0.009495,-0.069429,0.0,-0.0,0.997587,1,1,1.0],["Abdomen",2,0.0,0.106104,-0.0,-0.019335,-0.0,-0.0,0.999813,1,1,1],["Torso",3,0.0,0.141789,-0.0,0.153868,-0.237706,-0.005293,0.959058,1,1.0,1.0],["Chest",4,-0.0,0.130402,0.0,-0.000207,0.0,0.0,1,1.0,1.0,1],["Neck",5,0.0,0.133251,-0.0,-0.009471,0.0,-0.0,0.999955,1.0,1.0,1.0],["Head",6,0.0,0.076729,0.0,-0.024511,-0.0,0.000127,0.9997,1.0,1.0,1.0],["Shoulder.L",5,0.068513,0.038163,0.030799,-0.269814,-0.417607,-0.40977,0.764783,1.0,1,1],["UpperArm.L",8,0.0,0.063542,0.0,-0.741918,-0.041393,-0.176409,0.645542,1.0,1.0,1.0],["LowerArm.L",9,0.0,0.217008,-0.0,-0.11985,-0.020959,-0.19429,0.973369,1,1.0,1],["Wrist.L",10,0.0,0.235667,-0.0,0.009301,0.006304,0.023192,0.999668,1.0,1.0,1.0],["Index1.L",11,0.0,0.0272,0.0,-0.053651,-0.058323,-0.09078,0.992713,1,1.0,1.0],["Index2.L",12,-0.0,0.121023,-0.0,-0.004401,0.145898,0.093083,0.984901,1.0,1.0,1.0],["Index3.L",13,0.0,0.031775,0.0,-0.08226,-0.002798,0.020905,0.996388,1.0,1,1.0],["Index4.L",14,0.0,0.028649,0.0,-0.03024,0.012725,0.006021,0.999444,1.0,1,1.0],["Middle1.L",11,0.0,0.0272,0.0,-0.011616,-0.011794,0.016503,0.999727,1.0,1.0,1],["Middle2.L",16,-0.0,0.119848,-0.0,-0.05565,0.056641,0.046072,0.995777,1,1.0,1.0],["Middle3.L",17,0,0.039186,0.0,-0.120008,-0.004372,-0.021021,0.992541,1,1.0,1.0],["Middle4.L",18,-0.0,0.039165,0.0,-0.019048,0.035249,-0.007437,0.999169,1.0,1.0,1.0],["Ring1.L",11,-0.0,0.0272,0.0,-0.030456,-0.028963,0.128329,0.990841,1,1,1.0],["Ring2.L",20,-0.0,0.119257,0.0,-0.043931,0.106429,-0.040844,0.992509,1.0,1.0,1.0],["Ring3.L",21,-0.0,0.032924,0.0,-0.119294,0.057258,-0.039888,0.990404,1,1.0,1.0],["Ring4.L",22,0.0,0.032186,-0.0,-0.074809,0.027954,-0.007629,0.996777,1,1.0,1],["Pinky1.L",11,0.0,0.0272,0.0,-0.031091,-0.027353,0.227078,0.972996,1.0,1.0,1],["Pinky2.L",24,-0.0,0.115961,0.0,-0.091298,0.034092,-0.086657,0.99146,1,1.0,1],["Pinky3.L",25,0.0,0.02577,0.0,-0.089486,-0.037928,-0.022308,0.995016,1,1.0,1.0],["Pinky4.L",26,-0.0,0.026759,-0.0,-0.116958,-0.009655,-0.00323,0.993085,1,1.0,1.0],["Thumb1.L",11,0.0,0.0272,0.0,-0.317099,-0.317893,-0.180712,0.875063,1.0,1.0,1],["Thumb2.L",28,-0.0,0.082884,-0.0,0.131836,0.274653,-0.010817,0.952401,1.0,1.0,1.0],["Thumb3.L",29,0.0,0.031121,-0.0,-0.059697,0.031869,0.117547,0.990759,1.0,1.0,1],["Shoulder.R",5,-0.067834,0.038167,0.030791,-0.269814,0.417607,0.40977,0.764783,1.0,1.0,1.0],["UpperArm.R",31,0.0,0.063542,0.0,-0.741143,0.171119,0.108826,0.639987,1.0,1.0,1.0],["LowerArm.R",32,0.0,0.217008,0.0,-0.203003,-0.203246,0.331849,0.898531,1.0,1.0,1.0],["Wrist.R",33,-0.0,0.235667,-0.0,0.008225,-0.00982,-0.052007,0.998565,1.0,1.0,1.0],["Index1.R",34,0.0,0.0272,0.0,-0.053651,0.058323,0.09078,0.992713,1.0,1,1],["Index2.R",35,0.0,0.121023,-0.0,-0.016248,-0.144091,-0.094652,0.984893,1.0,1.0,1.0],["Index3.R",36,-0.0,0.031775,-0.0,-0.091963,0.003052,-0.020453,0.995548,1.0,1,1.0],["Index4.R",37,-0.0,0.028649,0.0,-0.03024,-0.012725,-0.006021,0.999444,1.0,1,1],["Middle1.R",34,-0.0,0.0272,0.0,-0.011616,0.011794,-0.016503,0.999727,1.0,1.0,1.0],["Middle2.R",39,0.0,0.119848,-0.0,-0.064598,-0.055152,-0.028093,0.99599,1.0,1,1],["Middle3.R",40,0.0,0.039186,0.0,-0.120008,0.004372,0.021021,0.992541,1.0,1.0,1.0],["Middle4.R",41,0.0,0.039165,0.0,-0.019048,-0.035249,0.007437,0.999169,1.0,1.0,1.0],["Ring1.R",34,-0.0,0.0272,0.0,-0.030456,0.028963,-0.128329,0.990841,1.0,1.0,1],["Ring2.R",43,-0.0,0.119257,-0.0,-0.043931,-0.106429,0.040844,0.992509,1.0,1.0,1.0],["Ring3.R",44,-0.0,0.032924,0.0,-0.119294,-0.057258,0.039888,0.990404,1.0,1,1.0],["Ring4.R",45,0.0,0.032186,-0.0,-0.074809,-0.027954,0.007629,0.996777,1,1.0,1.0],["Pinky1.R",34,-0.0,0.0272,0.0,-0.031091,0.027353,-0.227078,0.972996,1.0,1.0,1.0],["Pinky2.R",47,0.0,0.115961,0.0,-0.076603,-0.060813,0.182085,0.978406,1.0,1,1.0],["Pinky3.R",48,-0.0,0.02577,0.0,-0.089486,0.037928,0.022308,0.995016,1,1,1],["Pinky4.R",49,0.0,0.026758,-0.0,-0.116958,0.009655,0.00323,0.993085,1.0,1.0,1.0],["Thumb1.R",34,0.0,0.0272,0.0,-0.254289,0.351549,0.248254,0.866095,1.0,1.0,1],["Thumb2.R",51,0.0,0.082884,-0.0,0.131836,-0.274653,0.010817,0.952401,1.0,1.0,1],["Thumb3.R",52,0.0,0.031121,-0.0,-0.059697,-0.031869,-0.117547,0.990759,1.0,1.0,1.0],["UpperLeg.L",1,0.096406,0.063335,-0.02323,0.96787,0.07718,-0.222048,0.089249,1.0,1.0,1.000009],["LowerLeg.L",54,0,0.481815,0.0,0.247458,-0.0,0.0,0.968899,1.0,0.999999,1.0],["UpperLeg.R",1,-0.097312,0.063335,-0.02323,0.965092,-0.018397,0.171005,0.197524,1,1.0,1.000009],["LowerLeg.R",56,0,0.481815,0.0,0.222987,0.0,0.0,0.974821,1.0,0.999999,1.0],["Foot.L",0,0.096859,0.022752,-0.187028,0.614423,0.348027,-0.34617,0.617679,1.0,1,1.0],["PT.L",0,0.544518,0.650245,0.227107,-0.002674,0,0,0.999996,1,1,1],["Foot.R",0,-0.044775,0.022755,0.173686,0.704032,0.040989,-0.04077,0.707811,1,1,1],["PT.R",0,0.005565,0.446997,0.658934,-0.002674,0,0,0.999996,1,1,1]],"ibm":[98652,992],"box":[-0.82462,-0.00051,-0.20118,0.82462,1.82758,0.25924],"pos":[0,11556],"joint":[23112,15408],"weight":[38520,15408],"slot":[53928,3852],"idx":[57780,20436]},"M_Adventurer":{"gender":"M","mats":[["Skin",0.6172,0.4179,0.2384],["Green",0.0607,0.0505,0.0189],["LightGreen",0.0985,0.0848,0.0371],["Grey",0.0497,0.0497,0.0497],["Black",0.0176,0.0176,0.0176],["Eyebrows",0.0482,0.0343,0.0222],["Hair",0.0668,0.0274,0.009],["Eye",0.0311,0.0182,0.0113],["Brown",0.1789,0.1268,0.0513],["Brown2",0.1065,0.0763,0.032],["Gold",0.2789,0.1746,0.0395]],"bones":[["Root",-1,0,0,0.072289,0,0.0,0,1,1,1,1],["Body",0,0.000453,0.828953,-0.045606,0,0.23553,0,0.971867,1,1,1],["Hips",1,-0.000797,0.028695,0.033075,-0.069429,-0.0,-0.0,0.997587,1.0,1,1],["Abdomen",2,-0.0,0.106105,-0.0,0.047782,0.0,0.0,0.998858,1,1.0,1],["Torso",3,0.0,0.162004,0.0,0.085465,-0.237483,0.011578,0.967555,1,1,1.0],["Chest",4,0.0,0.216292,-0.0,0.003636,0.0,-0.0,0.999993,1.0,1.0,1.0],["Neck",5,-0.0,0.133251,-0.0,-0.009471,1e-06,-0.0,0.999955,1,1,1.0],["Head",6,0.0,0.076728,0.0,-0.024511,-0.000275,0.00012,0.9997,1.0,1,1],["Shoulder.L",5,0.098735,0.029018,0.021276,-0.456199,-0.840231,-0.106907,0.272881,1.0,1.0,1],["UpperArm.L",8,-0.0,0.065633,-0.0,-0.674998,0.403884,0.387776,0.480506,1,1.0,1],["LowerArm.L",9,0.0,0.181908,-0.0,-0.121328,-0.029565,-0.184313,0.974902,1.0,1.0,1.0],["Wrist.L",10,0.0,0.23528,0.0,0.01124,0.017744,0.010479,0.999725,1.0,1.0,1.0],["Index1.L",11,-0.0,0.028038,-0.0,-0.008858,0.014218,-0.09332,0.995495,1.0,1.0,1.0],["Index2.L",12,-0.0,0.124368,0.0,-0.040891,-0.032146,0.067043,0.996393,1.0,1.0,1.0],["Index3.L",13,-0.0,0.032754,-0.0,-0.079074,0.011656,0.025053,0.996486,1.0,1.0,1],["Index4.L",14,0,0.029531,0.0,-0.029872,0.009781,0.004962,0.999494,1.0,1.0,1.0],["Middle1.L",11,0.0,0.028038,0.0,0.025723,-0.019409,0.016911,0.999338,1.0,1.0,1],["Middle2.L",16,-0.0,0.123878,0.0,-0.093559,0.024963,0.040087,0.994493,1.0,1.0,1.0],["Middle3.L",17,-0.0,0.040394,0.0,-0.12041,0.006239,-0.018847,0.992526,1,1.0,1],["Middle4.L",18,-0.0,0.040372,-0.0,-0.019046,0.009172,-0.011121,0.999715,1,1.0,1],["Ring1.L",11,0.0,0.028038,0.0,0.009113,-0.050341,0.127957,0.990459,1,1.0,1],["Ring2.L",20,-0.0,0.122903,-0.0,-0.081933,0.160517,-0.036554,0.982947,1.0,1,1.0],["Ring3.L",21,-0.0,0.033939,-0.0,-0.118164,0.040226,-0.041463,0.991312,1.0,1.0,1.0],["Ring4.L",22,0.0,0.033177,0.0,-0.07518,0.030085,-0.00748,0.996688,1.0,1.0,1],["Pinky1.L",11,0.0,0.028038,0.0,0.017033,-0.07192,0.226359,0.971236,1,1.0,1],["Pinky2.L",24,0.0,0.119494,0.0,-0.129029,0.157212,-0.064622,0.976965,1,1.0,1.0],["Pinky3.L",25,0.0,0.026564,-0.0,-0.090798,-0.056609,-0.023062,0.993992,1,1.0,1.0],["Pinky4.L",26,-0.0,0.027583,-0.0,-0.11695,-0.018361,-0.002899,0.992964,1.0,1.0,1.0],["Thumb1.L",11,-0.0,0.028038,0.0,0.003877,0.198608,-0.345762,0.917054,1.0,1,1],["Thumb2.L",28,0.0,0.08231,0.0,0.041728,-0.122015,0.085182,0.987985,1.0,1.0,1.0],["Thumb3.L",29,-0.0,0.03208,-0.0,-0.088588,-0.055603,0.121992,0.987005,1.0,1.0,1],["Shoulder.R",5,-0.09806,0.029018,0.021276,-0.456199,0.840232,0.106908,0.272881,1.0,1.0,1.0],["UpperArm.R",31,-0.0,0.065633,0.0,-0.626873,-0.307534,-0.439376,0.565157,1.0,1.0,1],["LowerArm.R",32,-0.0,0.181908,0.0,-0.205763,-0.193786,0.323958,0.902862,1.0,1.0,1],["Wrist.R",33,0.0,0.23528,0.0,0.010542,-0.021214,-0.039322,0.998946,1,1.0,1.0],["Index1.R",34,-0.0,0.028038,-0.0,-0.008858,-0.014218,0.09332,0.995495,1,1.0,1.0],["Index2.R",35,0.0,0.124367,-0.0,-0.052857,0.033641,-0.066489,0.995818,1.0,1,1],["Index3.R",36,0.0,0.032754,-0.0,-0.088783,-0.011362,-0.024742,0.995679,1,1,1],["Index4.R",37,-0.0,0.029531,0.0,-0.029872,-0.009781,-0.004962,0.999494,1,1.0,1.0],["Middle1.R",34,0.0,0.028038,0.0,0.025723,0.019409,-0.016911,0.999338,1.0,1.0,1],["Middle2.R",39,-0.0,0.123878,-0.0,-0.101904,-0.022827,-0.021885,0.994291,1.0,1.0,1.0],["Middle3.R",40,0.0,0.040394,-0.0,-0.12041,-0.006239,0.018847,0.992526,1.0,1.0,1.0],["Middle4.R",41,-0.0,0.040372,-0.0,-0.019046,-0.009172,0.011121,0.999715,1,1,1],["Ring1.R",34,-0.0,0.028038,0.0,0.009113,0.050341,-0.127957,0.990459,1.0,1,1.0],["Ring2.R",43,0.0,0.122903,-0.0,-0.081933,-0.160517,0.036554,0.982947,1,1,1.0],["Ring3.R",44,-0.0,0.033939,0.0,-0.118164,-0.040226,0.041463,0.991312,1.0,1.0,1.0],["Ring4.R",45,-0.0,0.033177,-0.0,-0.07518,-0.030085,0.00748,0.996688,1,1.0,1.0],["Pinky1.R",34,0.0,0.028038,0.0,0.017033,0.07192,-0.226359,0.971236,1.0,1,1.0],["Pinky2.R",47,0.0,0.119494,0.0,-0.126589,-0.179584,0.161972,0.962024,1.0,1.0,1],["Pinky3.R",48,-0.0,0.026564,-0.0,-0.090798,0.056609,0.023062,0.993992,1.0,1,1],["Pinky4.R",49,0.0,0.027583,0.0,-0.11695,0.018361,0.002899,0.992964,1,1,1],["Thumb1.R",34,0.0,0.028038,0.0,0.019558,-0.185723,0.435159,0.880773,1.0,1.0,1.0],["Thumb2.R",51,0.0,0.08231,-0.0,0.041728,0.122015,-0.085182,0.987985,1,1,1.0],["Thumb3.R",52,-0.0,0.03208,0.0,-0.088588,0.055603,-0.121992,0.987005,1,1,1.0],["UpperLeg.L",1,0.120138,0.098749,0.018381,0.535611,-0.021101,-0.835662,0.119769,0.999999,0.999999,0.999974],["LowerLeg.L",54,-0.0,0.432979,-0.0,0.186823,0.681981,-0.186823,0.68198,1,1.0,1.0],["UpperLeg.R",1,-0.121045,0.098749,0.018381,0.554986,0.125434,0.80482,0.168885,1.0,1.0,0.999973],["LowerLeg.R",56,-0.0,0.432979,-0.0,0.167543,-0.686972,0.167543,0.686971,1.0,1,1],["Foot.L",0,0.120592,0.022752,-0.187028,0.614414,0.348044,-0.346153,0.617689,1.0,1.0,1.0],["PT.L",0,0.568219,0.626512,0.227077,-0.002674,3.4e-05,-0.0,0.999996,1,1,1],["Foot.R",0,-0.068507,0.022752,0.173686,0.704033,0.040969,-0.04079,0.70781,1,1,1],["PT.R",0,-0.018166,0.423264,0.658941,-0.002674,-3.4e-05,0.0,0.999996,1,1,1]],"ibm":[248212,992],"box":[-0.83773,-0.00122,-0.26302,0.83773,1.85594,0.28669],"pos":[102620,16875],"joint":[136372,22500],"weight":[158872,22500],"slot":[181372,5625],"idx":[187000,30606]},"W_Casual":{"gender":"W","mats":[["Skin",0.6172,0.4179,0.2384],["White",0.4575,0.4575,0.4575],["Grey",0.0497,0.0497,0.0497],["Hair_Brown",0.0482,0.0343,0.0222],["Brown",0.0311,0.0182,0.0113],["Hair_Blond",0.2598,0.1787,0.0628],["Orange",0.3424,0.1214,0.0398]],"bones":[["Root",-1,0,0,0.072289,0,0,0,1,1,1,1],["Body",0,0.000453,0.937146,-0.003995,0,0.23553,0,0.971867,1,1,1],["Hips",1,-0.000797,0.028695,0.009495,-0.069429,0.0,-0.0,0.997587,1,1,1.0],["Abdomen",2,0.0,0.106104,-0.0,-0.019335,-0.0,-0.0,0.999813,1,1,1],["Torso",3,0.0,0.141789,-0.0,0.153868,-0.237706,-0.005293,0.959058,1,1.0,1.0],["Chest",4,-0.0,0.130402,0.0,-0.000207,0.0,0.0,1,1.0,1.0,1],["Neck",5,0.0,0.133251,-0.0,-0.009471,0.0,-0.0,0.999955,1.0,1.0,1.0],["Head",6,0.0,0.076729,0.0,-0.024511,-0.0,0.000127,0.9997,1.0,1.0,1.0],["Shoulder.L",5,0.068513,0.038163,0.030799,-0.269814,-0.417607,-0.40977,0.764783,1.0,1,1],["UpperArm.L",8,0.0,0.063542,0.0,-0.741918,-0.041393,-0.176409,0.645542,1.0,1.0,1.0],["LowerArm.L",9,0.0,0.217008,-0.0,-0.11985,-0.020959,-0.19429,0.973369,1,1.0,1],["Wrist.L",10,0.0,0.235667,-0.0,0.009301,0.006304,0.023192,0.999668,1.0,1.0,1.0],["Index1.L",11,0.0,0.0272,0.0,-0.053651,-0.058323,-0.09078,0.992713,1,1.0,1.0],["Index2.L",12,-0.0,0.121023,-0.0,-0.004401,0.145898,0.093083,0.984901,1.0,1.0,1.0],["Index3.L",13,0.0,0.031775,0.0,-0.08226,-0.002798,0.020905,0.996388,1.0,1,1.0],["Index4.L",14,0.0,0.028649,0.0,-0.03024,0.012725,0.006021,0.999444,1.0,1,1.0],["Middle1.L",11,0.0,0.0272,0.0,-0.011616,-0.011794,0.016503,0.999727,1.0,1.0,1],["Middle2.L",16,-0.0,0.119848,-0.0,-0.05565,0.056641,0.046072,0.995777,1,1.0,1.0],["Middle3.L",17,0,0.039186,0.0,-0.120008,-0.004372,-0.021021,0.992541,1,1.0,1.0],["Middle4.L",18,-0.0,0.039165,0.0,-0.019048,0.035249,-0.007437,0.999169,1.0,1.0,1.0],["Ring1.L",11,-0.0,0.0272,0.0,-0.030456,-0.028963,0.128329,0.990841,1,1,1.0],["Ring2.L",20,-0.0,0.119257,0.0,-0.043931,0.106429,-0.040844,0.992509,1.0,1.0,1.0],["Ring3.L",21,-0.0,0.032924,0.0,-0.119294,0.057258,-0.039888,0.990404,1,1.0,1.0],["Ring4.L",22,0.0,0.032186,-0.0,-0.074809,0.027954,-0.007629,0.996777,1,1.0,1],["Pinky1.L",11,0.0,0.0272,0.0,-0.031091,-0.027353,0.227078,0.972996,1.0,1.0,1],["Pinky2.L",24,-0.0,0.115961,0.0,-0.091298,0.034092,-0.086657,0.99146,1,1.0,1],["Pinky3.L",25,0.0,0.02577,0.0,-0.089486,-0.037928,-0.022308,0.995016,1,1.0,1.0],["Pinky4.L",26,-0.0,0.026759,-0.0,-0.116958,-0.009655,-0.00323,0.993085,1,1.0,1.0],["Thumb1.L",11,0.0,0.0272,0.0,-0.317099,-0.317893,-0.180712,0.875063,1.0,1.0,1],["Thumb2.L",28,-0.0,0.082884,-0.0,0.131836,0.274653,-0.010817,0.952401,1.0,1.0,1.0],["Thumb3.L",29,0.0,0.031121,-0.0,-0.059697,0.031869,0.117547,0.990759,1.0,1.0,1],["Shoulder.R",5,-0.067834,0.038167,0.030791,-0.269814,0.417607,0.40977,0.764783,1.0,1.0,1.0],["UpperArm.R",31,0.0,0.063542,0.0,-0.741143,0.171119,0.108826,0.639987,1.0,1.0,1.0],["LowerArm.R",32,0.0,0.217008,0.0,-0.203003,-0.203246,0.331849,0.898531,1.0,1.0,1.0],["Wrist.R",33,-0.0,0.235667,-0.0,0.008225,-0.00982,-0.052007,0.998565,1.0,1.0,1.0],["Index1.R",34,0.0,0.0272,0.0,-0.053651,0.058323,0.09078,0.992713,1.0,1,1],["Index2.R",35,0.0,0.121023,-0.0,-0.016248,-0.144091,-0.094652,0.984893,1.0,1.0,1.0],["Index3.R",36,-0.0,0.031775,-0.0,-0.091963,0.003052,-0.020453,0.995548,1.0,1,1.0],["Index4.R",37,-0.0,0.028649,0.0,-0.03024,-0.012725,-0.006021,0.999444,1.0,1,1],["Middle1.R",34,-0.0,0.0272,0.0,-0.011616,0.011794,-0.016503,0.999727,1.0,1.0,1.0],["Middle2.R",39,0.0,0.119848,-0.0,-0.064598,-0.055152,-0.028093,0.99599,1.0,1,1],["Middle3.R",40,0.0,0.039186,0.0,-0.120008,0.004372,0.021021,0.992541,1.0,1.0,1.0],["Middle4.R",41,0.0,0.039165,0.0,-0.019048,-0.035249,0.007437,0.999169,1.0,1.0,1.0],["Ring1.R",34,-0.0,0.0272,0.0,-0.030456,0.028963,-0.128329,0.990841,1.0,1.0,1],["Ring2.R",43,-0.0,0.119257,-0.0,-0.043931,-0.106429,0.040844,0.992509,1.0,1.0,1.0],["Ring3.R",44,-0.0,0.032924,0.0,-0.119294,-0.057258,0.039888,0.990404,1.0,1,1.0],["Ring4.R",45,0.0,0.032186,-0.0,-0.074809,-0.027954,0.007629,0.996777,1,1.0,1.0],["Pinky1.R",34,-0.0,0.0272,0.0,-0.031091,0.027353,-0.227078,0.972996,1.0,1.0,1.0],["Pinky2.R",47,0.0,0.115961,0.0,-0.076603,-0.060813,0.182085,0.978406,1.0,1,1.0],["Pinky3.R",48,-0.0,0.02577,0.0,-0.089486,0.037928,0.022308,0.995016,1,1,1],["Pinky4.R",49,0.0,0.026758,-0.0,-0.116958,0.009655,0.00323,0.993085,1.0,1.0,1.0],["Thumb1.R",34,0.0,0.0272,0.0,-0.254289,0.351549,0.248254,0.866095,1.0,1.0,1],["Thumb2.R",51,0.0,0.082884,-0.0,0.131836,-0.274653,0.010817,0.952401,1.0,1.0,1],["Thumb3.R",52,0.0,0.031121,-0.0,-0.059697,-0.031869,-0.117547,0.990759,1.0,1.0,1.0],["UpperLeg.L",1,0.096406,0.063335,-0.02323,0.96787,0.07718,-0.222048,0.089249,1.0,1.0,1.000009],["LowerLeg.L",54,0,0.481815,0.0,0.247458,-0.0,0.0,0.968899,1.0,0.999999,1.0],["UpperLeg.R",1,-0.097312,0.063335,-0.02323,0.965092,-0.018397,0.171005,0.197524,1,1.0,1.000009],["LowerLeg.R",56,0,0.481815,0.0,0.222987,0.0,0.0,0.974821,1.0,0.999999,1.0],["Foot.L",0,0.096859,0.022752,-0.187028,0.614423,0.348027,-0.34617,0.617679,1.0,1,1.0],["PT.L",0,0.544518,0.650245,0.227107,-0.002674,0,0,0.999996,1,1,1],["Foot.R",0,-0.044775,0.022755,0.173686,0.704032,0.040989,-0.04077,0.707811,1,1,1],["PT.R",0,0.005565,0.446997,0.658934,-0.002674,0,0,0.999996,1,1,1]],"ibm":[341424,992],"box":[-0.82506,-0.00857,-0.09946,0.82506,1.84347,0.27081],"pos":[252180,10140],"joint":[272460,13520],"weight":[285980,13520],"slot":[299500,3380],"idx":[302880,19272]},"M_Casual_2":{"gender":"M","mats":[["Skin",0.6172,0.4179,0.2384],["LightBrown",0.305,0.2789,0.227],["Red_Dark",0.2051,0.0203,0.0343],["White",0.4575,0.4575,0.4575],["Skin_Darker",0.4869,0.3306,0.1896],["Eyebrows",0.0482,0.0343,0.0222],["Hair",0.0668,0.0274,0.009],["Eye",0.0311,0.0182,0.0113],["LightBlue",0.0331,0.0497,0.063]],"bones":[["Root",-1,0,0,0.072289,0,0.0,0,1,1,1,1],["Body",0,0.000453,0.828953,-0.045606,0,0.23553,0,0.971867,1,1,1],["Hips",1,-0.000797,0.028695,0.033075,-0.069429,-0.0,-0.0,0.997587,1.0,1,1],["Abdomen",2,-0.0,0.106105,-0.0,0.047782,0.0,0.0,0.998858,1,1.0,1],["Torso",3,0.0,0.162004,0.0,0.085465,-0.237483,0.011578,0.967555,1,1,1.0],["Chest",4,0.0,0.216292,-0.0,0.003636,0.0,-0.0,0.999993,1.0,1.0,1.0],["Neck",5,-0.0,0.133251,-0.0,-0.009471,1e-06,-0.0,0.999955,1,1,1.0],["Head",6,0.0,0.076728,0.0,-0.024511,-0.000275,0.00012,0.9997,1.0,1,1],["Shoulder.L",5,0.098735,0.029018,0.021276,-0.456199,-0.840231,-0.106907,0.272881,1.0,1.0,1],["UpperArm.L",8,-0.0,0.065633,-0.0,-0.674998,0.403884,0.387776,0.480506,1,1.0,1],["LowerArm.L",9,0.0,0.181908,-0.0,-0.121328,-0.029565,-0.184313,0.974902,1.0,1.0,1.0],["Wrist.L",10,0.0,0.23528,0.0,0.01124,0.017744,0.010479,0.999725,1.0,1.0,1.0],["Index1.L",11,-0.0,0.028038,-0.0,-0.008858,0.014218,-0.09332,0.995495,1.0,1.0,1.0],["Index2.L",12,-0.0,0.124368,0.0,-0.040891,-0.032146,0.067043,0.996393,1.0,1.0,1.0],["Index3.L",13,-0.0,0.032754,-0.0,-0.079074,0.011656,0.025053,0.996486,1.0,1.0,1],["Index4.L",14,0,0.029531,0.0,-0.029872,0.009781,0.004962,0.999494,1.0,1.0,1.0],["Middle1.L",11,0.0,0.028038,0.0,0.025723,-0.019409,0.016911,0.999338,1.0,1.0,1],["Middle2.L",16,-0.0,0.123878,0.0,-0.093559,0.024963,0.040087,0.994493,1.0,1.0,1.0],["Middle3.L",17,-0.0,0.040394,0.0,-0.12041,0.006239,-0.018847,0.992526,1,1.0,1],["Middle4.L",18,-0.0,0.040372,-0.0,-0.019046,0.009172,-0.011121,0.999715,1,1.0,1],["Ring1.L",11,0.0,0.028038,0.0,0.009113,-0.050341,0.127957,0.990459,1,1.0,1],["Ring2.L",20,-0.0,0.122903,-0.0,-0.081933,0.160517,-0.036554,0.982947,1.0,1,1.0],["Ring3.L",21,-0.0,0.033939,-0.0,-0.118164,0.040226,-0.041463,0.991312,1.0,1.0,1.0],["Ring4.L",22,0.0,0.033177,0.0,-0.07518,0.030085,-0.00748,0.996688,1.0,1.0,1],["Pinky1.L",11,0.0,0.028038,0.0,0.017033,-0.07192,0.226359,0.971236,1,1.0,1],["Pinky2.L",24,0.0,0.119494,0.0,-0.129029,0.157212,-0.064622,0.976965,1,1.0,1.0],["Pinky3.L",25,0.0,0.026564,-0.0,-0.090798,-0.056609,-0.023062,0.993992,1,1.0,1.0],["Pinky4.L",26,-0.0,0.027583,-0.0,-0.11695,-0.018361,-0.002899,0.992964,1.0,1.0,1.0],["Thumb1.L",11,-0.0,0.028038,0.0,0.003877,0.198608,-0.345762,0.917054,1.0,1,1],["Thumb2.L",28,0.0,0.08231,0.0,0.041728,-0.122015,0.085182,0.987985,1.0,1.0,1.0],["Thumb3.L",29,-0.0,0.03208,-0.0,-0.088588,-0.055603,0.121992,0.987005,1.0,1.0,1],["Shoulder.R",5,-0.09806,0.029018,0.021276,-0.456199,0.840232,0.106908,0.272881,1.0,1.0,1.0],["UpperArm.R",31,-0.0,0.065633,0.0,-0.626873,-0.307534,-0.439376,0.565157,1.0,1.0,1],["LowerArm.R",32,-0.0,0.181908,0.0,-0.205763,-0.193786,0.323958,0.902862,1.0,1.0,1],["Wrist.R",33,0.0,0.23528,0.0,0.010542,-0.021214,-0.039322,0.998946,1,1.0,1.0],["Index1.R",34,-0.0,0.028038,-0.0,-0.008858,-0.014218,0.09332,0.995495,1,1.0,1.0],["Index2.R",35,0.0,0.124367,-0.0,-0.052857,0.033641,-0.066489,0.995818,1.0,1,1],["Index3.R",36,0.0,0.032754,-0.0,-0.088783,-0.011362,-0.024742,0.995679,1,1,1],["Index4.R",37,-0.0,0.029531,0.0,-0.029872,-0.009781,-0.004962,0.999494,1,1.0,1.0],["Middle1.R",34,0.0,0.028038,0.0,0.025723,0.019409,-0.016911,0.999338,1.0,1.0,1],["Middle2.R",39,-0.0,0.123878,-0.0,-0.101904,-0.022827,-0.021885,0.994291,1.0,1.0,1.0],["Middle3.R",40,0.0,0.040394,-0.0,-0.12041,-0.006239,0.018847,0.992526,1.0,1.0,1.0],["Middle4.R",41,-0.0,0.040372,-0.0,-0.019046,-0.009172,0.011121,0.999715,1,1,1],["Ring1.R",34,-0.0,0.028038,0.0,0.009113,0.050341,-0.127957,0.990459,1.0,1,1.0],["Ring2.R",43,0.0,0.122903,-0.0,-0.081933,-0.160517,0.036554,0.982947,1,1,1.0],["Ring3.R",44,-0.0,0.033939,0.0,-0.118164,-0.040226,0.041463,0.991312,1.0,1.0,1.0],["Ring4.R",45,-0.0,0.033177,-0.0,-0.07518,-0.030085,0.00748,0.996688,1,1.0,1.0],["Pinky1.R",34,0.0,0.028038,0.0,0.017033,0.07192,-0.226359,0.971236,1.0,1,1.0],["Pinky2.R",47,0.0,0.119494,0.0,-0.126589,-0.179584,0.161972,0.962024,1.0,1.0,1],["Pinky3.R",48,-0.0,0.026564,-0.0,-0.090798,0.056609,0.023062,0.993992,1.0,1,1],["Pinky4.R",49,0.0,0.027583,0.0,-0.11695,0.018361,0.002899,0.992964,1,1,1],["Thumb1.R",34,0.0,0.028038,0.0,0.019558,-0.185723,0.435159,0.880773,1.0,1.0,1.0],["Thumb2.R",51,0.0,0.08231,-0.0,0.041728,0.122015,-0.085182,0.987985,1,1,1.0],["Thumb3.R",52,-0.0,0.03208,0.0,-0.088588,0.055603,-0.121992,0.987005,1,1,1.0],["UpperLeg.L",1,0.120138,0.098749,0.018381,0.535611,-0.021101,-0.835662,0.119769,0.999999,0.999999,0.999974],["LowerLeg.L",54,-0.0,0.432979,-0.0,0.186823,0.681981,-0.186823,0.68198,1,1.0,1.0],["UpperLeg.R",1,-0.121045,0.098749,0.018381,0.554986,0.125434,0.80482,0.168885,1.0,1.0,0.999973],["LowerLeg.R",56,-0.0,0.432979,-0.0,0.167543,-0.686972,0.167543,0.686971,1.0,1,1],["Foot.L",0,0.120592,0.022752,-0.187028,0.614414,0.348044,-0.346153,0.617689,1.0,1.0,1.0],["PT.L",0,0.568219,0.626512,0.227077,-0.002674,3.4e-05,-0.0,0.999996,1,1,1],["Foot.R",0,-0.068507,0.022752,0.173686,0.704033,0.040969,-0.04079,0.70781,1,1,1],["PT.R",0,-0.018166,0.423264,0.658941,-0.002674,-3.4e-05,0.0,0.999996,1,1,1]],"ibm":[426280,992],"box":[-0.83773,-0.0014,-0.168,0.83773,1.85658,0.28669],"pos":[345392,9246],"joint":[363884,12328],"weight":[376212,12328],"slot":[388540,3082],"idx":[391624,17328]}},"clips":{"M":{"Idle":{"dur":1.6667,"tracks":[["Body","p",430248,51,430452],["Body","q",431064,2,431072],["Abdomen","p",431088,2,431096],["Abdomen","q",431120,2,431128],["Torso","p",431144,2,431152],["Torso","q",431176,2,431184],["Chest","p",431200,2,431208],["Chest","q",431232,51,431436],["Neck","p",431844,2,431852],["Neck","q",431876,2,431884],["Head","p",431900,2,431908],["Head","q",431932,51,432136],["Shoulder.L","p",432544,2,432552],["Shoulder.L","q",432576,2,432584],["UpperArm.L","p",432600,2,432608],["UpperArm.L","q",432632,51,432836],["LowerArm.L","p",433244,2,433252],["LowerArm.L","q",433276,51,433480],["Wrist.L","p",433888,2,433896],["Wrist.L","q",433920,2,433928],["Shoulder.R","p",433944,2,433952],["Shoulder.R","q",433976,2,433984],["UpperArm.R","p",434000,2,434008],["UpperArm.R","q",434032,51,434236],["LowerArm.R","p",434644,2,434652],["LowerArm.R","q",434676,51,434880],["Wrist.R","p",435288,2,435296],["Wrist.R","q",435320,2,435328],["UpperLeg.L","q",435344,51,435548],["LowerLeg.L","q",435956,51,436160],["UpperLeg.R","q",436568,51,436772],["LowerLeg.R","q",437180,51,437384],["Foot.L","p",437792,2,437800],["Foot.L","q",437824,2,437832],["Foot.R","p",437848,2,437856],["Foot.R","q",437880,2,437888]]},"Idle_Neutral":{"dur":1.6667,"tracks":[["Body","p",437904,51,438108],["Body","q",438720,51,438924],["Abdomen","p",439332,2,439340],["Abdomen","q",439364,2,439372],["Torso","p",439388,2,439396],["Torso","q",439420,2,439428],["Chest","p",439444,2,439452],["Chest","q",439476,2,439484],["Neck","p",439500,2,439508],["Neck","q",439532,2,439540],["Head","p",439556,2,439564],["Head","q",439588,51,439792],["Shoulder.L","p",440200,51,440404],["Shoulder.L","q",441016,51,441220],["UpperArm.L","p",441628,2,441636],["UpperArm.L","q",441660,2,441668],["LowerArm.L","p",441684,2,441692],["LowerArm.L","q",441716,2,441724],["Wrist.L","p",441740,2,441748],["Wrist.L","q",441772,2,441780],["Shoulder.R","p",441796,51,442000],["Shoulder.R","q",442612,51,442816],["UpperArm.R","p",443224,2,443232],["UpperArm.R","q",443256,2,443264],["LowerArm.R","p",443280,2,443288],["LowerArm.R","q",443312,2,443320],["Wrist.R","p",443336,2,443344],["Wrist.R","q",443368,2,443376],["UpperLeg.L","q",443392,51,443596],["LowerLeg.L","q",444004,51,444208],["UpperLeg.R","q",444616,51,444820],["LowerLeg.R","q",445228,51,445432],["Foot.L","p",445840,2,445848],["Foot.L","q",445872,2,445880],["Foot.R","p",445896,2,445904],["Foot.R","q",445928,2,445936]]},"Walk":{"dur":1.3333,"tracks":[["Body","p",445952,41,446116],["Body","q",446608,41,446772],["Abdomen","p",447100,2,447108],["Abdomen","q",447132,2,447140],["Torso","p",447156,2,447164],["Torso","q",447188,41,447352],["Chest","p",447680,2,447688],["Chest","q",447712,41,447876],["Neck","p",448204,2,448212],["Neck","q",448236,41,448400],["Head","p",448728,2,448736],["Head","q",448760,41,448924],["Shoulder.L","p",449252,2,449260],["Shoulder.L","q",449284,2,449292],["UpperArm.L","p",449308,2,449316],["UpperArm.L","q",449340,41,449504],["LowerArm.L","p",449832,2,449840],["LowerArm.L","q",449864,41,450028],["Wrist.L","p",450356,2,450364],["Wrist.L","q",450388,41,450552],["Shoulder.R","p",450880,2,450888],["Shoulder.R","q",450912,2,450920],["UpperArm.R","p",450936,2,450944],["UpperArm.R","q",450968,41,451132],["LowerArm.R","p",451460,2,451468],["LowerArm.R","q",451492,41,451656],["Wrist.R","p",451984,2,451992],["Wrist.R","q",452016,41,452180],["UpperLeg.L","q",452508,41,452672],["LowerLeg.L","q",453000,41,453164],["UpperLeg.R","q",453492,41,453656],["LowerLeg.R","q",453984,41,454148],["Foot.L","p",454476,41,454640],["Foot.L","q",455132,41,455296],["Foot.R","p",455624,41,455788],["Foot.R","q",456280,41,456444]]},"Run":{"dur":0.8,"tracks":[["Body","p",456772,25,456872],["Body","q",457172,2,457180],["Abdomen","p",457196,2,457204],["Abdomen","q",457228,2,457236],["Torso","p",457252,2,457260],["Torso","q",457284,25,457384],["Chest","p",457584,2,457592],["Chest","q",457616,25,457716],["Neck","p",457916,2,457924],["Neck","q",457948,2,457956],["Head","p",457972,2,457980],["Head","q",458004,25,458104],["Shoulder.L","p",458304,2,458312],["Shoulder.L","q",458336,25,458436],["UpperArm.L","p",458636,2,458644],["UpperArm.L","q",458668,25,458768],["LowerArm.L","p",458968,2,458976],["LowerArm.L","q",459000,25,459100],["Wrist.L","p",459300,2,459308],["Wrist.L","q",459332,25,459432],["Shoulder.R","p",459632,2,459640],["Shoulder.R","q",459664,25,459764],["UpperArm.R","p",459964,2,459972],["UpperArm.R","q",459996,25,460096],["LowerArm.R","p",460296,2,460304],["LowerArm.R","q",460328,25,460428],["Wrist.R","p",460628,2,460636],["Wrist.R","q",460660,25,460760],["UpperLeg.L","q",460960,25,461060],["LowerLeg.L","q",461260,25,461360],["UpperLeg.R","q",461560,25,461660],["LowerLeg.R","q",461860,25,461960],["Foot.L","p",462160,25,462260],["Foot.L","q",462560,25,462660],["Foot.R","p",462860,25,462960],["Foot.R","q",463260,25,463360]]},"Wave":{"dur":1.6667,"tracks":[["Body","p",463560,51,463764],["Body","q",464376,51,464580],["Abdomen","p",464988,2,464996],["Abdomen","q",465020,2,465028],["Torso","p",465044,2,465052],["Torso","q",465076,2,465084],["Chest","p",465100,2,465108],["Chest","q",465132,51,465336],["Neck","p",465744,2,465752],["Neck","q",465776,2,465784],["Head","p",465800,2,465808],["Head","q",465832,51,466036],["Shoulder.L","p",466444,2,466452],["Shoulder.L","q",466476,2,466484],["UpperArm.L","p",466500,2,466508],["UpperArm.L","q",466532,51,466736],["LowerArm.L","p",467144,2,467152],["LowerArm.L","q",467176,51,467380],["Wrist.L","p",467788,2,467796],["Wrist.L","q",467820,51,468024],["Shoulder.R","p",468432,2,468440],["Shoulder.R","q",468464,2,468472],["UpperArm.R","p",468488,2,468496],["UpperArm.R","q",468520,51,468724],["LowerArm.R","p",469132,2,469140],["LowerArm.R","q",469164,51,469368],["Wrist.R","p",469776,2,469784],["Wrist.R","q",469808,2,469816],["UpperLeg.L","q",469832,51,470036],["LowerLeg.L","q",470444,51,470648],["UpperLeg.R","q",471056,51,471260],["LowerLeg.R","q",471668,51,471872],["Foot.L","p",472280,2,472288],["Foot.L","q",472312,2,472320],["Foot.R","p",472336,2,472344],["Foot.R","q",472368,2,472376]]},"Death":{"dur":1.0667,"tracks":[["Body","p",472392,33,472524],["Body","q",472920,33,473052],["Abdomen","p",473316,2,473324],["Abdomen","q",473348,2,473356],["Torso","p",473372,2,473380],["Torso","q",473404,33,473536],["Chest","p",473800,2,473808],["Chest","q",473832,33,473964],["Neck","p",474228,2,474236],["Neck","q",474260,33,474392],["Head","p",474656,2,474664],["Head","q",474688,33,474820],["Shoulder.L","p",475084,2,475092],["Shoulder.L","q",475116,2,475124],["UpperArm.L","p",475140,2,475148],["UpperArm.L","q",475172,33,475304],["LowerArm.L","p",475568,2,475576],["LowerArm.L","q",475600,33,475732],["Wrist.L","p",475996,2,476004],["Wrist.L","q",476028,33,476160],["Shoulder.R","p",476424,2,476432],["Shoulder.R","q",476456,2,476464],["UpperArm.R","p",476480,2,476488],["UpperArm.R","q",476512,33,476644],["LowerArm.R","p",476908,2,476916],["LowerArm.R","q",476940,33,477072],["Wrist.R","p",477336,2,477344],["Wrist.R","q",477368,33,477500],["UpperLeg.L","q",477764,33,477896],["LowerLeg.L","q",478160,33,478292],["UpperLeg.R","q",478556,33,478688],["LowerLeg.R","q",478952,33,479084],["Foot.L","p",479348,33,479480],["Foot.L","q",479876,33,480008],["Foot.R","p",480272,33,480404],["Foot.R","q",480800,33,480932]]},"HitRecieve":{"dur":0.5667,"tracks":[["Body","p",481196,18,481268],["Body","q",481484,18,481556],["Abdomen","p",481700,2,481708],["Abdomen","q",481732,2,481740],["Torso","p",481756,2,481764],["Torso","q",481788,2,481796],["Chest","p",481812,2,481820],["Chest","q",481844,18,481916],["Neck","p",482060,2,482068],["Neck","q",482092,2,482100],["Head","p",482116,2,482124],["Head","q",482148,18,482220],["Shoulder.L","p",482364,2,482372],["Shoulder.L","q",482396,2,482404],["UpperArm.L","p",482420,2,482428],["UpperArm.L","q",482452,18,482524],["LowerArm.L","p",482668,2,482676],["LowerArm.L","q",482700,18,482772],["Wrist.L","p",482916,2,482924],["Wrist.L","q",482948,2,482956],["Shoulder.R","p",482972,2,482980],["Shoulder.R","q",483004,2,483012],["UpperArm.R","p",483028,2,483036],["UpperArm.R","q",483060,18,483132],["LowerArm.R","p",483276,2,483284],["LowerArm.R","q",483308,18,483380],["Wrist.R","p",483524,2,483532],["Wrist.R","q",483556,2,483564],["UpperLeg.L","q",483580,18,483652],["LowerLeg.L","q",483796,18,483868],["UpperLeg.R","q",484012,18,484084],["LowerLeg.R","q",484228,18,484300],["Foot.L","p",484444,2,484452],["Foot.L","q",484476,2,484484],["Foot.R","p",484500,2,484508],["Foot.R","q",484532,2,484540]]}},"W":{"Idle":{"dur":2.0833,"tracks":[["Body","p",484556,51,484760],["Body","q",485372,2,485380],["Abdomen","p",485396,2,485404],["Abdomen","q",485428,2,485436],["Torso","p",485452,2,485460],["Torso","q",485484,2,485492],["Chest","p",485508,2,485516],["Chest","q",485540,51,485744],["Neck","p",486152,2,486160],["Neck","q",486184,2,486192],["Head","p",486208,2,486216],["Head","q",486240,51,486444],["Shoulder.L","p",486852,2,486860],["Shoulder.L","q",486884,2,486892],["UpperArm.L","p",486908,2,486916],["UpperArm.L","q",486940,51,487144],["LowerArm.L","p",487552,2,487560],["LowerArm.L","q",487584,51,487788],["Wrist.L","p",488196,2,488204],["Wrist.L","q",488228,2,488236],["Shoulder.R","p",488252,2,488260],["Shoulder.R","q",488284,2,488292],["UpperArm.R","p",488308,2,488316],["UpperArm.R","q",488340,51,488544],["LowerArm.R","p",488952,2,488960],["LowerArm.R","q",488984,51,489188],["Wrist.R","p",489596,2,489604],["Wrist.R","q",489628,2,489636],["UpperLeg.L","q",489652,51,489856],["LowerLeg.L","q",490264,51,490468],["UpperLeg.R","q",490876,51,491080],["LowerLeg.R","q",491488,51,491692],["Foot.L","p",492100,2,492108],["Foot.L","q",492132,2,492140],["Foot.R","p",492156,2,492164],["Foot.R","q",492188,2,492196]]},"Idle_Neutral":{"dur":2.0833,"tracks":[["Body","p",492212,51,492416],["Body","q",493028,51,493232],["Abdomen","p",493640,2,493648],["Abdomen","q",493672,2,493680],["Torso","p",493696,2,493704],["Torso","q",493728,2,493736],["Chest","p",493752,2,493760],["Chest","q",493784,2,493792],["Neck","p",493808,2,493816],["Neck","q",493840,2,493848],["Head","p",493864,2,493872],["Head","q",493896,51,494100],["Shoulder.L","p",494508,51,494712],["Shoulder.L","q",495324,51,495528],["UpperArm.L","p",495936,2,495944],["UpperArm.L","q",495968,2,495976],["LowerArm.L","p",495992,2,496000],["LowerArm.L","q",496024,2,496032],["Wrist.L","p",496048,2,496056],["Wrist.L","q",496080,2,496088],["Shoulder.R","p",496104,51,496308],["Shoulder.R","q",496920,51,497124],["UpperArm.R","p",497532,2,497540],["UpperArm.R","q",497564,2,497572],["LowerArm.R","p",497588,2,497596],["LowerArm.R","q",497620,2,497628],["Wrist.R","p",497644,2,497652],["Wrist.R","q",497676,2,497684],["UpperLeg.L","q",497700,51,497904],["LowerLeg.L","q",498312,51,498516],["UpperLeg.R","q",498924,51,499128],["LowerLeg.R","q",499536,51,499740],["Foot.L","p",500148,2,500156],["Foot.L","q",500180,2,500188],["Foot.R","p",500204,2,500212],["Foot.R","q",500236,2,500244]]},"Walk":{"dur":1.6667,"tracks":[["Body","p",500260,41,500424],["Body","q",500916,41,501080],["Abdomen","p",501408,2,501416],["Abdomen","q",501440,2,501448],["Torso","p",501464,2,501472],["Torso","q",501496,41,501660],["Chest","p",501988,2,501996],["Chest","q",502020,41,502184],["Neck","p",502512,2,502520],["Neck","q",502544,41,502708],["Head","p",503036,2,503044],["Head","q",503068,41,503232],["Shoulder.L","p",503560,2,503568],["Shoulder.L","q",503592,2,503600],["UpperArm.L","p",503616,2,503624],["UpperArm.L","q",503648,41,503812],["LowerArm.L","p",504140,2,504148],["LowerArm.L","q",504172,41,504336],["Wrist.L","p",504664,2,504672],["Wrist.L","q",504696,41,504860],["Shoulder.R","p",505188,2,505196],["Shoulder.R","q",505220,2,505228],["UpperArm.R","p",505244,2,505252],["UpperArm.R","q",505276,41,505440],["LowerArm.R","p",505768,2,505776],["LowerArm.R","q",505800,41,505964],["Wrist.R","p",506292,2,506300],["Wrist.R","q",506324,41,506488],["UpperLeg.L","q",506816,41,506980],["LowerLeg.L","q",507308,41,507472],["UpperLeg.R","q",507800,41,507964],["LowerLeg.R","q",508292,41,508456],["Foot.L","p",508784,41,508948],["Foot.L","q",509440,41,509604],["Foot.R","p",509932,41,510096],["Foot.R","q",510588,41,510752]]},"Run":{"dur":1.0,"tracks":[["Body","p",511080,25,511180],["Body","q",511480,2,511488],["Abdomen","p",511504,2,511512],["Abdomen","q",511536,2,511544],["Torso","p",511560,2,511568],["Torso","q",511592,25,511692],["Chest","p",511892,2,511900],["Chest","q",511924,25,512024],["Neck","p",512224,2,512232],["Neck","q",512256,2,512264],["Head","p",512280,2,512288],["Head","q",512312,25,512412],["Shoulder.L","p",512612,2,512620],["Shoulder.L","q",512644,25,512744],["UpperArm.L","p",512944,2,512952],["UpperArm.L","q",512976,25,513076],["LowerArm.L","p",513276,2,513284],["LowerArm.L","q",513308,25,513408],["Wrist.L","p",513608,2,513616],["Wrist.L","q",513640,25,513740],["Shoulder.R","p",513940,2,513948],["Shoulder.R","q",513972,25,514072],["UpperArm.R","p",514272,2,514280],["UpperArm.R","q",514304,25,514404],["LowerArm.R","p",514604,2,514612],["LowerArm.R","q",514636,25,514736],["Wrist.R","p",514936,2,514944],["Wrist.R","q",514968,25,515068],["UpperLeg.L","q",515268,25,515368],["LowerLeg.L","q",515568,25,515668],["UpperLeg.R","q",515868,25,515968],["LowerLeg.R","q",516168,25,516268],["Foot.L","p",516468,25,516568],["Foot.L","q",516868,25,516968],["Foot.R","p",517168,25,517268],["Foot.R","q",517568,25,517668]]},"Wave":{"dur":2.0833,"tracks":[["Body","p",517868,51,518072],["Body","q",518684,51,518888],["Abdomen","p",519296,2,519304],["Abdomen","q",519328,2,519336],["Torso","p",519352,2,519360],["Torso","q",519384,2,519392],["Chest","p",519408,2,519416],["Chest","q",519440,51,519644],["Neck","p",520052,2,520060],["Neck","q",520084,2,520092],["Head","p",520108,2,520116],["Head","q",520140,51,520344],["Shoulder.L","p",520752,2,520760],["Shoulder.L","q",520784,2,520792],["UpperArm.L","p",520808,2,520816],["UpperArm.L","q",520840,51,521044],["LowerArm.L","p",521452,2,521460],["LowerArm.L","q",521484,51,521688],["Wrist.L","p",522096,2,522104],["Wrist.L","q",522128,51,522332],["Shoulder.R","p",522740,2,522748],["Shoulder.R","q",522772,2,522780],["UpperArm.R","p",522796,2,522804],["UpperArm.R","q",522828,51,523032],["LowerArm.R","p",523440,2,523448],["LowerArm.R","q",523472,51,523676],["Wrist.R","p",524084,2,524092],["Wrist.R","q",524116,2,524124],["UpperLeg.L","q",524140,51,524344],["LowerLeg.L","q",524752,51,524956],["UpperLeg.R","q",525364,51,525568],["LowerLeg.R","q",525976,51,526180],["Foot.L","p",526588,2,526596],["Foot.L","q",526620,2,526628],["Foot.R","p",526644,2,526652],["Foot.R","q",526676,2,526684]]},"Death":{"dur":1.3333,"tracks":[["Body","p",526700,33,526832],["Body","q",527228,33,527360],["Abdomen","p",527624,2,527632],["Abdomen","q",527656,2,527664],["Torso","p",527680,2,527688],["Torso","q",527712,33,527844],["Chest","p",528108,2,528116],["Chest","q",528140,33,528272],["Neck","p",528536,2,528544],["Neck","q",528568,33,528700],["Head","p",528964,2,528972],["Head","q",528996,33,529128],["Shoulder.L","p",529392,2,529400],["Shoulder.L","q",529424,2,529432],["UpperArm.L","p",529448,2,529456],["UpperArm.L","q",529480,33,529612],["LowerArm.L","p",529876,2,529884],["LowerArm.L","q",529908,33,530040],["Wrist.L","p",530304,2,530312],["Wrist.L","q",530336,33,530468],["Shoulder.R","p",530732,2,530740],["Shoulder.R","q",530764,2,530772],["UpperArm.R","p",530788,2,530796],["UpperArm.R","q",530820,33,530952],["LowerArm.R","p",531216,2,531224],["LowerArm.R","q",531248,33,531380],["Wrist.R","p",531644,2,531652],["Wrist.R","q",531676,33,531808],["UpperLeg.L","q",532072,33,532204],["LowerLeg.L","q",532468,33,532600],["UpperLeg.R","q",532864,33,532996],["LowerLeg.R","q",533260,33,533392],["Foot.L","p",533656,33,533788],["Foot.L","q",534184,33,534316],["Foot.R","p",534580,33,534712],["Foot.R","q",535108,33,535240]]},"HitRecieve":{"dur":0.7083,"tracks":[["Body","p",535504,18,535576],["Body","q",535792,18,535864],["Abdomen","p",536008,2,536016],["Abdomen","q",536040,2,536048],["Torso","p",536064,2,536072],["Torso","q",536096,2,536104],["Chest","p",536120,2,536128],["Chest","q",536152,18,536224],["Neck","p",536368,2,536376],["Neck","q",536400,2,536408],["Head","p",536424,2,536432],["Head","q",536456,18,536528],["Shoulder.L","p",536672,2,536680],["Shoulder.L","q",536704,2,536712],["UpperArm.L","p",536728,2,536736],["UpperArm.L","q",536760,18,536832],["LowerArm.L","p",536976,2,536984],["LowerArm.L","q",537008,18,537080],["Wrist.L","p",537224,2,537232],["Wrist.L","q",537256,2,537264],["Shoulder.R","p",537280,2,537288],["Shoulder.R","q",537312,2,537320],["UpperArm.R","p",537336,2,537344],["UpperArm.R","q",537368,18,537440],["LowerArm.R","p",537584,2,537592],["LowerArm.R","q",537616,18,537688],["Wrist.R","p",537832,2,537840],["Wrist.R","q",537864,2,537872],["UpperLeg.L","q",537888,18,537960],["LowerLeg.L","q",538104,18,538176],["UpperLeg.R","q",538320,18,538392],["LowerLeg.R","q",538536,18,538608],["Foot.L","p",538752,2,538760],["Foot.L","q",538784,2,538792],["Foot.R","p",538808,2,538816],["Foot.R","q",538840,2,538848]]}}},"license":"CC0 1.0 (Quaternius, Ultimate Modular Men / Women)"}</script>
