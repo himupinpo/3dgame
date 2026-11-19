@@ -14,15 +14,19 @@ html, body { margin: 0; height: 100%; background: #20262e; color: var(--ink); ov
 .hud { position: absolute; pointer-events: none; text-shadow: 0 1px 4px rgba(0,0,0,.8); display: none; }
 body.playing .hud { display: block; }
 /* スコープ */
-#scope { position: absolute; inset: 0; pointer-events: none; display: none; }
+#scope { position: absolute; inset: 0; pointer-events: none; display: none; --k: 1; --d: 0; --R: calc(min(46vh, 46vw) * (.32 + .68 * var(--k))); }
 body.scoped #scope { display: block; }
-#scope .mask { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0, rgba(0,0,0,0) calc(min(46vh, 46vw) - 2px), #000 min(46vh, 46vw)); }
+#scope .mask { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0, rgba(0,0,0,0) calc(var(--R) - 2px), #000 var(--R)); }
+#scope .eye { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) calc(var(--R) * .35), rgba(0,0,0,.85) var(--R)); opacity: var(--d); }
+#scope .lens { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0, rgba(0,0,0,0) calc(var(--R) * .74), rgba(0,0,0,.5) calc(var(--R) - 3px), rgba(0,0,0,0) var(--R)), radial-gradient(circle at 38% 33%, rgba(190,220,255,.1), rgba(190,220,255,0) calc(var(--R) * .45)); }
+#scope .ring { position: absolute; left: 50%; top: 50%; width: calc(var(--R) * 2); height: calc(var(--R) * 2); transform: translate(-50%, -50%); border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(90,140,200,.25), inset 0 0 18px rgba(0,0,0,.6); }
 #scope.nv .tint { position: absolute; inset: 0; background: rgba(40, 255, 110, .16); mix-blend-mode: screen; }
-#scope svg { position: absolute; left: 50%; top: 50%; width: min(92vh, 92vw); height: min(92vh, 92vw); transform: translate(-50%, -50%); }
+#scope svg { position: absolute; left: 50%; top: 50%; width: min(92vh, 92vw); height: min(92vh, 92vw); transform: translate(-50%, -50%) scale(calc(.32 + .68 * var(--k))); }
 #sRange, #sWind, #sZoom { position: absolute; font-weight: 900; font-size: 14px; color: #dfffe6; text-shadow: 0 1px 3px #000; }
-#sRange { left: 50%; top: calc(50% + min(30vh, 30vw)); transform: translateX(-50%); } #sWind { left: calc(50% - min(30vh, 30vw)); top: calc(50% + min(10vh, 10vw)); } #sZoom { left: calc(50% + min(24vh, 24vw)); top: calc(50% + min(10vh, 10vw)); }
+#sRange { left: 50%; top: calc(50% + min(30vh, 30vw)); transform: translateX(-50%); } #sWind { left: calc(50% - min(30vh, 30vw)); top: calc(50% + min(10vh, 10vw)); } #sZoom { left: calc(50% + min(24vh, 24vw)); top: calc(50% + min(10vh, 10vw)); transform-origin: 0 50%; }
 #cross { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; display: none; }
 body.playing:not(.scoped) #cross { display: block; }
+body.bcam .hud, body.bcam #cross, body.bcam .tb, body.bcam #hHint { display: none !important; } body.bcam #msg, body.bcam #sub { display: block !important; }
 #cross::before, #cross::after { content: ''; position: absolute; background: rgba(255,255,255,.85); box-shadow: 0 0 2px #000; }
 #cross::before { left: 10px; top: 0; width: 2px; height: 22px; } #cross::after { top: 10px; left: 0; height: 2px; width: 22px; }
 /* 情報 */
@@ -84,7 +88,7 @@ input[type=range] { width: 150px; accent-color: var(--acc); }
 </style></head><body>
 <div id="rot">
   <canvas id="c"></canvas>
-  <div id="scope"><div class="mask"></div><div class="tint"></div>
+  <div id="scope"><div class="lens"></div><div class="ring"></div><div class="mask"></div><div class="eye"></div><div class="tint"></div>
     <svg viewBox="-100 -100 200 200"><g stroke="#000" stroke-width=".55" fill="none"><line x1="-100" y1="0" x2="-4" y2="0"/><line x1="4" y1="0" x2="100" y2="0"/><line x1="0" y1="-100" x2="0" y2="-4"/><line x1="0" y1="4" x2="0" y2="100"/><line x1="-100" y1="0" x2="-55" y2="0" stroke-width="2.2"/><line x1="55" y1="0" x2="100" y2="0" stroke-width="2.2"/><line x1="0" y1="55" x2="0" y2="100" stroke-width="2.2"/></g><g id="milDots" fill="#000"></g><circle cx="0" cy="0" r=".9" fill="#ff3a2a"/></svg>
     <div id="sRange"></div><div id="sWind"></div><div id="sZoom"></div></div>
   <canvas id="hc"></canvas>
@@ -186,15 +190,17 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, 16 / 9, .3, 6000); scene.add(camera);
 // 光のにじみ（夕方・夜の灯りや窓がふわっと光る）。軽い画質では使わない
 const FX = { comp: null, bloom: null, n: 0 };
-if (GFX() >= 1) { FX.comp = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType })); FX.comp.addPass(new RenderPass(scene, camera)); FX.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .3, .55, .9); FX.comp.addPass(FX.bloom); FX.comp.addPass(new OutputPass()); }
-function renderFrame() { FX.n++; if (!renderer.shadowMap.autoUpdate && FX.n % 3 === 0) renderer.shadowMap.needsUpdate = true; if (FX.comp) FX.comp.render(); else renderer.render(scene, camera); }
+// 手もとのライフルは、べつの小さな場面で、いちばん手前に描く（近くても切れない）
+const VM = { scene: new THREE.Scene(), cam: new THREE.PerspectiveCamera(50, 16 / 9, .01, 20) };
+if (GFX() >= 1) { FX.comp = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType })); FX.comp.addPass(new RenderPass(scene, camera)); { const vp = new RenderPass(VM.scene, VM.cam); vp.clear = false; vp.clearDepth = true; FX.comp.addPass(vp); } FX.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .3, .55, .9); FX.comp.addPass(FX.bloom); FX.comp.addPass(new OutputPass()); }
+function renderFrame() { FX.n++; if (!renderer.shadowMap.autoUpdate && FX.n % 3 === 0) renderer.shadowMap.needsUpdate = true; if (FX.comp) FX.comp.render(); else { renderer.render(scene, camera); renderer.autoClear = false; renderer.clearDepth(); renderer.render(VM.scene, VM.cam); renderer.autoClear = true; } }
 scene.fog = new THREE.Fog(0xb8cde0, 500, 2600);
 let HUD_DPR = 1;
 function onResize() {
   const r = $('rot'); r.style.width = VW() + 'px'; r.style.height = VH() + 'px'; r.style.transform = ROT.on ? 'rotate(90deg) translateY(-100%)' : 'none';
   document.documentElement.style.setProperty('--sw', VW() / 100 + 'px');
   const g = GFX(), pr = Math.min(devicePixelRatio || 1, g >= 2 ? 2 : g === 1 ? 1.4 : 1);
-  renderer.setPixelRatio(pr); renderer.setSize(VW(), VH(), false); camera.aspect = VW() / VH(); camera.updateProjectionMatrix();
+  renderer.setPixelRatio(pr); renderer.setSize(VW(), VH(), false); camera.aspect = VW() / VH(); camera.updateProjectionMatrix(); VM.cam.aspect = camera.aspect; VM.cam.fov = camera.aspect < 1 ? 70 : 50; VM.cam.updateProjectionMatrix();
   if (FX.comp) { FX.comp.setPixelRatio(pr); FX.comp.setSize(VW(), VH()); const k = g >= 2 ? .5 : .35; FX.bloom.resolution.set(VW() * pr * k, VH() * pr * k); }
   HUD_DPR = Math.min(devicePixelRatio || 1, 2); hc.width = Math.round(VW() * HUD_DPR); hc.height = Math.round(VH() * HUD_DPR);
 }
@@ -329,7 +335,7 @@ const TEX = {};
 const BC = [-188, -94, 0, 94, 188], BH = 35, LOT = 31;
 const BANK = { x: 0, z: 94, door: V3(0, .15, 64.6) }, PARK = { x: 94, z: 94 }, ME = { x: -94, z: -94, h: 72 };
 const ME_POS = V3(-63.5, 72.15 + 1.4, -63.5);   // あなたのいる所（ステージごとに変わる）
-const STAGE = { id: '', water: null };
+const STAGE = { id: '', water: null, waterAt: null };
 const STAGES = { city: { name: '中央広場の町', perch: [-63.5, 72.15 + 1.4, -63.5] }, port: { name: '港の倉庫街', perch: [-96.5, 48.15 + 1.4, -56.5] } };
 // 区画ごとのビルの高さ（ねらう線をふさがないように決めてある）。0：広場など
 const BLK_H = { '-188,-188': 60, '-94,-188': 45, '0,-188': 34, '94,-188': 70, '188,-188': 50, '-188,-94': 40, '-94,-94': 72, '0,-94': 46, '94,-94': 40, '188,-94': 65, '-188,0': 55, '-94,0': 28, '0,0': 0, '94,0': 40, '188,0': 55, '-188,94': 36, '-94,94': 30, '0,94': 24, '94,94': 0, '188,94': 48, '-188,188': 50, '-94,188': 64, '0,188': 70, '94,188': 80, '188,188': 90 };
@@ -411,7 +417,7 @@ function roofStuff(bx, bz, w, h, mine) {
 function plaza() {
   const M = CITY.mats, G = CITY.grp;
   const gr = mk(uvScale(new THREE.CircleGeometry(14, 40).rotateX(-Math.PI / 2), 4, 4), M.grass, -18, .24, -18); gr.castShadow = false; const gr2 = gr.clone(); gr2.position.set(18, .24, -18); G.add(gr2);
-  mk(new THREE.CylinderGeometry(6, 6.4, .8, 32), M.stone, 0, .55, 0); mk(new THREE.CylinderGeometry(5.4, 5.4, .1, 32), M.water, 0, .9, 0); mk(new THREE.CylinderGeometry(.7, 1, 2.4, 12), M.stone, 0, 1.6, 0); mk(new THREE.CylinderGeometry(1.8, 1.4, .3, 16), M.stone, 0, 2.9, 0);
+  mk(new THREE.CylinderGeometry(6, 6.4, .8, 32), M.stone, 0, .55, 0); mk(new THREE.CylinderGeometry(5.4, 5.4, .1, 32), M.water, 0, .94, 0); mk(new THREE.CylinderGeometry(.7, 1, 2.4, 12), M.stone, 0, 1.6, 0); mk(new THREE.CylinderGeometry(1.8, 1.4, .3, 16), M.stone, 0, 2.9, 0);
   addBox(-6, 6, 0, 1, -6, 6);
   const tr = [[-26, -26], [26, -26], [-26, 26], [26, 26], [-26, 0], [26, 0], [0, -26], [0, 26], [-12, 22], [12, 22]];
   for (const [x, z] of tr) { mk(new THREE.CylinderGeometry(.18, .24, 3.6, 6), M.trunk, x, 1.9, z); mk(new THREE.IcosahedronGeometry(2.6, 1), M.leaf, x, 5, z); }
@@ -483,9 +489,9 @@ function buildStage(id) {
   if (CITY.grp.parent) scene.remove(CITY.grp);
   const keep = new Set(); for (const k in CAR_GEO) for (const g of Object.values(CAR_GEO[k])) keep.add(g);
   CITY.grp.traverse(o => { if (o.geometry && !keep.has(o.geometry)) o.geometry.dispose(); });
-  CITY.grp = new THREE.Group(); CITY.boxes.length = 0; CITY.cars.length = 0; TRAFFIC.length = 0; CITY.bld = [[], [], [], []]; CITY.wins = []; CITY.lamps = []; CITY.pools = null; CITY.sea = null; CITY.extra = []; CITY.extraCars = 0;
-  STAGE.id = id; STAGE.water = id === 'port' ? PORT.water : null; ME_POS.set(...STAGES[id].perch);
-  if (id === 'port') genPort(); else { genDistrict(); genTraffic(); }
+  CITY.grp = new THREE.Group(); CITY.boxes.length = 0; CITY.cars.length = 0; TRAFFIC.length = 0; CITY.bld = [[], [], [], []]; CITY.wins = []; CITY.lamps = []; CITY.pools = null; CITY.sea = null; CITY.extra = []; CITY.extraCars = 0; CITY.upd = [];
+  STAGE.id = id; STAGE.water = id === 'port' ? PORT.water : null; STAGE.waterAt = id === 'port' ? (x, z) => (z > PORT.water ? -2.4 : null) : STAGES[id].waterAt || null; STAGE.hAt = STAGES[id].hAt || null; ME_POS.set(...STAGES[id].perch);
+  if (id === 'port') genPort(); else if (id === 'city') { genDistrict(); genTraffic(); } else { stageTextures(); STAGES[id].gen(); }
   buildingMeshes(); roofClutter(); cityLights(); lightPools();
   CITY.grp.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !o.parent.isGroup) { o.matrixAutoUpdate = false; o.updateMatrix(); } }); scene.add(CITY.grp);
   CITY.baseBoxes = CITY.boxes.length; if (SKY.tod >= 0) { const T = TODS[SKY.tod]; setCityNight(T.night, T.dusk); }
@@ -514,7 +520,7 @@ function lightPools() {
 // 弾の線と、ビル・車・地面の当たり（いちばん近い所までの長さ）
 function rayWorld(o, d, maxT) {
   let best = maxT, kind = null;
-  if (d.y < 0) { let t = -o.y / d.y; if (STAGE.water !== null && o.z + d.z * t > STAGE.water) t = (-2.4 - o.y) / d.y; if (t > 0 && t < best) { best = t; kind = 'ground'; } }   // 港：岸壁の先は海の面
+  if (d.y < 0) { let t = -o.y / d.y; if (STAGE.waterAt) { const wy = STAGE.waterAt(o.x + d.x * t, o.z + d.z * t); if (wy !== null) t = (wy - o.y) / d.y; } if (t > 0 && t < best) { best = t; kind = 'ground'; } }   // 海・川・湖：水の面
   const test = b => { let t0 = 0, t1 = best; for (let a = 0; a < 3; a++) { const oa = a === 0 ? o.x : a === 1 ? o.y : o.z, da = a === 0 ? d.x : a === 1 ? d.y : d.z, lo = b[a * 2], hi = b[a * 2 + 1];
     if (Math.abs(da) < 1e-9) { if (oa < lo || oa > hi) return -1; continue; } let ta = (lo - oa) / da, tb = (hi - oa) / da; if (ta > tb) { const x = ta; ta = tb; tb = x; } t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) return -1; } return t0; };
   for (const b of CITY.boxes) { const t = test(b); if (t > .5 && t < best) { best = t; kind = 'wall'; } }
@@ -596,6 +602,266 @@ function genPort() {
   const tc = [0xd8d8dc, 0x2a4a8a, 0xa02a2a, 0x3a6a4a, 0x2a2a2e];
   for (let i = 0; i < 6; i++) { const dir = i % 2 ? 1 : -1, Cr = car(0, 0, 0, tc[i % tc.length], i % 3 === 0); Cr.ax = 'z'; Cr.lane = -26 + dir * 3.2; Cr.dir = dir; Cr.s = rr(-240, 240); Cr.v = rr(6, 10); TRAFFIC.push(Cr); }
 }
+// =========================================================================================
+//  ほかの8つのステージ：川べりの住宅街・山あいのダム・雪の駅前・砂漠の基地・夜の遊園地・空港・工場地帯・城下町
+//  どのステージも、あなたは北西の高い所（南東の角）から、南東を見下ろす。ねらう場所と自分のあいだには、高い物を置かない
+// =========================================================================================
+// たくさんの同じ形を、まとめて描く（色は1つずつ）
+function IBatch() {
+  const L = new Map();
+  return {
+    box(mat, x, y, z, sx, sy, sz, col, ry = 0, solid = false) { const k = 'b|' + mat.uuid; if (!L.has(k)) L.set(k, { geo: new THREE.BoxGeometry(1, 1, 1), mat, it: [] }); L.get(k).it.push([x, y, z, sx, sy, sz, ry, col]); if (solid) addBox(x - sx / 2, x + sx / 2, y - sy / 2, y + sy / 2, z - sz / 2, z + sz / 2); },
+    geo(key, geo, mat, x, y, z, sx, sy, sz, col, ry = 0) { const k = key + '|' + mat.uuid; if (!L.has(k)) L.set(k, { geo, mat, it: [] }); L.get(k).it.push([x, y, z, sx, sy, sz, ry, col]); },
+    flush() {
+      const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color(), up = V3(0, 1, 0);
+      for (const { geo, mat, it } of L.values()) { const im = new THREE.InstancedMesh(geo, mat, it.length); it.forEach((v, i) => { im.setMatrixAt(i, m4.compose(V3(v[0], v[1], v[2]), q.setFromAxisAngle(up, v[6]), V3(v[3], v[4], v[5]))); im.setColorAt(i, c.set(v[7] ?? 0xffffff)); });
+        im.castShadow = im.receiveShadow = true; im.computeBoundingSphere(); CITY.grp.add(im); }
+    },
+  };
+}
+const PRISM = (() => { const s = new THREE.Shape(); s.moveTo(-.5, 0); s.lineTo(.5, 0); s.lineTo(0, 1); s.closePath(); const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false }); g.translate(0, 0, -.5); g.rotateY(Math.PI / 2); g.computeVertexNormals(); return g; })();   // 三角の屋根（長さ1・幅1・高さ1。下が y 0）
+const CONE4 = new THREE.ConeGeometry(.71, 1, 4).rotateY(Math.PI / 4).translate(0, .5, 0);
+function stageTextures() {
+  portTextures(); if (TEX.snow) return;
+  const noisy = (base, sp, n, fn) => { const [c, g] = cvs(256, 256); g.fillStyle = base; g.fillRect(0, 0, 256, 256); for (let i = 0; i < n; i++) { const v = Math.random() * sp | 0; g.fillStyle = `rgba(${v},${v},${v},.14)`; g.fillRect(Math.random() * 256 | 0, Math.random() * 256 | 0, 2, 2); } if (fn) fn(g); return ctex(c); };
+  TEX.snow = noisy('#e6ecf4', 255, 2600, g => { for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(170,190,215,.18)'; g.beginPath(); g.ellipse(Math.random() * 256, Math.random() * 256, 10 + Math.random() * 30, 4 + Math.random() * 10, Math.random() * 3, 0, TAU); g.fill(); } });
+  TEX.sand = noisy('#d6b47c', 255, 3000, g => { g.strokeStyle = 'rgba(150,110,60,.2)'; g.lineWidth = 2; for (let y = 0; y < 256; y += 9) { g.beginPath(); for (let x = 0; x <= 256; x += 8) g.lineTo(x, y + Math.sin(x / 20 + y) * 3); g.stroke(); } });
+  TEX.earth = noisy('#a89272', 255, 3200);
+  TEX.cobble = noisy('#8e8a82', 255, 2000, g => { g.strokeStyle = 'rgba(50,48,44,.45)'; g.lineWidth = 2; for (let y = 0; y < 256; y += 21) for (let x = (y / 21 % 2) * 14; x < 256; x += 28) g.strokeRect(x, y, 28, 21); });
+  TEX.dkconc = noisy('#5e605e', 255, 3000, g => { g.strokeStyle = 'rgba(30,30,30,.4)'; g.lineWidth = 2; for (let i = 0; i <= 256; i += 64) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, 256); g.moveTo(0, i); g.lineTo(256, i); g.stroke(); } });
+  TEX.runway = noisy('#3a3c3e', 120, 3000, g => { g.fillStyle = '#e8e8e2'; for (let x = 0; x < 256; x += 64) g.fillRect(x, 124, 34, 8); });
+  const M = CITY.mats;
+  Object.assign(M, { snowG: L({ map: TEX.snow }), sandG: L({ map: TEX.sand }), earthG: L({ map: TEX.earth }), cobble: L({ map: TEX.cobble }), dkconc: L({ map: TEX.dkconc }), runway: L({ map: TEX.runway }),
+    wall: S({ color: 0xffffff, roughness: .85 }), roofT: S({ color: 0xffffff, roughness: .7, metalness: .1 }), metalP: S({ color: 0xffffff, roughness: .5, metalness: .6 }), plain: L({ color: 0xffffff }),
+    canvas: L({ color: 0xffffff, side: THREE.DoubleSide }), glassB: S({ color: 0x5a7a92, roughness: .08, metalness: .8 }), bulb: new THREE.MeshBasicMaterial({ color: 0xfff0c0 }) });
+}
+// 地面（なんでも）と、遠くの山
+function groundPlane(mat, rep = 240) { const g = mk(uvScale(new THREE.PlaneGeometry(2400, 2400), rep, rep).rotateX(-Math.PI / 2), mat, 0, 0, 0); g.castShadow = false; return g; }
+function mountains(n, r0, col, seed, h = [160, 380]) { const r = rng(seed), B = IBatch(); for (let i = 0; i < n; i++) { const a = r() * TAU, d = r0 + r() * 500, s = 180 + r() * 260, hh = h[0] + r() * (h[1] - h[0]); B.geo('mtn', new THREE.ConeGeometry(1, 1, 7), CITY.mats.plain, Math.cos(a) * d, hh / 2 - 6, Math.sin(a) * d, s, hh, s, col, r() * 3); } B.flush(); }
+// あなたのビル（南東の角に立つ）。st：ビルの見た目
+function perchBld(st, bx, bz, w, h, col) { putBld(st, bx, bz, w, w, h, col); roofStuff(bx, bz, w, h, true); }
+// 家（白いかべ＋三角の屋根）。rot：0＝むねが x 向き、1＝z 向き
+function house(B, x, z, w, d, h, wallC, roofC, rot = 0) { B.box(CITY.mats.wall, x, h / 2 + .15, z, w, h, d, wallC, 0, true); const rl = rot ? d : w, rw = rot ? w : d; B.geo('prism', PRISM, CITY.mats.roofT, x, h + .15, z, rl + .8, Math.min(rw, 9) * .55, rw + .8, roofC, rot ? Math.PI / 2 : 0); }
+function treeB(B, x, z, s = 1, col = 0x4a7a3a) { B.geo('trunk', new THREE.CylinderGeometry(.14, .2, 1, 6).translate(0, .5, 0), CITY.mats.trunk, x, .15, z, s, 3 * s, s, 0xffffff); B.geo('leaf', new THREE.IcosahedronGeometry(1, 1).translate(0, 0, 0), CITY.mats.plain, x, 4.4 * s, z, 2 * s, 2.3 * s, 2 * s, col); }
+function lampB(B, x, z, h = 6, glow = true) { B.box(CITY.mats.pole, x, h / 2, z, .16, h, .16, 0x555a60); if (glow) CITY.wins.push([x, h + .1, z]); }
+// 歩く人：ステージの「人の集まる所」の中をうろうろ、または決まった道
+function stageCivs(n, o = {}) {
+  const S = STAGES[STAGE.id], loops = S.loops || [];
+  for (let i = 0; i < n; i++) {
+    if (loops.length && Math.random() < (o.walk ?? .4)) { const L = loops[i % loops.length], k = (Math.random() * L.length) | 0, a = L[k], b = L[(k + 1) % L.length], t = Math.random(); const P = spawnPerson('civ', lerp(a[0], b[0], t), lerp(a[1], b[1], t), { st: 'walk', path: L, cloth: o.cloth }); P.pi = (k + 1) % L.length; }
+    else { const [x, z] = S.wander(); spawnPerson('civ', x, z, { st: Math.random() < .3 ? 'idle' : 'wander', cloth: o.cloth }); }
+  }
+}
+const inRect = (x0, x1, z0, z1) => () => [rr(x0, x1), rr(z0, z1)];
+
+// ---------- 川べりの住宅街 ----------
+function genRiver() {
+  const M = CITY.mats, B = IBatch(), r = rng(301);
+  groundPlane(M.grass, 300);
+  // 川（z 20〜44）。両岸は石のかべ、水面は y -1
+  mk(new THREE.PlaneGeometry(2400, 24).rotateX(-Math.PI / 2), M.sea, 0, -1, 32).castShadow = false; mk(new THREE.PlaneGeometry(2400, 24.2).rotateX(-Math.PI / 2), M.dark, 0, -1.6, 32).castShadow = false;
+  for (const z of [19.6, 44.4]) boxM(2400, 1.4, .8, M.stone, 0, -.6, z, false);
+  for (const z of [13, 51]) { const p = mk(uvScale(new THREE.PlaneGeometry(2400, 5).rotateX(-Math.PI / 2), 400, 1), M.walk, 0, .06, z); p.castShadow = false; }   // 川ぞいの道
+  // 橋（x 10。車と人が通る）
+  boxM(10, .8, 34, M.stone, 10, 2.1, 32); for (const x of [5.3, 14.7]) boxM(.3, 1.1, 34, M.parapet, x, 3.05, 32, false); for (const z of [24, 40]) boxM(2, 3.2, 2, M.stone, 10, .2, z, false);
+  for (const [z, a] of [[13, 1], [51, -1]]) { const r = mk(new THREE.BoxGeometry(10, .3, 4.7), M.asph, 10, 1.25, z); r.rotation.x = a * -.54; r.castShadow = false; }
+  // 北：野球場と広場（あなたのビルと川のあいだは、ひらけている）
+  const fld = mk(new THREE.CircleGeometry(30, 32, -Math.PI / 4, Math.PI / 2).rotateX(-Math.PI / 2), M.earthG, -20, .05, -30); fld.castShadow = false; fld.rotation.y = Math.PI;
+  for (let k = 0; k < 8; k++) B.box(M.pole, -40 + k * 6, 3, -62, .12, 6, .12, 0x606468); B.box(M.metalP, -19, 3, -62, 42, 5.6, .05, 0x8a9298);
+  for (let i = 0; i < 26; i++) treeB(B, rr(-70, 90), [-6, 6, 60, 70][i % 4] + rr(-2, 2), .8 + r() * .5);
+  for (let x = -60; x <= 90; x += 18) for (const z of [11, 53]) lampB(B, x, z + (z < 30 ? -2.4 : 2.4), 5);
+  // 家：南の岸の向こう、東と西（見る線の外）
+  const cols = [0xf2ece0, 0xe8dcc8, 0xf6f4ee, 0xdcd4c4, 0xe4e8ec], roofs = [0x4a4e58, 0x8a3a2a, 0x3a5a7a, 0x5a5048, 0x2e3a34];
+  for (let x = -120; x <= 140; x += 14) for (let z = 62; z <= 150; z += 15) if (r() < .85) house(B, x + r() * 2, z, 9 + r() * 3, 8 + r() * 2, 5 + r() * 2.5, cols[r() * 5 | 0], roofs[r() * 5 | 0], r() < .5 ? 1 : 0);
+  for (let x = 70; x <= 160; x += 14) for (let z = -120; z <= -10; z += 15) if (r() < .8) house(B, x + r() * 2, z, 9 + r() * 3, 8, 5 + r() * 2.5, cols[r() * 5 | 0], roofs[r() * 5 | 0], r() < .5 ? 1 : 0);
+  for (let x = -200; x <= -100; x += 14) for (let z = -40; z <= 10; z += 15) house(B, x, z, 10, 8, 6, cols[r() * 5 | 0], roofs[r() * 5 | 0]);
+  perchBld(3, -80, -80, 34, 30, [.93, .92, .9]);
+  for (let i = 0; i < 40; i++) { const a = Math.PI * .1 + r() * Math.PI * .8, d = 300 + r() * 400; putBld(r() < .5 ? 3 : 1, Math.cos(a) * d, Math.sin(a) * d + 100, 20 + r() * 20, 20 + r() * 20, 14 + r() * 30, [.9, .9, .88], 0); }
+  mountains(14, 700, 0x5a7a52, 31, [120, 260]);
+  B.flush();
+}
+// ---------- 山あいのダム ----------
+function genDam() {
+  const M = CITY.mats, B = IBatch(), r = rng(302);
+  groundPlane(M.earthG, 200);
+  // ダムのかべ（z 26〜34、上は y 32 の道）と、下流がわの斜面、上の手すり
+  boxM(190, 32, 8, M.stone, 0, 16, 30); mk(new THREE.BoxGeometry(190, 36, 2).rotateX(-.42), M.stone, 0, 15, 22).castShadow = true; addBox(-95, 95, 0, 22, 18, 26);
+  for (const z of [26.3, 33.7]) boxM(190, 1.1, .3, M.parapet, 0, 32.7, z, false);
+  for (let x = -90; x <= 90; x += 15) lampB(B, x, 26.6, 4, true);
+  for (let x = -90; x <= 90; x += 30) { B.box(M.stone, x, 33.6, 31.7, 4, 3, 4, 0xd0ccc4, 0, true); B.box(M.dark, x, 33.2, 29.62, 1.3, 2.2, .1, 0x202226); }   // 水門の機械の小屋（入口は歩道がわ）
+  // 湖（ダムの上流）と、まわりの山
+  mk(new THREE.PlaneGeometry(1600, 800).rotateX(-Math.PI / 2), M.sea, 0, 29, 434).castShadow = false;
+  for (const [x, z, s, h] of [[-196, 44, 110, 105], [196, 44, 110, 110], [-300, -40, 170, 90], [300, -60, 190, 100], [-60, 360, 260, 160], [220, 320, 240, 140]]) mk(new THREE.ConeGeometry(s, h, 8), M.plain, x, h / 2 - 2, z).material = M.leaf;
+  mountains(16, 600, 0x4a6040, 41, [200, 420]);
+  // 下流：川・発電所・変電所
+  const rv = mk(new THREE.PlaneGeometry(14, 600).rotateX(-Math.PI / 2), M.sea, 0, .05, -280); rv.castShadow = false;
+  putBld(3, 34, -24, 34, 18, 12, [.86, .86, .84]); boxM(.3, 4.4, 4, M.dark, 16.85, 2.35, -24, false); for (const z of [-36, -12]) lampB(B, 12, z, 7); lampB(B, -6, -24, 7);
+  for (let x = 58; x <= 90; x += 8) for (const z of [-40, -20]) { B.box(M.pole, x, 6, z, .4, 12, .4, 0x8a8e92); B.box(M.pole, x, 11.6, z, .2, .2, 22, 0x8a8e92); }
+  boxM(10, .2, 120, M.asph, -40, .1, -40, false);   // ダムへの道
+  for (let i = 0; i < 40; i++) treeB(B, rr(-120, 120) + (r() < .5 ? -150 : 150) * (r() < .3 ? 1 : 0), rr(-140, 10), 1 + r() * .6, 0x3a6a34);
+  perchBld(1, -100, -82, 22, 46, [.8, .74, .66]);
+  B.flush();
+}
+// ---------- 雪の駅前 ----------
+function genSnow() {
+  const M = CITY.mats, B = IBatch(), r = rng(303);
+  groundPlane(M.snowG, 200);
+  // 駅（南）とホーム・電車
+  putBld(1, 10, 48, 130, 16, 10, [.9, .86, .8]); boxM(16, 3, .4, M.dark, 10, 1.6, 39.8, false);
+  { const [c, g] = cvs(512, 128); g.fillStyle = '#1e3a5a'; g.fillRect(0, 0, 512, 128); g.fillStyle = '#fff'; g.font = '900 70px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ゆきみ駅', 256, 66); const s = mk(new THREE.PlaneGeometry(16, 4), new THREE.MeshBasicMaterial({ map: ctex(c, { rep: false }) }), 10, 8, 39.9); s.rotation.y = Math.PI; }
+  boxM(150, 1, 10, M.stone, 10, .5, 64, false); for (let k = 0; k < 4; k++) B.box(M.metalP, -40 + k * 22, 3, 70, 20, 3.4, 3, [0x3a8a5a, 0xe8e8e8, 0x3a8a5a, 0xe8e8e8][k], 0, true);
+  // 駅前の広場：バス停・街灯・雪の木・時計
+  for (const [x, z] of [[-20, 28], [0, 28], [20, 28]]) { B.box(M.metalP, x, 2.4, z, 4, .15, 1.6, 0x8a9298); B.box(M.pole, x - 1.8, 1.2, z, .1, 2.4, .1, 0x606468); B.box(M.pole, x + 1.8, 1.2, z, .1, 2.4, .1, 0x606468); }
+  B.box(M.pole, 12, 3.5, 6, .3, 7, .3, 0x404448); B.geo('clock', new THREE.CylinderGeometry(.9, .9, .25, 24).rotateX(Math.PI / 2), M.white, 12, 7.4, 6, 1, 1, 1, 0xffffff);
+  for (let i = 0; i < 22; i++) { const x = rr(-60, 80), z = [-26, 34, -40, 90][i % 4] + rr(-3, 3); B.geo('pine', new THREE.ConeGeometry(1, 1, 7).translate(0, .5, 0), M.plain, x, .15, z, 2.4, 7, 2.4, 0x2e4a3a); B.geo('pineS', new THREE.ConeGeometry(1, 1, 7).translate(0, .5, 0), M.plain, x, 3.2, z, 1.8, 4.2, 1.8, 0xf2f6fa); }
+  for (let x = -50; x <= 70; x += 20) for (const z of [-22, 32]) lampB(B, x, z, 6);
+  // まわりの町（東・西・南の奥）。北西の自分のビルと広場のあいだはあける
+  for (let i = 0; i < 26; i++) { const x = r() < .5 ? rr(90, 220) : rr(-220, -110), z = rr(-160, 160); putBld([1, 3, 0][r() * 3 | 0], x, z, 24 + r() * 18, 24 + r() * 18, 14 + r() * 34, [.92, .9, .86]); }
+  for (let i = 0; i < 18; i++) putBld([1, 3][r() * 2 | 0], rr(-150, 160), rr(100, 220), 24 + r() * 16, 20 + r() * 14, 10 + r() * 20, [.92, .9, .86]);
+  perchBld(1, -90, -80, 40, 36, [.82, .78, .72]);
+  mountains(18, 650, 0xe8eef6, 51, [220, 420]);
+  // 雪がふる（カメラのまわりだけ）
+  const N = 1400, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = rr(-60, 60); pos[i * 3 + 1] = rr(-30, 30); pos[i * 3 + 2] = rr(-60, 60); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const flakes = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: .18, transparent: true, opacity: .85, depthWrite: false })); flakes.frustumCulled = false; CITY.grp.add(flakes);
+  CITY.upd.push(dt => { const a = g.attributes.position.array, c = camera.position; for (let i = 0; i < N; i++) { a[i * 3 + 1] -= dt * (1.4 + (i % 7) * .12); a[i * 3] += Math.sin(i + W.t) * dt * .3; if (a[i * 3 + 1] < -30) a[i * 3 + 1] += 60; } g.attributes.position.needsUpdate = true; flakes.position.set(Math.round(c.x / 4) * 4, c.y, Math.round(c.z / 4) * 4); });
+  B.flush();
+}
+// ---------- 砂漠の基地 ----------
+function genDesert() {
+  const M = CITY.mats, B = IBatch(), r = rng(304);
+  groundPlane(M.sandG, 200);
+  for (let i = 0; i < 40; i++) { const a = r() * TAU, d = 260 + r() * 700; B.geo('dune', new THREE.SphereGeometry(1, 16, 8, 0, TAU, 0, Math.PI / 2), M.sandG, Math.cos(a) * d, -.2, Math.sin(a) * d, 60 + r() * 120, 8 + r() * 20, 40 + r() * 80, 0xffffff, r() * 3); }
+  // かべで囲んだ基地（x -10〜80、z -10〜70）。北に門
+  const wc = 0xc8b48c;
+  for (const [x0, x1, z] of [[-10, 28, -10], [42, 80, -10], [-10, 80, 70]]) B.box(M.wall, (x0 + x1) / 2, 1.75, z, x1 - x0, 3.2, .6, wc, 0, true);
+  for (const x of [-10, 80]) B.box(M.wall, x, 1.75, 30, .6, 3.2, 80, wc, 0, true);
+  // 見張り台（四すみ）
+  for (const [x, z] of [[-6, -6], [76, -6], [-6, 66], [76, 66]]) { for (const [dx, dz] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) B.box(M.metalP, x + dx, 4, z + dz, .25, 8, .25, 0x6a6458); B.box(M.wood, x, 8, z, 3.6, .3, 3.6, 0x8a6a46, 0, true); B.box(M.wood, x, 8.6, z - 1.8, 3.6, 1, .1, 0x8a6a46); B.geo('troof', CONE4, M.canvas, x, 10.3, z, 4.4, 1.4, 4.4, 0x9a8a6a); }
+  // 兵舎・テント・燃料タンク・トラック
+  for (const [x, z] of [[14, 52], [46, 52]]) B.box(M.wall, x, 2.2, z, 22, 4.1, 9, 0xb8a888, 0, true);
+  for (const [x, z] of [[8, 22], [20, 26], [56, 22], [64, 32]]) B.geo('tent', CONE4, M.canvas, x, .15, z, 6, 3.6, 6, 0x7a7a4a);
+  for (const z of [6, 10]) B.geo('tank', new THREE.CylinderGeometry(1.4, 1.4, 1, 14).rotateZ(Math.PI / 2), M.metalP, 70, 1.6, z, 7, 1, 1, 0xa8a8a0);
+  for (const x of [26, 38, 50]) car(x, 2, 0, 0x5a6a42, true);
+  for (let i = 0; i < 16; i++) B.geo('rock', new THREE.DodecahedronGeometry(1, 0), M.rock, rr(-150, 220), .2, rr(-150, 200), 2 + r() * 6, 1 + r() * 3, 2 + r() * 5, 0x9a8a72, r() * 3);
+  // あなたのいる台地（岩）と、砂ぶくろ
+  boxM(64, 36, 64, M.rock, -112, 18, -102); for (let k = 0; k < 6; k++) B.box(M.canvas, -82 - k * 1.3, 36.4, -71, 1.2, .5, .7, 0xb8a47a); for (let k = 0; k < 6; k++) B.box(M.canvas, -71, 36.4, -82 - k * 1.3, .7, .5, 1.2, 0xb8a47a);
+  mountains(10, 800, 0xc8a070, 61, [90, 200]);
+  for (let x = 0; x <= 70; x += 14) lampB(B, x, 40, 7);
+  B.flush();
+}
+// ---------- 夜の遊園地 ----------
+function genPark() {
+  const M = CITY.mats, B = IBatch(), r = rng(305);
+  groundPlane(M.tile, 300);
+  // 観覧車（回る）
+  const fw = new THREE.Group(); fw.position.set(70, 26, 70); CITY.grp.add(fw);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(22, .35, 8, 64), M.metalP); rim.material = new THREE.MeshStandardMaterial({ color: 0xe8e8f0, roughness: .4, metalness: .6 }); fw.add(rim);
+  for (let k = 0; k < 8; k++) { const s = new THREE.Mesh(new THREE.BoxGeometry(.2, 44, .2), rim.material); s.rotation.z = k / 8 * Math.PI; fw.add(s); }
+  const cabs = []; for (let k = 0; k < 16; k++) { const c = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.4, 2.2), new THREE.MeshStandardMaterial({ color: [0xe84a5a, 0x4a8ae8, 0xf2c02a, 0x5ad07a][k % 4], roughness: .5 })); fw.add(c); cabs.push(c); }
+  for (const s of [-1, 1]) for (const z of [-1, 1]) { const leg = mk(new THREE.CylinderGeometry(.4, .6, 29, 8), M.metalP, 70 + s * 7, 13, 70 + z * 3); leg.rotation.z = s * .25; }
+  CITY.wins.push(...Array.from({ length: 32 }, (_, k) => [70 + Math.sin(k / 32 * TAU) * 22, 26 + Math.cos(k / 32 * TAU) * 22, 70]));
+  CITY.upd.push(dt => { fw.rotation.z += dt * .06; cabs.forEach((c, k) => { const a = k / 16 * TAU + fw.rotation.z; c.position.set(Math.sin(a) * 22, Math.cos(a) * 22 - 1.6, 0); c.rotation.z = -fw.rotation.z; }); });
+  // メリーゴーランド（回る）
+  const cr = new THREE.Group(); cr.position.set(18, 0, 30); CITY.grp.add(cr); const crm = new THREE.MeshStandardMaterial({ color: 0xf0d8a0, roughness: .5 });
+  cr.add(new THREE.Mesh(new THREE.CylinderGeometry(9, 9, .6, 32), crm)); const cn = new THREE.Mesh(new THREE.ConeGeometry(10, 4, 32), new THREE.MeshStandardMaterial({ color: 0xd84a6a, roughness: .5 })); cn.position.y = 7; cr.add(cn);
+  for (let k = 0; k < 12; k++) { const a = k / 12 * TAU, p = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, 4.6, 6), new THREE.MeshStandardMaterial({ color: 0xd8c070, metalness: .7, roughness: .3 })); p.position.set(Math.cos(a) * 7, 2.6, Math.sin(a) * 7); cr.add(p); const h = new THREE.Mesh(new THREE.BoxGeometry(.5, 1, 1.6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .6 })); h.position.set(Math.cos(a) * 7, 1.8, Math.sin(a) * 7); h.rotation.y = -a; cr.add(h); }
+  addBox(9, 27, 0, 5, 21, 39); CITY.upd.push(dt => { cr.rotation.y += dt * .4; });
+  for (let k = 0; k < 24; k++) { const a = k / 24 * TAU; CITY.wins.push([18 + Math.cos(a) * 9.5, 5, 30 + Math.sin(a) * 9.5]); }
+  // ジェットコースターのレール（東）
+  const pts = []; for (let k = 0; k <= 40; k++) { const t = k / 40; pts.push(V3(110 + Math.cos(t * TAU) * 40, 6 + Math.sin(t * TAU * 3) * 4 + 6, -10 + Math.sin(t * TAU) * 30)); }
+  const tube = mk(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 160, .5, 6, true), M.metalP); tube.material = new THREE.MeshStandardMaterial({ color: 0xe0503a, roughness: .5, metalness: .5 });
+  for (let k = 0; k < 40; k += 2) B.box(M.metalP, pts[k].x, pts[k].y / 2, pts[k].z, .3, pts[k].y, .3, 0xd8d8d8);
+  // 屋台・ベンチ・灯り
+  const sc = [0xe84a5a, 0x4a8ae8, 0xf2c02a, 0x5ad07a, 0xb05ae0];
+  for (let k = 0; k < 10; k++) { const x = -30 + (k % 5) * 14, z = k < 5 ? -8 : 64; B.box(M.wall, x, 1.4, z, 4, 2.5, 3, 0xf6f0e4, 0, true); B.geo('stallR', PRISM, M.roofT, x, 2.7, z, 4.6, 1.2, 3.8, sc[k % 5]); CITY.wins.push([x, 3.4, z]); }
+  for (let x = -40; x <= 100; x += 10) for (const z of [-20, 4, 52]) { lampB(B, x, z, 4.2); }
+  for (let i = 0; i < 20; i++) treeB(B, rr(-60, 140), [-30, 100][i % 2] + rr(-4, 4), .9, 0x3a6a3a);
+  for (let i = 0; i < 22; i++) { const a = Math.PI * .05 + r() * Math.PI * .9, d = 260 + r() * 400; putBld([0, 3, 1][r() * 3 | 0], Math.cos(a) * d, Math.sin(a) * d, 24 + r() * 20, 24 + r() * 20, 20 + r() * 60, [.9, .92, .95], 0); }
+  perchBld(0, -100, -90, 30, 46, [.86, .9, .96]);
+  B.flush();
+}
+// ---------- 空港 ----------
+function airliner(B, x, z, ry, col = 0xf2f2f2) {
+  const M = CITY.mats, c = Math.cos(ry), s = Math.sin(ry), P = (lx, ly, lz) => [x + lx * c + lz * s, ly, z - lx * s + lz * c];
+  B.geo('fus', new THREE.CylinderGeometry(2.1, 2.1, 1, 16).rotateX(Math.PI / 2), M.metalP, ...P(0, 3.6, 0), 1, 1, 36, col, ry); B.geo('nose', new THREE.SphereGeometry(2.1, 14, 10), M.metalP, ...P(0, 3.6, -18), 1, 1, 1.6, col, ry);
+  B.geo('tailc', new THREE.ConeGeometry(2.1, 7, 14).rotateX(Math.PI / 2), M.metalP, ...P(0, 4.2, 21.4), 1, .9, 1, col, ry);
+  B.box(M.metalP, ...P(0, 2.8, 2), 32, .4, 5, 0xdadada, ry); B.box(M.metalP, ...P(0, 8, 22), .4, 7, 4, 0x2a5aa8, ry); B.box(M.metalP, ...P(0, 4.6, 23), 11, .3, 2.6, 0xdadada, ry);
+  for (const ex of [-7, 7]) B.geo('eng', new THREE.CylinderGeometry(1, 1.1, 1, 12).rotateX(Math.PI / 2), M.metalP, ...P(ex, 1.8, 0), 1, 1, 4, 0x9a9ea4, ry);
+  const a = Math.abs(c) > .5; addBox(x - (a ? 2.1 : 18), x + (a ? 2.1 : 18), 1.5, 5.7, z - (a ? 18 : 2.1), z + (a ? 18 : 2.1));
+}
+function genAirport() {
+  const M = CITY.mats, B = IBatch(), r = rng(306);
+  groundPlane(M.conc, 200);
+  const rw = mk(uvScale(new THREE.PlaneGeometry(1400, 46).rotateX(-Math.PI / 2), 30, 1), M.runway, 0, .04, 150); rw.castShadow = false;
+  const tw = mk(new THREE.PlaneGeometry(1400, 22).rotateX(-Math.PI / 2), M.asph, 0, .03, 100); tw.castShadow = false;
+  // ターミナル（北）・とう乗橋
+  putBld(0, 30, -32, 190, 22, 16, [.86, .92, .98]); for (const x of [0, 40, 80]) { B.box(M.metalP, x, 5, -14, 3, 3.2, 14, 0xb8bcc4); B.box(M.pole, x, 2, -8, .5, 4, .5, 0x606468); }
+  airliner(B, 0, 18, 0); airliner(B, 40, 18, 0, 0xeef2f8); airliner(B, 80, 18, 0, 0xf8f4ec);
+  // 格納庫（東）と小さな飛行機
+  const hg = mk(new THREE.CylinderGeometry(20, 20, 50, 24, 1, true, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2), M.metalP, 150, 0, 30); hg.material = new THREE.MeshStandardMaterial({ color: 0xc0c4c8, roughness: .5, metalness: .5, side: THREE.DoubleSide }); addBox(130, 170, 0, 18, 7, 55);
+  B.box(M.metalP, 150, 10, 55.2, 50, 20, .3, 0x8a9096, 0, false);
+  // 燃料車・荷物の台車
+  for (let k = 0; k < 8; k++) B.box(M.metalP, -20 + k * 4, .9, 50, 2.4, 1.4, 1.6, [0x3a6ab0, 0xd8d8d8][k % 2]);
+  for (const x of [20, 60]) car(x, 44, Math.PI / 2, 0xd8b030, true);
+  for (let x = -40; x <= 120; x += 20) lampB(B, x, 60, 14);
+  for (let i = 0; i < 30; i++) { const a = Math.PI + r() * Math.PI, d = 260 + r() * 450; putBld([0, 3][r() * 2 | 0], Math.cos(a) * d, Math.sin(a) * d - 100, 30 + r() * 20, 24 + r() * 20, 12 + r() * 30, [.9, .92, .95], 0); }
+  mountains(10, 900, 0x6a7a6a, 71, [140, 260]);
+  perchBld(0, -92, -70, 18, 44, [.88, .92, .96]); B.geo('cab', new THREE.CylinderGeometry(7, 5.6, 6, 12), M.glassB, -92, 44.15 + 3, -70, 1, 1, 1, 0xffffff);
+  B.flush();
+}
+// ---------- 工場地帯 ----------
+function genFactory() {
+  const M = CITY.mats, B = IBatch(), r = rng(307);
+  groundPlane(M.dkconc, 200);
+  // タンク（上に人が立てる。上は y 14.15）
+  for (const [x, z] of [[20, 20], [60, 6], [44, 56]]) { B.geo('tankB', new THREE.CylinderGeometry(10, 10, 14, 28).translate(0, 7, 0), M.metalP, x, .15, z, 1, 1, 1, 0xd8dadc); B.geo('tankT', new THREE.CylinderGeometry(10.2, 10.2, .4, 28), M.metalP, x, 14.2, z, 1, 1, 1, 0x9aa0a6); addBox(x - 7, x + 7, 0, 14.15, z - 7, z + 7); B.geo('rail', new THREE.TorusGeometry(9.6, .06, 4, 40).rotateX(Math.PI / 2), M.pole, x, 15.2, z, 1, 1, 1, 0xd8b030); }
+  // パイプの棚（z 34）
+  for (let x = -20; x <= 110; x += 10) for (const dz of [-1.6, 1.6]) B.box(M.pole, x, 3.5, 34 + dz, .3, 7, .3, 0x707478);
+  for (const dy of [6.6, 7.3]) B.geo('pipe', new THREE.CylinderGeometry(.35, .35, 1, 10).rotateZ(Math.PI / 2), M.metalP, 45, dy, 34, 130, 1, 1, [0xd8a030, 0x8a9aa8][dy > 7 ? 1 : 0]);
+  // えんとつ（赤白）・冷却塔・工場の建物
+  for (const [x, z] of [[110, -20], [124, 40]]) for (let k = 0; k < 8; k++) B.geo('chim', new THREE.CylinderGeometry(2.4 - k * .1, 2.5 - k * .1, 8, 16).translate(0, 4, 0), M.wall, x, k * 8, z, 1, 1, 1, k % 2 ? 0xffffff : 0xc83a2a);
+  { const pts = []; for (let k = 0; k <= 10; k++) { const t = k / 10; pts.push(new THREE.Vector2(18 - Math.sin(t * Math.PI) * 6 + t * 2, t * 40)); } const ct = mk(new THREE.LatheGeometry(pts, 32), M.wall, 140, 0, 110); ct.material = new THREE.MeshStandardMaterial({ color: 0xc8c8c4, roughness: .9, side: THREE.DoubleSide }); }
+  for (const [x, z, w, d, h] of [[-40, -30, 40, 24, 12], [10, -40, 30, 20, 10], [-30, 70, 30, 30, 14], [90, 80, 36, 24, 16]]) { B.box(M.shed || M.metalP, x, h / 2, z, w, h, d, 0xb4b8bc, 0, true); B.geo('shedR', PRISM, M.roofT, x, h, z, w + .6, 4, d + .6, 0x6a7078); }
+  for (let x = -30; x <= 110; x += 20) lampB(B, x, -6, 9);
+  B.geo('ring', new THREE.CylinderGeometry(4.3, 4.3, .3, 20), M.metalP, 110, 30, -20, 1, 1, 1, 0x707478); B.geo('ringR', new THREE.TorusGeometry(4.2, .05, 4, 32).rotateX(Math.PI / 2), M.pole, 110, 31.1, -20, 1, 1, 1, 0xd8b030); B.box(M.pole, 112.6, 15, -17.4, .12, 30, .5, 0x707478);   // えんとつの作業台（y 30）
+  for (let i = 0; i < 24; i++) { const a = Math.PI * .05 + r() * Math.PI * .9, d = 280 + r() * 400; B.geo('ftank', new THREE.CylinderGeometry(1, 1, 1, 16).translate(0, .5, 0), M.metalP, Math.cos(a) * d, 0, Math.sin(a) * d, 12 + r() * 10, 10 + r() * 14, 12 + r() * 10, 0xc8ccd0); }
+  mountains(10, 800, 0x5a6458, 81, [120, 220]);
+  perchBld(3, -92, -92, 30, 40, [.82, .84, .86]);
+  B.flush();
+}
+// ---------- 城下町 ----------
+function genOld() {
+  const M = CITY.mats, B = IBatch(), r = rng(308);
+  groundPlane(M.earthG, 200);
+  const st = mk(uvScale(new THREE.PlaneGeometry(220, 12).rotateX(-Math.PI / 2), 40, 2), M.cobble, 10, .05, 12); st.castShadow = false;   // 大通り（東西）
+  const st2 = mk(uvScale(new THREE.PlaneGeometry(10, 120).rotateX(-Math.PI / 2), 2, 20), M.cobble, -8, .04, 40); st2.castShadow = false;
+  // 町家（白いかべ・黒い瓦）。大通りの南がわと東・西。自分と大通りのあいだはあける
+  for (let x = -60; x <= 110; x += 11) { if (x > -20 && x < 4) continue; if (r() < .9) house(B, x, 24, 9.5, 8, 4.4 + r(), 0xf4f0e6, 0x3a3c40); }
+  for (let x = 60; x <= 140; x += 11) for (let z = -60; z <= 0; z += 12) if (r() < .85) house(B, x, z, 9.5, 8, 4.2 + r(), [0xf4f0e6, 0xe2d6c0][r() * 2 | 0], 0x3a3c40, r() < .3 ? 1 : 0);
+  for (let x = -140; x <= -60; x += 11) for (let z = 30; z <= 90; z += 12) house(B, x, z, 9.5, 8, 4.4, 0xf4f0e6, 0x3a3c40);
+  // お城：石がき（上は y 12）と天守、まわりのほり
+  mk(new THREE.CylinderGeometry(20 * Math.SQRT2, 26 * Math.SQRT2, 12, 4, 1).rotateY(Math.PI / 4), M.stone, 60, 6, 70).material = new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: .95 }); addBox(36, 84, 0, 12, 46, 94);
+  boxM(3, 3.6, .2, M.dark, 60, 13.8, 64.72, false);   // 天守の入口
+  for (const [w, h, y, rc] of [[18, 7, 12, 0x2a2c30], [14, 6, 19, 0x2a2c30], [10, 5, 25, 0x2a2c30]]) { B.box(M.wall, 60, y + h / 2, 72, w, h, w * .8, 0xf6f4ee, 0, true); B.geo('kroof', CONE4, M.roofT, 60, y + h, 72, w * 1.25, 2.6, w * 1.05, rc); }
+  B.geo('moat', new THREE.BoxGeometry(1, 1, 1), M.sea, 60, .02, 70, 72, .04, 72, 0x2a5a7a);
+  for (let x = -40; x <= 100; x += 12) { B.box(M.wood, x, 1.2, 6.8, .14, 2.4, .14, 0x4a3a2a); CITY.wins.push([x, 2.5, 6.8]); }   // ちょうちん
+  for (let i = 0; i < 24; i++) treeB(B, rr(0, 120), rr(100, 140), 1 + r() * .4, 0x3e6a3a);
+  { const tg = new THREE.Group(); CITY.grp.add(tg); B.box(M.wood, -8, 3.4, -10, .5, 6.8, .5, 0xc83a2a); B.box(M.wood, 4, 3.4, -10, .5, 6.8, .5, 0xc83a2a); B.box(M.wood, -2, 7, -10, 15, .7, .7, 0x2a2a2a); B.box(M.wood, -2, 6, -10, 13, .4, .4, 0xc83a2a); }   // 鳥居
+  mountains(14, 700, 0x4a6a48, 91, [160, 300]);
+  perchBld(1, -90, -90, 26, 38, [.86, .82, .76]);
+  B.flush();
+}
+Object.assign(STAGES, {
+  river: { name: '川べりの住宅街', perch: [-80 + 16.5, 30.15 + 1.4, -80 + 16.5], gen: genRiver, wander: inRect(-10, 60, -14, 10), loops: [[[-60, 13], [90, 13]], [[-60, 51], [90, 51]], [[10, 8], [10, 56]]], waterAt: (x, z) => (z > 20 && z < 44 && Math.abs(x - 10) > 5.5 ? -1 : null), hAt: (x, z) => (Math.abs(x - 10) < 5 && z > 10.7 && z < 53.3 ? .15 + 2.4 * clamp(Math.min(z - 10.7, 53.3 - z) / 4.3, 0, 1) : .15) },
+  dam: { name: '山あいのダム', perch: [-100 + 10.5, 46.15 + 1.4, -82 + 10.5], gen: genDam, wander: inRect(0, 60, -14, 0), loops: [[[-80, 30], [80, 30]], [[-40, -10], [40, -10]]], waterAt: (x, z) => (z > 34 ? 29 : null) },
+  snow: { name: '雪の駅前', perch: [-90 + 19.5, 36.15 + 1.4, -80 + 19.5], gen: genSnow, wander: inRect(-30, 50, -14, 26), loops: [[[-50, 34], [70, 34]], [[-40, -20], [60, -20]]] },
+  desert: { name: '砂漠の基地', perch: [-112 + 31.5, 36 + 1.4, -102 + 31.5], gen: genDesert, wander: inRect(4, 66, 4, 40), loops: [[[0, 14], [70, 14], [70, 44], [0, 44]]] },
+  park: { name: '夜の遊園地', perch: [-100 + 14.5, 46.15 + 1.4, -90 + 14.5], gen: genPark, wander: inRect(-30, 60, -14, 56), loops: [[[-30, -4], [80, -4], [80, 48], [-30, 48]]] },
+  airport: { name: '空港', perch: [-92 + 8.5, 44.15 + 1.4, -70 + 8.5], gen: genAirport, wander: inRect(-20, 100, 40, 60), loops: [[[-30, 46], [110, 46]]] },
+  factory: { name: '工場地帯', perch: [-92 + 14.5, 40.15 + 1.4, -92 + 14.5], gen: genFactory, wander: inRect(-10, 90, 40, 60), loops: [[[-20, -6], [100, -6]], [[-10, 44], [90, 44]]] },
+  old: { name: '城下町', perch: [-90 + 12.5, 38.15 + 1.4, -90 + 12.5], gen: genOld, wander: inRect(-30, 60, 8, 16), loops: [[[-40, 10], [100, 10]], [[-40, 14], [100, 14]], [[-8, 0], [-8, 60]]] },
+});
 // =========================================================================================
 //  キャラクター：Quaternius（CC0）の4人。待機・歩き・走りのクリップに、ジャンプ・落下・ぶら下がり・よじ登り・はしご・着地の形を骨を回して足す
 // =========================================================================================
@@ -808,9 +1074,10 @@ function updatePerson(P, dt, W) {
   if (P.down) { P.ct += dt; poseHuman(P, 'Death', false); return; }
   P.sp = 0;
   if (P.st === 'walk' && P.path) { const t = P.path[P.pi]; if (moveTo(P, t[0], t[1], P.data.ws || 1.35, dt)) P.pi = (P.pi + 1) % P.path.length; }
-  else if (P.st === 'wander') { if (!P.tgt || P.wait > 0) { P.wait -= dt; if (!P.tgt || P.wait <= 0 && P.wait > -1) { P.tgt = plazaPoint(); P.wait = -2; } } else if (moveTo(P, P.tgt[0], P.tgt[1], 1.25, dt)) { P.tgt = null; P.wait = rr(1, 5); } }
+  else if (P.st === 'wander') { if (!P.tgt || P.wait > 0) { P.wait -= dt; if (!P.tgt || P.wait <= 0 && P.wait > -1) { P.tgt = ((STAGES[STAGE.id] || {}).wander || plazaPoint)(); P.wait = -2; } } else if (moveTo(P, P.tgt[0], P.tgt[1], 1.25, dt)) { P.tgt = null; P.wait = rr(1, 5); } }
   else if (P.st === 'run' || P.st === 'flee') { const t = P.runTo; if (t && moveTo(P, t[0], t[1], P.st === 'flee' ? 3.4 * (W.spK || 1) : 4.2, dt)) { if (P.st === 'flee') { P.gone = true; P.H.root.visible = false; W.onEscape && W.onEscape(P); } else { P.st = P.path ? 'walk' : 'idle'; P.calmT = 0; } } }
   else if (P.st === 'script' && P.beh) P.beh(P, dt, W);
+  if (STAGE.hAt && P.p.y < 3) P.p.y = STAGE.hAt(P.p.x, P.p.z);   // 橋の上など
   if (P.st === 'idle' && P.lookAt) P.face = P.face + angDiff(P.face, Math.atan2(P.lookAt[0] - P.p.x, P.lookAt[1] - P.p.z)) * Math.min(1, dt * 4);
   const c = P.sp > 3 ? 'Run' : P.sp > .3 ? 'Walk' : P.idleClip || 'Idle'; setClip(P, c);
   P.ct += dt * (c === 'Walk' ? clamp(P.sp / 1.35, .7, 1.4) : 1); poseHuman(P, P.clip, true);
@@ -911,6 +1178,7 @@ function updateSky(focus) {
 // =========================================================================================
 const UI = { playing: () => G.scr === 'play' && !G.paused };
 const G = { scr: 'title', paused: false, mi: 0, M: null, phase: 'intro', t: 0, left: 0, ammo: 0, shots: 0, hits: 0, scoped: false, zoom: 0, yaw: 0, pitch: 0, base: 0, swayT: 0, breath: 1, recoil: 0, bolt: 0, bullets: [], fx: [], wind: V3(), res: null, msgT: 0, bc: null, escaped: 0, endT: 0 };
+const G_ = G;   // じゅうの動きの関数の中では G を手もとの銃に使うので、こちらの名前で
 const ZOOMS = [62, 15, 6];
 const DIFF = [{ v: 1200, g: 0, wind: 0, sway: .0004, mark: 2, name: 'かんたん' }, { v: 900, g: 9.8, wind: .6, sway: .0008, mark: 1, name: 'ふつう' }, { v: 850, g: 9.8, wind: 1.2, sway: .0014, mark: 0, name: 'むずかしい' }];
 const BEST_KEY = 'snp-best';
@@ -932,18 +1200,91 @@ const AU = {
   thud() { this.noise(.1, 1400, .12, 'bandpass'); },
   empty() { this.tone(1400, .05, .05, 'square'); },
   scope() { this.noise(.05, 2500, .06, 'bandpass'); },
+  // スコープをのぞく：服のこすれ → ほおを銃床にのせる → 目当てゴムが当たる
+  scopeIn() { this.noise(.2, 900, .09, 'lowpass'); this.noise(.08, 1800, .05, 'bandpass', .08); this.tone(150, .07, .07, 'sine', .2, 90); this.noise(.025, 3400, .05, 'bandpass', .22); },
+  scopeOut() { this.noise(.14, 1100, .07, 'lowpass'); this.noise(.02, 3000, .03, 'bandpass', .05); },
+  // 倍率リングを回す：カチカチ（さいごは少し強く）＋こすれる音
+  zoom(up) { this.noise(.22, 6500, .018, 'highpass'); for (let k = 0; k < 5; k++) { const t = k * .042, last = k === 4; this.noise(.012, up ? 4300 + k * 180 : 5000 - k * 180, last ? .11 : .06, 'bandpass', t); this.tone(last ? 2100 : 2600, .008, last ? .025 : .012, 'square', t); } this.tone(420, .04, .03, 'sine', .2); },
   good() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, .45, .08, 'triangle', i * .09)); },
   bad() { [330, 294, 247].forEach((f, i) => this.tone(f, .5, .08, 'sawtooth', i * .22)); },
   update() { if (this.ok) this.amb.gain.setTargetAtTime(G.scr === 'play' ? (G.scoped ? .025 : .05) : .02, this.ctx.currentTime, .3); },
 };
-// ---------- じゅう（自分の手もと） ----------
-const GUN = { g: new THREE.Group() };
+// ---------- じゅう（自分の手もと）：ボルトアクションのライフル・スコープ・手ぶくろの手 ----------
+// 部品の大きさは本物くらい（全長 約1.2m）。原点は機関部のまん中、銃口は -z
+const GUN = { g: new THREE.Group(), bolt: null, shells: [], smoke: [], flash: null, muzzle: V3(0, .006, -.83), port: V3(.022, .012, .04) };
 function makeGun() {
-  const M = new THREE.MeshStandardMaterial({ color: 0x2a2d30, roughness: .45, metalness: .6 }), W = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: .7 }), add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); GUN.g.add(o); return o; };
-  add(new THREE.BoxGeometry(.07, .1, .55), W, 0, -.02, .25); add(new THREE.BoxGeometry(.06, .08, .5), M, 0, .02, -.2); add(new THREE.CylinderGeometry(.013, .016, .7, 10).rotateX(Math.PI / 2), M, 0, .03, -.75);
-  add(new THREE.CylinderGeometry(.028, .028, .34, 14).rotateX(Math.PI / 2), M, 0, .11, -.18); add(new THREE.CylinderGeometry(.036, .03, .07, 14).rotateX(Math.PI / 2), M, 0, .11, -.37); add(new THREE.CylinderGeometry(.034, .03, .06, 14).rotateX(Math.PI / 2), M, 0, .11, .01);
-  add(new THREE.BoxGeometry(.02, .07, .03), M, 0, .07, -.18); add(new THREE.BoxGeometry(.03, .03, .08), M, .045, .05, .02);
-  GUN.g.scale.setScalar(.72); GUN.g.position.set(.22, -.2, -.36); GUN.g.traverse(o => { if (o.material) o.material.depthTest = true; }); camera.add(GUN.g);
+  const metal = new THREE.MeshStandardMaterial({ color: 0x2b2e31, roughness: .42, metalness: .78 }), dark = new THREE.MeshStandardMaterial({ color: 0x17191b, roughness: .55, metalness: .6 }),
+    stockM = new THREE.MeshStandardMaterial({ color: 0x3d4234, roughness: .82, metalness: 0 }), rubber = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: .95 }),
+    glass = new THREE.MeshStandardMaterial({ color: 0x0e2a3c, roughness: .04, metalness: 1, emissive: 0x06141e }), glove = new THREE.MeshStandardMaterial({ color: 0x2c2c2a, roughness: .9 }),
+    sleeve = new THREE.MeshStandardMaterial({ color: 0x4a5038, roughness: .92 }), brass = new THREE.MeshStandardMaterial({ color: 0xc8a050, roughness: .3, metalness: .95 });
+  GUN.mats = { brass };
+  const G = GUN.g, add = (geo, m, x, y, z, p = G) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); p.add(o); return o; }, cylZ = (r0, r1, len, seg = 16) => new THREE.CylinderGeometry(r0, r1, len, seg).rotateX(Math.PI / 2);
+  // 銃床（横から見た形をおし出す）。x：前が＋、y：上が＋
+  const sh = new THREE.Shape(), P = [[.36, -.012], [.06, -.012], [.06, -.02], [-.1, -.02], [-.1, -.012], [-.16, .008], [-.4, .02], [-.43, .016], [-.445, -.02], [-.44, -.11], [-.405, -.122], [-.25, -.075], [-.17, -.064], [-.152, -.15], [-.112, -.152], [-.094, -.06], [-.03, -.046], [.06, -.046], [.34, -.04]];
+  sh.moveTo(...P[0]); for (let k = 1; k < P.length; k++) sh.lineTo(...P[k]); sh.closePath();
+  const sg = new THREE.ExtrudeGeometry(sh, { depth: .036, bevelEnabled: true, bevelThickness: .006, bevelSize: .006, bevelSegments: 2, curveSegments: 4 }); sg.translate(0, 0, -.018); sg.rotateY(-Math.PI / 2); sg.computeVertexNormals(); add(sg, stockM, 0, 0, 0);
+  add(new THREE.BoxGeometry(.05, .1, .02), rubber, 0, -.048, .447);   // 床尾のゴム
+  // 機関部・ボルト・引き金
+  add(cylZ(.019, .019, .21), metal, 0, .004, .0); add(new THREE.BoxGeometry(.026, .012, .055), dark, .012, .016, .045);   // 排きょう口
+  const bolt = new THREE.Group(); bolt.position.set(0, .004, .07); G.add(bolt); GUN.bolt = bolt;
+  add(cylZ(.012, .012, .09), metal, 0, 0, -.02, bolt); const hd = add(new THREE.CylinderGeometry(.004, .004, .065, 8), metal, .03, -.012, .015, bolt); hd.rotation.z = Math.PI / 2 + .55; add(new THREE.SphereGeometry(.012, 12, 10), dark, .058, -.03, .015, bolt);
+  const tg = add(new THREE.TorusGeometry(.022, .003, 6, 14, Math.PI), metal, 0, -.05, .1); tg.rotation.set(0, Math.PI / 2, Math.PI); add(new THREE.BoxGeometry(.004, .022, .007), metal, 0, -.045, .1);
+  add(new THREE.BoxGeometry(.03, .06, .075), dark, 0, -.055, .02);   // 弾倉
+  // 銃身・銃口のブレーキ・二脚（たたんだ）
+  add(cylZ(.0105, .0128, .6), metal, 0, .006, -.41); add(cylZ(.0148, .0148, .065), dark, 0, .006, -.745);
+  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(.004, .012, .028), new THREE.MeshBasicMaterial({ color: 0x050505 }), sx * .0145, .006, -.742);
+  add(new THREE.BoxGeometry(.03, .016, .03), dark, 0, -.05, -.3); for (const sx of [-1, 1]) add(cylZ(.0035, .0035, .2), metal, sx * .01, -.058, -.2);
+  // レールとスコープ
+  add(new THREE.BoxGeometry(.022, .008, .25), dark, 0, .026, -.02); for (let k = 0; k < 10; k++) add(new THREE.BoxGeometry(.024, .004, .008), dark, 0, .032, -.13 + k * .024);
+  for (const z of [-.1, .05]) { add(new THREE.BoxGeometry(.024, .03, .018), metal, 0, .045, z); add(cylZ(.018, .018, .02, 20), metal, 0, .068, z); }
+  add(cylZ(.0152, .0152, .31, 24), metal, 0, .068, -.03); add(cylZ(.0272, .0165, .08, 24), metal, 0, .068, -.225); add(cylZ(.0272, .0272, .018, 24), dark, 0, .068, -.27);
+  add(cylZ(.0168, .02, .075, 24), metal, 0, .068, .16); add(cylZ(.021, .021, .02, 24), rubber, 0, .068, .2);
+  add(new THREE.CylinderGeometry(.0125, .0125, .03, 18), dark, 0, .098, -.03); add(new THREE.CylinderGeometry(.0125, .0125, .028, 18).rotateZ(Math.PI / 2), dark, .03, .068, -.03); add(new THREE.CylinderGeometry(.011, .011, .02, 18).rotateZ(Math.PI / 2), dark, -.026, .068, -.03);
+  add(new THREE.CylinderGeometry(.015, .015, .002, 24).rotateX(Math.PI / 2), dark, 0, .098, -.03).rotation.set(0, 0, 0);
+  const lo = add(new THREE.CircleGeometry(.025, 24), glass, 0, .068, -.2795); lo.rotation.y = Math.PI; add(new THREE.CircleGeometry(.0185, 24), glass, 0, .068, .211);
+  // 手ぶくろの手と、そで
+  const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
+  const rh = new THREE.Group(); rh.position.set(.004, -.098, .128); rh.rotation.x = .35; G.add(rh);
+  add(cap(.03, .05), glove, 0, 0, 0, rh); for (let k = 0; k < 3; k++) { const f = add(cap(.009, .03), glove, -.02, .03 - k * .021, -.03, rh); f.rotation.z = Math.PI / 2; } add(cap(.01, .035), glove, .022, .03, -.02, rh).rotation.x = -.8;
+  const ra = add(cap(.045, .32), sleeve, .06, -.17, .27); ra.rotation.set(.9, 0, -.45);
+  const lh = new THREE.Group(); lh.position.set(-.005, -.052, -.26); G.add(lh);
+  add(cap(.028, .05), glove, 0, -.01, 0, lh).rotation.x = Math.PI / 2; for (let k = 0; k < 3; k++) { const f = add(cap(.008, .028), glove, .022, .012, -.022 + k * .02, lh); f.rotation.x = Math.PI / 2; } add(cap(.009, .03), glove, -.024, .012, -.01, lh).rotation.x = Math.PI / 2;
+  const la = add(cap(.04, .3), sleeve, -.07, -.2, -.17); la.rotation.set(1.2, 0, .32);
+  // 銃口の光
+  GUN.flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xffd28a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); GUN.flash.position.copy(GUN.muzzle); GUN.flash.scale.setScalar(.25); G.add(GUN.flash);
+  G.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
+  VM.scene.add(G); VM.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1); VM.sun = new THREE.DirectionalLight(0xffffff, 2); VM.scene.add(VM.hemi, VM.sun, VM.sun.target);
+  G.scale.setScalar(.9);
+}
+// 手もとの光：外の太陽・空の色を、カメラから見た向きに直して当てる
+const _sv = V3(), _iq = new THREE.Quaternion();
+function gunLight() {
+  if (!VM.hemi) return; VM.hemi.color.copy(SKY.hemi.color); VM.hemi.groundColor.copy(SKY.hemi.groundColor); VM.hemi.intensity = Math.max(.35, SKY.hemi.intensity);
+  VM.sun.color.copy(SKY.sun.color); VM.sun.intensity = Math.max(.5, SKY.sun.intensity * .9); _iq.copy(camera.quaternion).invert(); _sv.copy(SKY.U.uSun.value).applyQuaternion(_iq); VM.sun.position.copy(_sv).multiplyScalar(5); VM.sun.target.position.set(0, 0, 0);
+  VM.scene.environment = scene.environment; VM.scene.environmentIntensity = scene.environmentIntensity;
+}
+// 1発うったあと：反動 → ボルトを起こす → 引く（からの薬きょうが飛ぶ） → おす → たおす
+function gunAnim(dt) {
+  const G = GUN.g, e = 1.15 - G_.bolt, ss = s => s * s * (3 - 2 * s), seg = (a, b) => ss(clamp((e - a) / (b - a), 0, 1));
+  const kick = G_.bolt > 0 ? Math.max(0, 1 - e / .14) : 0, lift = seg(.16, .3) - seg(.72, .86), pull = seg(.32, .48) - seg(.54, .7), work = G_.bolt > 0 ? Math.sin(Math.PI * clamp((e - .1) / .85, 0, 1)) : 0;
+  if (G_.bolt > 0 && e > .45 && !G_.ejected) { G_.ejected = true; ejectShell(); }
+  if (G_.bolt <= 0) G_.ejected = false;
+  const br = Math.sin(G_.swayT * 1.7) * .0025, wx = IN.look[0] * .00004;
+  const tall = VM.cam.aspect < 1, bx = tall ? .1 : .2, by = tall ? -.2 : -.175, r = ssf(clamp((G_.scA || 0) / .6, 0, 1)), arc = Math.sin(r * Math.PI);
+  G.position.set(lerp(bx, 0, r) - work * .02 + wx * (1 - r), lerp(by, -.0612, r) + arc * .025 - work * .035 + br * (1 - r) + kick * .01, lerp(-.64, -.27, r) + kick * .07 + G_.hideK * .05);
+  G.rotation.set((.02 + kick * .16 + work * .05) * (1 - r) - G_.hideK * .4 + arc * .06, (.07 + work * .05) * (1 - r), -work * .18 - arc * .12);
+  GUN.g.visible = (G_.scr === 'play' || G_.scr === 'pause') && (G_.scA || 0) < .62;
+  GUN.bolt.rotation.z = lift * 1.05; GUN.bolt.position.z = .07 + pull * .085;
+  GUN.flash.material.opacity = Math.max(0, 1 - e / .06) * (G_.bolt > 0 ? 1 : 0); GUN.flash.scale.setScalar(.18 + Math.random() * .12);
+  for (let i = GUN.shells.length - 1; i >= 0; i--) { const S = GUN.shells[i]; S.t += dt; S.v.y -= 9.8 * dt; S.o.position.addScaledVector(S.v, dt); S.o.rotation.x += S.w * dt; S.o.rotation.z += S.w * .7 * dt; if (S.t > .9) { G.remove(S.o); GUN.shells.splice(i, 1); } }
+  for (let i = GUN.smoke.length - 1; i >= 0; i--) { const S = GUN.smoke[i]; S.t += dt; S.o.position.y += dt * .06; S.o.position.z -= dt * .05; S.o.scale.setScalar(.05 + S.t * .25); S.o.material.opacity = Math.max(0, .35 - S.t * .3); if (S.t > 1.2) { G.remove(S.o); GUN.smoke.splice(i, 1); } }
+}
+function ejectShell() {
+  const o = new THREE.Mesh(new THREE.CylinderGeometry(.0055, .0065, .062, 10).rotateX(Math.PI / 2), GUN.mats.brass); o.position.copy(GUN.port); GUN.g.add(o);
+  GUN.shells.push({ o, t: 0, v: V3(rr(.9, 1.3), rr(.7, 1), rr(-.1, .15)), w: rr(14, 22) }); AU.noise(.03, 5000, .04, 'bandpass', .5);
+}
+function gunFire() {
+  G_.ejected = false; for (let k = 0; k < 3; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xc8c8c8, transparent: true, depthWrite: false, opacity: .35 })); s.position.copy(GUN.muzzle).add(V3(rr(-.02, .02), rr(0, .02), rr(-.03, .03))); GUN.g.add(s); GUN.smoke.push({ o: s, t: -k * .05 }); }
 }
 // ---------- ミッション ----------
 const towardMe = (x, z) => Math.atan2(ME_POS.x - x, ME_POS.z - z);
@@ -972,7 +1313,7 @@ function sniperSetup(spots) {
     P.beh = P => { P.face = towardMe(P.p.x, P.p.z); P.sp = 0; }; });
 }
 function sniperUpdate(t, dt) {
-  const lim = [7, 4.2, 3.4][SET.diff] * (G.M.lv > 25 ? .9 : 1); let warn = 0;
+  const lim = [7, 4.2, 3.4][SET.diff] * (G.M.lv > MISSIONS.length * .83 ? .9 : 1); let warn = 0;
   for (const P of PEOPLE) { if (P.kind !== 'crim' || P.down || !P.data.spot) continue; const D = P.data, S = D.spot;
     if (P.gone) { if ((D.hideT -= dt) <= 0) { P.gone = false; P.H.root.visible = true; if (Array.isArray(S.z)) P.p.z = rr(S.z[0], S.z[1]); else P.p.x = rr(S.x[0], S.x[1]); D.vis = 0; D.glT = 0; D.peek = (D.peek || 0) + 1; D.peekT = lim * rr(.5, .72); } continue; }
     D.glT = (D.glT || 0) + dt;
@@ -987,6 +1328,29 @@ function sniperUpdate(t, dt) {
 }
 // 港：コンテナの山の上（高い山を、場所ごとに1つずつ）
 function stackTop(xmin, xmax) { const L = PORT.stacks.filter(s => s[0] > xmin && s[0] < xmax).sort((a, b) => b[2] - a[2] || Math.abs(a[1] - 4) - Math.abs(b[1] - 4)); return L[0]; }
+// 高い所の見張り：気づくと、はしごの所まで行って下におり、走ってにげる
+function climber(P, ladder, to) {
+  const base = P.beh;
+  P.beh = (P, dt, W) => { const D = P.data, k = W.spK || 1;
+    if (!P.alert) { if (base) base(P, dt, W); return; }
+    if ((P.alertT -= dt) > 0) { P.sp = 0; P.face = towardMe(P.p.x, P.p.z); return; }
+    if (!D.lad) { if (moveTo(P, ladder[0], ladder[1], 2 * k, dt)) D.lad = 1; return; }
+    if (P.p.y > .16) { P.p.y = Math.max(.15, P.p.y - dt * 2.2 * k); P.sp = 0; return; }
+    if (moveTo(P, to[0], to[1], 3.2 * k, dt)) { P.gone = true; P.H.root.visible = false; W.onEscape(P); } };
+  return P;
+}
+// 円のふちを歩く（タンクの上など）
+const circleWalk = (cx, cz, R, sp, k) => (P, dt, W) => { const a = W.t * sp / R + k; moveTo(P, cx + Math.cos(a) * R, cz + Math.sin(a) * R, sp * 1.6, dt); };
+// その場に立って、こちらを見ている（運転手・見張り）
+const stander = (P, dt) => { P.face = P.alert ? towardMe(P.p.x, P.p.z) : P.data.f0 ?? P.face; P.sp = 0; };
+// ステージの人ごみに、目じるしの手配犯と、まぎらわしい人をまぜる
+function wantedCrowd(n, cloth, flee, decoyC) {
+  stageCivs(n, { walk: .3 }); const S = STAGES[STAGE.id];
+  const [x, z] = S.wander(), T = spawnPerson('crim', x, z, { noGun: true, bag: true, cloth, st: 'wander', fleeTo: flee }); T.wanted = true;
+  for (let i = 0; i < 2; i++) { const [x, z] = S.wander(); spawnPerson('civ', x, z, { st: 'wander', cloth }); }
+  for (let i = 0; i < 2; i++) { const [x, z] = S.wander(); spawnPerson('civ', x, z, { st: 'wander', bag: true, cloth: decoyC[i] }); }
+}
+const wantedFlee = () => { for (const P of PEOPLE) if (P.wanted && P.alert && P.st === 'wander') { P.st = 'flee'; P.runTo = P.fleeTo; } };
 const MISSIONS = [
   { id: 'm1', name: '銀行強盗', tod: 0, time: 55, ammo: 8, wind: [1, 3], aim: [0, 1, 58],
     brief: ['<b>ひかり銀行</b>（広場の南）から、強盗が<b>3人</b>出てくる。黒い服で、じゅうとかばんを持っている。', '強盗は銀行の前の<b>黒いワゴン車</b>に乗ってにげようとしている。車に着く前に止めよう。', 'まわりには、ふつうの人も歩いている。まちがえてうたないように。'],
@@ -1237,15 +1601,124 @@ MISSIONS.push(
     update: (t, dt) => sniperUpdate(t, dt),
   },
 );
-const ORDER = ['m1', 'm12', 'm4', 'm13', 'm2', 'm14', 'm3', 'm15', 'm5', 'm16', 'm17', 'm6', 'm18', 'm19', 'm8', 'm20', 'm21', 'm10', 'm22', 'm9', 'm11', 'm23', 'm24', 'm25', 'm26', 'm27', 'm28', 'm7', 'm29', 'm30'];
+MISSIONS.push(
+  // ---------- 川べりの住宅街 ----------
+  { id: 'r1', name: '橋の上の取引', stage: 'river', tod: 0, time: 60, ammo: 8, wind: [0, 2], aim: [10, 3, 32],
+    brief: ['<b>川べりの住宅街</b>。川にかかる<b>橋の上</b>で、悪者<b>3人</b>があやしい取引をしている。', '川ぞいの道に<b>見張りが1人</b>。だれかをうつと、のこりは<b>橋の南の家のあいだ</b>へにげる。', '見通しのいいステージ。落ち着いてねらおう。'],
+    setup() { stageCivs(16);
+      [[8.4, 30], [11.6, 31.4], [9.6, 34]].forEach(([x, z], k) => { const P = spawnPerson('crim', x, z, { y: 2.55, st: 'script', bag: k === 1, fleeTo: [10, 59] }); P.beh = crimPatrol([x, z], [x + .9, z + .6], .4); });
+      const A = spawnPerson('crim', -14, 13, { st: 'script', fleeTo: [73, -8] }); A.beh = crimPatrol([-14, 12.6], [2, 12.6], 1); },
+  },
+  { id: 'r2', name: '川ぞいの逃走', stage: 'river', tod: 1, time: 70, ammo: 8, wind: [1, 3], aim: [20, 1, 51],
+    brief: ['夕方の川べり。強盗<b>4人</b>が、川の<b>向こう岸の道</b>を東へ歩いて、<b>黒いワゴン車</b>へ向かう。', '車の横には、じゅうを持った<b>運転手</b>。だれかをうつと、強盗は<b>走り出す</b>。', '橋のたもとで、少しのあいだ見えなくなる。'],
+    setup() { stageCivs(14); car(64, 51.6, Math.PI / 2, 0x1a1a1e, true);
+      for (let i = 0; i < 4; i++) walker(hideUntil(spawnPerson('crim', -40 - (i % 2) * 1.2, 50.4 + (i % 2) * 1.1, { st: 'script', bag: i % 2 === 0 }), 2 + i * 3.4), [[-20, 50.6], [60.5, 50.4]], 1.8, '強盗に車でにげられた…', 3.3);
+      const D = spawnPerson('crim', 64, 48.8, { st: 'script', data: { f0: Math.PI } }); D.beh = stander; },
+    update: t => appearStep(t),
+  },
+  // ---------- 山あいのダム ----------
+  { id: 'd1', name: 'ダムの上の見張り', stage: 'dam', tod: 0, time: 65, ammo: 8, wind: [1, 3], aim: [0, 32, 28], slowAlert: 1.5,
+    brief: ['<b>山あいのダム</b>。ダムのいちばん上の道を、ライフルを持った見張りが<b>3人</b>歩いている。下の道にも<b>1人</b>。', 'だれかをうつと、見張りは<b>水門の小屋</b>（下の見張りはダムの下）へにげこむ。', 'ダムの上は遠い。弾が少し落ちる。'],
+    setup() { stageCivs(6);
+      for (const [x0, x1, door] of [[-56, -44, -30], [4, 16, 30], [64, 76, 90]]) { const P = spawnPerson('crim', (x0 + x1) / 2, 28, { y: 32.05, st: 'script', fleeTo: [door, 29.3] }); P.beh = crimPatrol([x0, 28], [x1, 28], 1); }
+      const P = spawnPerson('crim', -40, -26, { st: 'script', fleeTo: [-40, 17] }); P.beh = crimPatrol([-40, -32], [-40, -14], 1); },
+  },
+  { id: 'd2', name: '発電所の爆弾犯', stage: 'dam', tod: 2, time: 75, ammo: 8, wind: [0, 2], aim: [0, 1, -26], nv: true,
+    brief: ['夜のダム。<b>爆弾を持った男が3人</b>、ちがう方向から<b>発電所の西の入口</b>へ向かってくる。', '入口のそばに<b>見張りが2人</b>。爆弾犯が入口に着いたら失敗。だれかをうつと、爆弾犯は<b>走り出す</b>。', 'スコープは<b>暗視</b>モード。'],
+    setup() { stageCivs(3);
+      [[[-40, 12], [[-40, -6], [0, -22], [15.6, -24]], 3], [[-24, -62], [[0, -40], [15.6, -25.2]], 10], [[60, -62], [[22, -42], [15.6, -22.8]], 18]].forEach(([p0, path, t0]) => {
+        const B = hideUntil(spawnPerson('crim', p0[0], p0[1], { noGun: true, bag: true, st: 'script', cloth: [.36, .24, .14] }), t0); walker(B, path, 1.2, '発電所に爆弾をしかけられた…', 3.5); });
+      for (const [a, b] of [[[8, -34], [8, -16]], [[-6, -28], [-6, -18]]]) { const P = spawnPerson('crim', a[0], a[1], { st: 'script', fleeTo: [60, -30] }); P.beh = crimPatrol(a, b, .9); } },
+    update: t => appearStep(t),
+  },
+  // ---------- 雪の駅前 ----------
+  { id: 's1', name: '雪の駅前の手配犯', stage: 'snow', tod: 0, time: 70, ammo: 6, wind: [1, 3], aim: [10, 1, 8], noMark: true,
+    brief: ['<b>雪の駅前</b>の広場。人ごみの中に<b>指名手配犯</b>がまぎれている。', '目じるし：<b style="color:#ff6a5a">赤いコート</b>と<b>黒いかばん</b>。赤いコートだけ・かばんだけの人もいる。', '気づかれると、<b>駅</b>へにげこもうとする。'],
+    setup() { wantedCrowd(30, [.8, .12, .1], [10, 39.6], [[.1, .2, .5], [.4, .4, .42]]); },
+    update: wantedFlee,
+  },
+  { id: 's2', name: '終電へいそぐ強盗', stage: 'snow', tod: 2, time: 80, ammo: 8, wind: [0, 2], aim: [10, 1, 10], nv: true,
+    brief: ['雪の夜。強盗<b>5人</b>が、つぎつぎに北から広場を通って<b>駅の入口</b>へ向かう。終電でにげる気だ。', 'バス停のそばに<b>見張りが1人</b>。だれかが駅に入ったら失敗。スコープは<b>暗視</b>モード。'],
+    setup() { stageCivs(8);
+      [[-30, -30], [40, -32], [0, -36], [-44, -10], [56, -14]].forEach(([x, z], i) => walker(hideUntil(spawnPerson('crim', x, z, { st: 'script', bag: i % 2 === 0 }), 2 + i * 5), [[x * .4 + 6, 20], [10, 39.4]], 1.4, '強盗に終電でにげられた…', 3.3));
+      const A = spawnPerson('crim', -8, 26, { st: 'script', fleeTo: [10, 39.4] }); A.beh = crimPatrol([-8, 25], [8, 25], .8); },
+    update: t => appearStep(t),
+  },
+  // ---------- 砂漠の基地 ----------
+  { id: 'x1', name: '見張り台の4人', stage: 'desert', tod: 0, time: 75, ammo: 9, wind: [2, 4], aim: [35, 4, 28],
+    brief: ['<b>砂漠の基地</b>。四すみの<b>見張り台</b>の上に、ライフルを持った見張りが<b>4人</b>。トラックのそばにも<b>2人</b>。', 'だれかをうつと、見張り台の見張りは<b>はしごでおりて</b>、兵舎へにげる。トラックのそばの2人は<b>トラック</b>へ。', '砂漠の風は強い。風に気をつけて。'],
+    setup() {
+      for (const [x, z] of [[-6, -6], [76, -6], [-6, 66], [76, 66]]) { const sx = x < 35 ? 1 : -1, sz = z < 30 ? 1 : -1; const P = spawnPerson('crim', x, z, { y: 8.2, st: 'script' }); P.beh = crimPatrol([x - .9 * sx, z], [x + .9 * sx, z + .6 * sz], .5); climber(P, [x + 2.1 * sx, z + 2.1 * sz], [x < 35 ? 14 : 46, 46.8]); }
+      for (const [x, tx] of [[28, 26], [44, 50]]) { const P = spawnPerson('crim', x, 24, { st: 'script', fleeTo: [tx + 1.3, 5] }); P.beh = crimPatrol([x, 22], [x + 4, 30], .8); } },
+  },
+  { id: 'x2', name: '砂漠の人質', stage: 'desert', tod: 1, time: 60, ammo: 6, wind: [2, 4], aim: [36, 1, 26],
+    brief: ['夕方の砂漠の基地。テントのあいだで、悪者が<b>人質</b>をとっている。人質に当てないように。', '基地の中に<b>見張りが2人</b>、見張り台に<b>1人</b>。見張りは気づくと兵舎へにげる。'],
+    setup() { hostagePair(36, 26, .15, .5);
+      for (const [a, b, f] of [[[20, 12], [20, 30], [14, 46.8]], [[54, 18], [54, 36], [46, 46.8]]]) { const P = spawnPerson('crim', a[0], a[1], { st: 'script', fleeTo: f }); P.beh = crimPatrol(a, b, .9); }
+      const T = spawnPerson('crim', 76, -6, { y: 8.2, st: 'script' }); T.beh = crimPatrol([75.1, -6], [76.9, -5.4], .5); climber(T, [73.9, -3.9], [46, 46.8]); },
+  },
+  // ---------- 夜の遊園地 ----------
+  { id: 'p1', name: '遊園地の手配犯', stage: 'park', tod: 1, time: 75, ammo: 6, wind: [0, 2], aim: [20, 1, 20], noMark: true,
+    brief: ['夕方の<b>遊園地</b>。人ごみの中に<b>指名手配犯</b>がまぎれている。', '目じるし：<b style="color:#ffa04a">オレンジの服</b>と<b>黒いかばん</b>。オレンジの服だけ・かばんだけの人もいる。', '気づかれると、<b>西の出口</b>へにげる。'],
+    setup() { wantedCrowd(34, [.95, .45, .05], [-44, 20], [[.1, .2, .5], [.82, .12, .1]]); },
+    update: wantedFlee,
+  },
+  { id: 'p2', name: '観覧車の下の取引', stage: 'park', tod: 2, time: 75, ammo: 9, wind: [0, 2], aim: [66, 4, 56], nv: true, slowAlert: 1.6,
+    brief: ['夜の遊園地。<b>観覧車の下</b>で、悪者<b>5人</b>が取引をしている。まわりに<b>見張りが2人</b>（見張りはにげない）。', 'だれかをうつと、取引の悪者は少しして<b>黒いワゴン車</b>へ走る。車に乗りこまれて出発されたら失敗。', 'スコープは<b>暗視</b>モード。'],
+    setup() { stageCivs(8); const tr = [98, 60]; car(tr[0], tr[1], 0, 0x1a1a1e, true);
+      [[60, 54], [64, 57], [68, 53.6], [72, 57.4], [76, 54.6]].forEach(([x, z], k) => { const P = spawnPerson('crim', x, z, { st: 'script', bag: k === 2 }); P.data.p0 = [x, z];
+        P.beh = (P, dt, W) => { const D = P.data; if (!P.alert) { moveTo(P, D.p0[0] + Math.sin(W.t * .3 + k) * 1.4, D.p0[1] + Math.cos(W.t * .35 + k) * .8, .5, dt); return; }
+          if ((P.alertT -= dt) > 0) { P.sp = 0; return; } if (!D.at) { if (moveTo(P, tr[0] - 1.6, tr[1] - 3 + (k - 2) * .4, 2.6 * (W.spK || 1), dt)) D.at = W.t; return; } P.sp = 0; if (W.t - D.at > 4.5) { P.gone = true; P.H.root.visible = false; W.onEscape(P); } }; });
+      for (const [a, b] of [[[44, 40], [44, 52]], [[96, 22], [96, 32]]]) { const P = spawnPerson('crim', a[0], a[1], { st: 'script' }), pat = crimPatrol(a, b, .9); P.beh = (P, dt, W) => { if (P.alert) { P.data.aim = 1; stander(P, dt); } else pat(P, dt, W); }; } },
+  },
+  // ---------- 空港 ----------
+  { id: 'a1', name: 'ターミナルの屋上', stage: 'airport', tod: 0, time: 65, ammo: 8, wind: [1, 3], aim: [30, 16, -32],
+    brief: ['<b>空港</b>。ターミナルビルの<b>屋上</b>を、ライフルを持った見張りが<b>4人</b>見回っている。', '1人たおすと、ほかの見張りは<b>屋上の出入り口</b>へにげる。屋上はひろいので、すばやく。'],
+    setup() { stageCivs(16); const y = 16.15;
+      for (const [x0, x1, z, hut] of [[-50, -30, -26, [-10, -38]], [0, 20, -38, [40, -26]], [50, 70, -26, [84, -38]], [92, 112, -36, [118, -24]]]) {
+        boxM(3, 2.6, 3, CITY.mats.roofBox || CITY.mats.wall, hut[0], y + 1.3, hut[1]); const P = spawnPerson('crim', (x0 + x1) / 2, z, { y, st: 'script', fleeTo: [hut[0] - 2, hut[1]] }); P.beh = crimPatrol([x0, z], [x1, z], 1.1); } },
+  },
+  { id: 'a2', name: '飛行機へにげる強盗', stage: 'airport', tod: 1, time: 75, ammo: 9, wind: [1, 3], aim: [70, 2, 64],
+    brief: ['夕方の空港。強盗<b>4人</b>が、荷物のトラックのかげから、東の<b>飛行機のタラップ</b>へ向かう。', 'タラップの下には、じゅうを持った<b>見張りが2人</b>。強盗が飛行機に乗ったら失敗。', '遠いので、弾がかなり落ちる。だれかをうつと、強盗は<b>走り出す</b>。'],
+    setup() { stageCivs(10); const B = IBatch(); airliner(B, 122, 80, Math.PI / 2, 0xf4f4f4); B.box(CITY.mats.metalP, 110, 1.9, 75.4, 2.2, 3.8, 4.4, 0xd8d8d8); B.flush();
+      for (let i = 0; i < 4; i++) walker(hideUntil(spawnPerson('crim', 24 + i * 1.5, 47, { st: 'script', bag: i % 2 === 0 }), 2 + i * 3.2), [[60, 60], [109.6, 72.6]], 1.6, '強盗に飛行機でにげられた…', 3.2);
+      for (const x of [105.5, 114]) { const P = spawnPerson('crim', x, 72.2, { st: 'script', data: { f0: Math.PI } }); P.data.aim = 1; P.beh = stander; } },
+    update: t => appearStep(t),
+  },
+  // ---------- 工場地帯 ----------
+  { id: 'f1', name: 'タンクの上の見張り', stage: 'factory', tod: 0, time: 70, ammo: 8, wind: [1, 3], aim: [40, 10, 30],
+    brief: ['<b>工場地帯</b>。3つの<b>タンクの上</b>を、見張りが<b>1人ずつ</b>歩いている。パイプの下にも<b>2人</b>。', 'だれかをうつと、タンクの見張りは<b>はしごでおりて</b>倉庫へにげる。', '<b>オレンジの服</b>は工場で働く人。うたないように。'],
+    setup() { stageCivs(10, { cloth: [.95, .5, .1] });
+      for (const [cx, cz, to, k] of [[20, 20, [-30, 54], 0], [60, 6, [90, 67], 2], [44, 56, [90, 67], 4]]) { const d = Math.hypot(to[0] - cx, to[1] - cz), lx = cx + (to[0] - cx) / d * 10.4, lz = cz + (to[1] - cz) / d * 10.4;
+        const P = spawnPerson('crim', cx + 6, cz, { y: 14.45, st: 'script' }); P.beh = circleWalk(cx, cz, 6, .8, k); climber(P, [lx, lz], to); }
+      for (const [a, b, f] of [[[-10, 30], [10, 30], [-30, 54]], [[78, 42], [96, 42], [90, 67]]]) { const P = spawnPerson('crim', a[0], a[1], { st: 'script', fleeTo: f }); P.beh = crimPatrol(a, b, 1); } },
+  },
+  { id: 'f2', name: '工場の狙撃手', stage: 'factory', tod: 1, time: 80, ammo: 9, wind: [1, 3], aim: [40, 14, 10], cover: true,
+    brief: ['夕方の工場地帯。<b>タンクの上</b>と<b>えんとつの作業台</b>に、敵の<b>狙撃手が4人</b>。', 'ときどき顔を出してねらってくる。スコープが<b>光った</b>所をすばやく。ねらわれたら<b>「隠れる」</b>（PC は C キー）。'],
+    setup() { stageCivs(6, { cloth: [.95, .5, .1] }); sniperSetup([{ y: 14.45, z: 14, x: [13, 17] }, { y: 14.45, x: 53, z: [0, 4] }, { y: 30.15, x: 106.8, z: [-23, -20.8] }, { y: 14.45, z: 49.6, x: [37, 41] }]); },
+    update: (t, dt) => sniperUpdate(t, dt),
+  },
+  // ---------- 城下町 ----------
+  { id: 'o1', name: '城下町の手配犯', stage: 'old', tod: 0, time: 70, ammo: 6, wind: [1, 3], aim: [20, 1, 12], noMark: true,
+    brief: ['<b>城下町</b>の大通り。人ごみの中に<b>指名手配犯</b>がまぎれている。', '目じるし：<b style="color:#c08aff">むらさきの服</b>と<b>黒いかばん</b>。むらさきの服だけ・かばんだけの人もいる。', '気づかれると、<b>大通りの東</b>へにげる。'],
+    setup() { wantedCrowd(30, [.45, .15, .6], [100, 12], [[.82, .12, .1], [.4, .4, .42]]); },
+    update: wantedFlee,
+  },
+  { id: 'o2', name: '石垣の上の見張り', stage: 'old', tod: 1, time: 65, ammo: 7, wind: [1, 3], aim: [56, 13, 62],
+    brief: ['夕方の城下町。お城の<b>石垣の上</b>を、見張りが<b>4人</b>見回っている。', '1人たおすと、ほかの見張りは<b>天守の入口</b>へにげこむ。天守のうらにまわられると見えない。'],
+    setup() { stageCivs(16);
+      for (const [a, b] of [[[44, 52.5], [58, 52.5]], [[64, 52.5], [78, 52.5]], [[42.5, 58], [42.5, 76]], [[44, 80], [52, 88]]]) { const P = spawnPerson('crim', a[0], a[1], { y: 12.05, st: 'script', fleeTo: [60, 63.6] }); P.beh = crimPatrol(a, b, 1); } },
+  },
+);
+const ORDER = ['m1', 'm12', 'r1', 'm4', 'm13', 'a1', 'm2', 'd1', 'm14', 's1', 'm3', 'm15', 'x1', 'm5', 'f1', 'm16', 'o1', 'm17', 'r2', 'm6', 'p1', 'm18', 'm19', 'o2', 'm8', 's2', 'm20', 'm21', 'x2', 'm10', 'm22', 'a2', 'm9', 'm11', 'd2', 'm23', 'm24', 'p2', 'm25', 'm26', 'm27', 'm28', 'm7', 'f2', 'm29', 'm30'];
 MISSIONS.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)); MISSIONS.forEach((M, i) => { M.lv = i + 1; });
 // ---------- はじめる ----------
 function startMission(i) {
   AU.init(); G.mi = i; const M = G.M = MISSIONS[i];
-  clearPeople(); buildStage(M.stage || 'city'); for (const C of TRAFFIC) C.stop = false; W.spK = .82 + .035 * M.lv; W.reK = 1.45 - .045 * M.lv; setHide(false); document.body.classList.toggle('cover', !!M.cover); CITY.cars.splice(CITY.cars.length - (CITY.extraCars || 0)); for (const o of CITY.extra || []) CITY.grp.remove(o); CITY.extra = []; CITY.extraCars = 0; CITY.boxes.length = CITY.baseBoxes;
+  clearPeople(); buildStage(M.stage || 'city'); for (const C of TRAFFIC) C.stop = false; const fK = (M.lv - 1) / (MISSIONS.length - 1); W.spK = .855 + 1.015 * fK; W.reK = 1.405 - 1.305 * fK; setHide(false); document.body.classList.toggle('cover', !!M.cover); CITY.cars.splice(CITY.cars.length - (CITY.extraCars || 0)); for (const o of CITY.extra || []) CITY.grp.remove(o); CITY.extra = []; CITY.extraCars = 0; CITY.boxes.length = CITY.baseBoxes;
   const nc = CITY.cars.length, ng = CITY.grp.children.length;
   setTOD(M.tod); M.setup(); CITY.extraCars = CITY.cars.length - nc; CITY.extra = CITY.grp.children.slice(ng);
-  Object.assign(G, { phase: 'intro', t: 0, left: M.time, ammo: M.ammo, shots: 0, hits: 0, scoped: false, zoom: 1, breath: 1, recoil: 0, bolt: 0, bullets: [], escaped: 0, res: null, bc: null, endT: 0, alertAll: false });
+  Object.assign(G, { phase: 'intro', t: 0, left: M.time, ammo: M.ammo, shots: 0, hits: 0, scoped: false, scA: 0, scVis: false, zf: ZOOMS[1], zKick: 0, zoom: 1, breath: 1, recoil: 0, bolt: 0, bullets: [], escaped: 0, res: null, bc: null, endT: 0, alertAll: false });
   for (const f of G.fx) scene.remove(f.o); G.fx = []; if (!M.cover) G.glint = null; G.warnT = 0; G.boatT = 0;
   const D = DIFF[SET.diff], w = rr(M.wind[0], M.wind[1]) * (SET.diff === 0 ? 0 : 1), wa = rr(0, TAU); G.wind.set(Math.cos(wa) * w, 0, Math.sin(wa) * w);
   const a = M.aim; G.base = Math.atan2(-(a[0] - ME_POS.x), -(a[2] - ME_POS.z)); G.yaw = G.base; G.pitch = Math.atan2(a[1] - ME_POS.y, Math.hypot(a[0] - ME_POS.x, a[2] - ME_POS.z));
@@ -1276,10 +1749,25 @@ function showResult() {
 // ---------- 隠れる ----------
 function setHide(on) { G.hide = !!on; document.body.classList.toggle('hiding', G.hide); if (G.hide && G.scoped) setScope(false); const b = $('bHide'); if (b) b.innerHTML = G.hide ? '立つ' : '隠れる'; }
 // ---------- ねらう ----------
-function setScope(on) { G.scoped = on; document.body.classList.toggle('scoped', on); GUN.g.visible = !on; updateMilDots(); }
+function setScope(on) { if (!!G.scoped === !!on) return; G.scoped = on; if (G.scr === 'play') AU[on ? 'scopeIn' : 'scopeOut'](); }
+function setZoom(z) { if (z === G.zoom) return; const up = z > G.zoom; G.zoom = z; G.zKick = 1; AU.zoom(up); }
 function fovNow() { return G.scoped ? ZOOMS[G.zoom] : ZOOMS[0]; }
+// スコープの出し入れ（G.scA：0＝はなしている〜1＝のぞいている）と、なめらかなズーム
+const ssf = x => x * x * (3 - 2 * x);
+function scopeAnim(dt) {
+  const tgt = G.scoped ? 1 : 0; G.scA = G.scA ?? 0; G.scA = tgt > G.scA ? Math.min(1, G.scA + dt * 3.3) : tgt < G.scA ? Math.max(0, G.scA - dt * 5) : G.scA;
+  const a = G.scA, vis = a > .55 && G.scr === 'play';
+  if (vis !== G.scVis) { G.scVis = vis; document.body.classList.toggle('scoped', vis); }
+  G.zf = G.zf ? Math.exp(damp(Math.log(G.zf), Math.log(ZOOMS[G.zoom]), 7, dt)) : ZOOMS[G.zoom];   // 倍率リングを回すと、なめらかに
+  G.zKick = Math.max(0, (G.zKick || 0) - dt * 2.6);
+  const k = clamp((a - .55) / .45, 0, 1), e = 1 - Math.pow(1 - k, 3), kick = Math.sin(Math.PI * Math.min(1, (1 - G.zKick) * 1.4)) * (G.zKick > 0 ? 1 : 0);
+  const el = $('scope'); if (el) { el.style.setProperty('--k', (e * (1 - kick * .07)).toFixed(3)); el.style.setProperty('--d', (kick * .35 + (1 - e) * .5).toFixed(3)); }
+  const f = a <= .55 ? lerp(62, 50, ssf(a / .55)) : Math.exp(lerp(Math.log(G.zf * 1.8), Math.log(G.zf), e));
+  if (Math.abs(camera.fov - f) > .0005) { camera.fov = f; camera.updateProjectionMatrix(); if (vis && Math.abs((G.mdF || 0) - f) > f * .01) { G.mdF = f; updateMilDots(); } }
+  const z = $('sZoom'); if (z) { z.style.transform = `scale(${(1 + kick * .3).toFixed(3)})`; z.style.color = kick > .05 ? '#ffe58a' : ''; }
+}
 function updateMilDots() {
-  const el = $('milDots'); if (!el) return; const fov = fovNow() * D2R, H = VH(), Wd = VW(), px = H / fov, svg = 200 / (.92 * Math.min(Wd, H)); let s = '';
+  const el = $('milDots'); if (!el) return; const fov = camera.fov * D2R, H = VH(), Wd = VW(), px = H / fov, svg = 200 / (.92 * Math.min(Wd, H)); let s = '';
   for (let k = 1; k <= 6; k++) { const d = k * .001 * px * svg; if (d > 95) break; s += `<circle cx="0" cy="${d.toFixed(2)}" r="${k % 5 ? .9 : 1.3}"/><circle cx="${d.toFixed(2)}" cy="0" r="${k % 5 ? .9 : 1.3}"/><circle cx="${(-d).toFixed(2)}" cy="0" r="${k % 5 ? .9 : 1.3}"/>`; }
   el.innerHTML = s;
 }
@@ -1289,16 +1777,15 @@ function swayAmp() { const D = DIFF[SET.diff]; return G.scoped ? D.sway * (IN.br
 function swayY() { const a = swayAmp(), t = G.swayT; return a * (Math.sin(t * .83) * .7 + Math.sin(t * 1.91 + 1) * .3); }
 function swayP() { const a = swayAmp(), t = G.swayT; return a * (Math.sin(t * 1.13 + 2) * .6 + Math.sin(t * 2.37) * .4) - G.recoil; }
 function updateAim(dt) {
-  const k = fovNow() / 62 * .0024 * SET.sens;
+  const k = camera.fov / 62 * .0024 * SET.sens;
   G.yaw -= IN.look[0] * k; G.pitch -= IN.look[1] * k * (SET.inv ? -1 : 1); IN.look[0] = IN.look[1] = 0;
   const dy = angDiff(G.base, G.yaw); if (Math.abs(dy) > 1.5) G.yaw = G.base + Math.sign(dy) * 1.5; G.pitch = clamp(G.pitch, -1.2, .3);
   G.swayT += dt; G.recoil = damp(G.recoil, 0, 6, dt);
   if (IN.breath && G.scoped && G.breath > 0) G.breath = Math.max(0, G.breath - dt / 3.5); else G.breath = Math.min(1, G.breath + dt / 5);
   G.bolt = Math.max(0, G.bolt - dt);
   G.hideK = damp(G.hideK || 0, G.hide ? 1 : 0, 9, dt); camera.position.copy(ME_POS); camera.position.y -= G.hideK * 1.15; _e.set(G.pitch + swayP() - G.hideK * .25, G.yaw + swayY(), 0); camera.quaternion.setFromEuler(_e);
-  const f = fovNow(); if (Math.abs(camera.fov - f) > .01) { camera.fov = f; camera.updateProjectionMatrix(); }
-  GUN.g.position.set(.22, -.2 + G.bolt * .015, -.36 + Math.max(0, G.bolt - .8) * .22); GUN.g.rotation.x = Math.max(0, G.bolt - .7) * .25;
-  renderer.toneMappingExposure = (TODS[SKY.tod] || TODS[0]).exp * (G.scoped && G.M && G.M.nv ? 3 : 1); if (FX.bloom) FX.bloom.strength = (G.scoped && G.M && G.M.nv ? .25 : [.14, .24, .55][SKY.tod] || .2);
+  scopeAnim(dt); gunLight(); gunAnim(dt);
+  renderer.toneMappingExposure = (TODS[SKY.tod] || TODS[0]).exp * (G.scVis && G.M && G.M.nv ? 3 : 1); if (FX.bloom) FX.bloom.strength = (G.scVis && G.M && G.M.nv ? .25 : [.14, .24, .55][SKY.tod] || .2);
 }
 // ---------- 弾 ----------
 function simShot(o, d, step = 1 / 400) {   // 弾の通り道：いちばん先に当たる所
@@ -1320,10 +1807,10 @@ function predictImpact() {   // 着弾予想（ふつう）：今のねらいで
 function fire() {
   if (G.phase !== 'play') return; if (G.hide) { msg('', '隠れているあいだは、うてません', 1); return; } if (G.bolt > 0) return; if (G.ammo <= 0) { AU.empty(); msg('', '弾がない', 1); return; }
   const d = aimDir(_dir.clone()), r = simShot(ME_POS, d);
-  G.ammo--; G.shots++; G.bolt = 1.15; G.recoil = G.scoped ? .025 : .06; AU.shot(); AU.bolt();
+  G.ammo--; G.shots++; G.bolt = 1.15; G.recoil = G.scoped ? .025 : .06; AU.shot(); AU.bolt(); gunFire();
   const B = { r, t: 0, o: ME_POS.clone().addScaledVector(d, 1.2) };
   // 最後の悪者に当たるなら、弾を追うカメラ
-  if (SET.bcam && r.kind === 'person' && r.who.kind === 'crim' && crimsAlive() === 1 && r.t > .08) { G.phase = 'bullet'; G.bc = { B, t: 0, T: 1.6 }; setScope(false); GUN.g.visible = false; }
+  if (SET.bcam && r.kind === 'person' && r.who.kind === 'crim' && crimsAlive() === 1 && r.t > .08) { G.phase = 'bullet'; G.bc = { B, t: 0, T: Math.min(2.2, 1.1 + r.t * 2.5), who: r.who, off: r.pos.clone().sub(r.who.p) }; setScope(false); GUN.g.visible = false; }
   G.bullets.push(B); tracer(B);
   // 音におどろく：悪者は気づく
   if (G.shots === 1) setTimeout(() => {}, 0);
@@ -1344,22 +1831,46 @@ function updateBullets(dt) {
   for (let i = G.bullets.length - 1; i >= 0; i--) { const B = G.bullets[i]; B.t += dt; const k = Math.min(1, B.t / Math.max(.01, B.r.t));
     if (B.line) { const pa = B.line.geometry.attributes.position; const head = B.o.clone().lerp(B.r.pos, k), tail = B.o.clone().lerp(B.r.pos, Math.max(0, k - .25)); pa.setXYZ(0, tail.x, tail.y, tail.z); pa.setXYZ(1, head.x, head.y, head.z); pa.needsUpdate = true; }
     if (B.t >= B.r.t) { G.bullets.splice(i, 1); impact(B); } }
-  for (let i = G.fx.length - 1; i >= 0; i--) { const F = G.fx[i]; F.t += dt; F.o.scale.setScalar(1 + F.t * 6); F.o.material.opacity = Math.max(0, .8 - F.t * 1.2); if (F.t > .8) { scene.remove(F.o); G.fx.splice(i, 1); } }
+  for (let i = G.fx.length - 1; i >= 0; i--) { const F = G.fx[i]; F.t += dt; if (F.k === 'flash') { F.o.scale.setScalar(.35 + F.t * 3); F.o.material.opacity = Math.max(0, 1 - F.t * 4); if (F.t > .25) { scene.remove(F.o); G.fx.splice(i, 1); } continue; } F.o.scale.setScalar(1 + F.t * 6); F.o.material.opacity = Math.max(0, .8 - F.t * 1.2); if (F.t > .8) { scene.remove(F.o); G.fx.splice(i, 1); } }
 }
-// 弾を追うカメラ：ゆっくり進む弾のうしろから
+// 弾を追うカメラ：ゆっくり進む弾のうしろから → ねらった人の体に当たる → たおれるところを少し見せる
+// 当たる所は「ねらった人の、いまの位置」についていく（スローのあいだに相手が少し動いても、弾は体に届く）
+const _bp = V3(), _bd = V3(), _be = V3();
 function bulletCam(dt) {
-  const C = G.bc, B = C.B; C.t += dt; const k = Math.min(1, C.t / C.T), e = k * k * (3 - 2 * k) * .97 + k * .03;
-  const p = B.o.clone().lerp(B.r.pos, Math.min(.985, e)), d = B.r.dir;
-  camera.position.copy(p).addScaledVector(d, -1.4).add(V3(0, .25, 0)); camera.lookAt(p.clone().addScaledVector(d, 3)); camera.fov = 40; camera.updateProjectionMatrix();
-  if (!C.ball) { C.ball = new THREE.Mesh(new THREE.CylinderGeometry(.02, .03, .12, 8).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc89a4a, metalness: .8, roughness: .3 })); scene.add(C.ball); }
-  C.ball.position.copy(p); C.ball.lookAt(p.clone().add(d));
-  return k >= 1;
+  const C = G.bc, B = C.B; C.t += dt;
+  _be.copy(C.who.p).add(C.off);
+  if (!C.ball) { C.ball = new THREE.Mesh(new THREE.CylinderGeometry(.012, .02, .1, 10).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc89a4a, metalness: .9, roughness: .25 })); scene.add(C.ball);
+    C.trail = new THREE.Mesh(new THREE.CylinderGeometry(.004, .03, 1, 8, 1, true).translate(0, -.5, 0).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .3, depthWrite: false })); scene.add(C.trail); }
+  if (!C.hit) {
+    const k = Math.min(1, C.t / C.T), e = k < .85 ? k / .85 * .92 : .92 + (k - .85) / .15 * .08;   // さいごの少しで、体まで一気に
+    _bp.copy(B.o).lerp(_be, e); _bd.copy(_be).sub(B.o).normalize();
+    const back = lerp(1.5, .9, k);
+    camera.position.copy(_bp).addScaledVector(_bd, -back); camera.position.y += .22 * (1 - k) + .08;
+    camera.lookAt(_be.x, _be.y + .05, _be.z); camera.fov = lerp(40, 32, k); camera.updateProjectionMatrix();
+    C.ball.position.copy(_bp); C.ball.lookAt(_bp.clone().add(_bd)); C.ball.rotateZ(C.t * 40);
+    const tl = Math.min(3, _bp.distanceTo(B.o)); C.trail.position.copy(_bp); C.trail.lookAt(_bp.clone().add(_bd)); C.trail.scale.set(1, 1, tl);
+    if (k >= 1) {   // 当たった
+      C.hit = true; C.hitT = 0; C.ball.visible = false; C.trail.visible = false; C.camP = camera.position.clone(); C.a0 = Math.atan2(C.camP.x - _be.x, C.camP.z - _be.z);
+      G.phase = 'play'; const i = G.bullets.indexOf(B); if (i >= 0) G.bullets.splice(i, 1); B.r.pos.copy(_be); impact(B); hitFlash(_be); CAM_SHAKE.t = .25;
+    }
+    return false;
+  }
+  // たおれていくところを、まわりこみながら見る
+  C.hitT += dt; const a = C.a0 + C.hitT * .4, R = 4.2 + C.hitT * 1.1, P = C.who.p;
+  camera.position.set(P.x + Math.sin(a) * R, P.y + 1.5 + C.hitT * .6, P.z + Math.cos(a) * R); camera.lookAt(P.x, P.y + .6, P.z); camera.fov = 40; camera.updateProjectionMatrix();
+  if (CAM_SHAKE.t > 0) { CAM_SHAKE.t -= dt; camera.position.x += (Math.random() - .5) * .05; camera.position.y += (Math.random() - .5) * .05; }
+  return C.hitT > 1.5;
+}
+const CAM_SHAKE = { t: 0 };
+// 当たったときの光（こわくない、白い光と土ぼこり）
+function hitFlash(p) {
+  const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xfff0c8, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); m.position.copy(p); m.scale.setScalar(.35); scene.add(m); G.fx.push({ o: m, t: 0, k: 'flash' });
 }
 // ---------- 表示 ----------
 function msg(t, sub, dur, cls = '') { $('msg').textContent = t; $('msg').className = 'hud ' + cls; $('sub').textContent = sub || ''; $('msg').style.opacity = t ? 1 : 0; $('sub').style.opacity = sub ? 1 : 0; G.msgT = dur; }
 const _pp = V3();
 function drawHud() {
-  const w = hc.width, h = hc.height; hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, w, h); if (G.scr !== 'play' || G.phase === 'bullet') return;
+  const w = hc.width, h = hc.height; hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, w, h); if (G.scr !== 'play' || G.bc) return;
   hx.setTransform(HUD_DPR, 0, 0, HUD_DPR, 0, 0); const Wd = w / HUD_DPR, H = h / HUD_DPR, D = DIFF[SET.diff];
   const proj = v => { _pp.copy(v).project(camera); return { x: (_pp.x + 1) / 2 * Wd, y: (1 - _pp.y) / 2 * H, ok: _pp.z < 1 }; };
   if (D.mark && !G.M.noMark) for (const P of PEOPLE) { if (P.gone || P.down) continue; if (P.kind !== 'crim' && !P.hostage) continue;
@@ -1380,12 +1891,12 @@ function updateHud() {
   if (G.scoped) { const d = aimDir(_dir.clone()), rw = rayWorld(ME_POS, d, 1200), rp = rayPeople(ME_POS, d, rw.t), dist = Math.min(rw.t, rp.t);
     $('sRange').textContent = dist < 1199 ? '距離 ' + Math.round(dist) + 'm' : '距離 ---';
     const rel = Math.atan2(G.wind.x, G.wind.z) - (G.yaw + Math.PI), arrows = ['↓', '↙', '←', '↖', '↑', '↗', '→', '↘'], ai = ((Math.round(-rel / (TAU / 8)) % 8) + 8) % 8;
-    $('sWind').textContent = '風 ' + (ws < .2 ? 'なし' : arrows[ai] + ' ' + ws.toFixed(1)); $('sZoom').textContent = (G.zoom === 1 ? '4' : '10') + '倍'; }
+    $('sWind').textContent = '風 ' + (ws < .2 ? 'なし' : arrows[ai] + ' ' + ws.toFixed(1)); $('sZoom').textContent = (G.zKick > 0 ? (62 / G.zf * .97).toFixed(1) : G.zoom === 1 ? '4' : '10') + '倍'; }
   const hint = G.hide ? '隠れている（うたれない）。「立つ」で起き上がる' : !G.scoped ? (IN.lastDev === 'touch' ? 'スコープボタンで、のぞく' : '右クリック／スペースでスコープ') : G.breath > .3 && !IN.breath ? (IN.lastDev === 'touch' ? '「息を止める」でゆれが止まる' : 'Shift でゆれが止まる') : '';
   if (hint !== HK) { HK = hint; $('hHint').textContent = hint; $('hHint').style.display = hint ? '' : 'none'; }
 }
 // ---------- 画面 ----------
-function show(id) { document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id === id)); G.scr = id; document.body.classList.toggle('playing', id === 'play'); GUN.g.visible = (id === 'play' || id === 'pause') && !G.scoped; if (id !== 'play') { document.body.classList.remove('scoped'); } else if (G.scoped) document.body.classList.add('scoped'); }
+function show(id) { document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id === id)); G.scr = id; document.body.classList.toggle('playing', id === 'play'); GUN.g.visible = (id === 'play' || id === 'pause') && !((G.scA || 0) > .62); if (id !== 'play') { document.body.classList.remove('scoped'); G.scVis = false; } else if ((G.scA || 0) > .55) { document.body.classList.add('scoped'); G.scVis = true; } }
 function pause(on) { if (on) { G.paused = true; show('pause'); if (document.pointerLockElement) document.exitPointerLock(); } else { G.paused = false; show('play'); } }
 function seg(el, labels, get, set) { el.innerHTML = ''; labels.forEach((l, i) => { const b = document.createElement('button'); b.textContent = l; b.onclick = () => { set(i); [...el.children].forEach((c, j) => c.classList.toggle('on', j === get())); }; el.appendChild(b); }); [...el.children].forEach((c, j) => c.classList.toggle('on', j === get())); }
 function rng2(el, get, set) { el.value = get(); el.oninput = () => set(+el.value); }
@@ -1411,7 +1922,7 @@ function drawMissions() {
   show('misSel');
 }
 function openBrief(i) { const M = MISSIONS[i]; G.mi = i; $('bTitle').textContent = 'ミッション ' + (i + 1) + '：' + M.name; $('brief').innerHTML = M.brief.map(t => `<p>${t}</p>`).join('') + `<p style="opacity:.8;font-size:13px">制限時間 ${M.time}秒・弾 ${M.ammo}発・むずかしさ「${DIFF[SET.diff].name}」</p>`; show('briefing'); }
-function toTitle() { G.M = null; G.scoped = false; setHide(false); clearPeople(); document.body.classList.remove('scoped', 'cover'); setTOD(0); if (STAGE.id === 'port') portWorkers(18); else spawnCivilians(30, { plaza: .5 }); show('title'); G.phase = 'title'; }
+function toTitle() { G.M = null; G.scoped = false; setHide(false); clearPeople(); document.body.classList.remove('scoped', 'cover'); setTOD(0); if (STAGE.id === 'port') portWorkers(18); else if (STAGE.id === 'city') spawnCivilians(30, { plaza: .5 }); else stageCivs(18); show('title'); G.phase = 'title'; }
 function wireUI() {
   const on = (id, f) => $(id).addEventListener('click', () => { AU.init(); f(); });
   on('tPlay', drawMissions); on('tSet', () => openSettings('title')); on('tHow', () => { SET_BACK = 'title'; show('how'); });
@@ -1427,31 +1938,33 @@ function tick(dt) {
   readInput(dt);
   for (const e of IN.ev.splice(0)) {
     if (e === 'pause') { if (G.scr === 'play') pause(true); else if (G.scr === 'pause') pause(false); continue; }
-    if (!UI.playing() || G.phase === 'bullet') continue;
+    if (!UI.playing() || G.bc) continue;
     if (e === 'fire') fire();
     if (e === 'hide') { if (G.M.cover) { setHide(!G.hide); AU.scope(); } continue; }
     if (G.hide && (e === 'scope' || e === 'zoom' || e === 'zoomIn')) { setHide(false); continue; }
-    if (e === 'scope') { setScope(!G.scoped); AU.scope(); }
-    if (e === 'zoom') { if (!G.scoped) setScope(true); else G.zoom = G.zoom === 1 ? 2 : 1; updateMilDots(); AU.scope(); }
-    if (e === 'zoomIn') { if (!G.scoped) setScope(true); else G.zoom = 2; updateMilDots(); }
-    if (e === 'zoomOut') { if (G.zoom === 2) G.zoom = 1; else setScope(false); updateMilDots(); }
+    if (e === 'scope') setScope(!G.scoped);
+    if (e === 'zoom') { if (!G.scoped) setScope(true); else setZoom(G.zoom === 1 ? 2 : 1); }
+    if (e === 'zoomIn') { if (!G.scoped) setScope(true); else setZoom(2); }
+    if (e === 'zoomOut') { if (G.zoom === 2) setZoom(1); else setScope(false); }
   }
   if (G.msgT > 0) { G.msgT -= dt; if (G.msgT <= 0) { $('msg').style.opacity = 0; $('sub').style.opacity = 0; } }
   let wdt = G.paused ? 0 : dt;
   if (G.scr === 'play' && !G.paused) {
     if (G.phase === 'intro') { G.t += dt; if (G.t > .4) { G.phase = 'play'; G.t = 0; } }
     if (G.phase === 'play') { G.t += dt; G.left -= dt; if (G.M.update) G.M.update(G.t, dt); if (G.left <= 0) fail('時間切れ…'); }
-    if (G.phase === 'bullet') { wdt = dt * .06; if (bulletCam(dt)) { G.phase = 'play'; const B = G.bc.B; scene.remove(G.bc.ball); G.bc = null; G.bullets.splice(G.bullets.indexOf(B), 1); impact(B); } }
-    if (G.phase === 'done' || G.phase === 'failed') { G.endT -= dt; if (G.endT <= 0) { G.phase = 'over'; showResult(); } }
+    document.body.classList.toggle('bcam', !!G.bc);
+    if (G.bc) { wdt = dt * (G.bc.hit ? .55 : .06); if (bulletCam(dt)) { scene.remove(G.bc.ball, G.bc.trail); G.bc = null; } }
+    if ((G.phase === 'done' || G.phase === 'failed') && !G.bc) { G.endT -= dt; if (G.endT <= 0) { G.phase = 'over'; showResult(); } }
   }
   W.t += wdt;
   if (G.scr !== 'title' && G.scr !== 'misSel' && G.scr !== 'briefing' && !(G.scr === 'settings' && SET_BACK === 'title') && !(G.scr === 'how' && SET_BACK === 'title')) {
-    if (G.phase !== 'bullet') updateAim(dt);
-    updateBullets(G.phase === 'bullet' ? 0 : wdt);
+    if (!G.bc) updateAim(dt);
+    updateBullets(G.bc && !G.bc.hit ? 0 : wdt);
   } else { // タイトル：町の上をゆっくり
     const a = performance.now() / 1000 * .05; camera.position.set(Math.sin(a) * 150, 85, Math.cos(a) * 150); camera.lookAt(0, 10, 0); if (camera.fov !== 50) { camera.fov = 50; camera.updateProjectionMatrix(); }
   }
   for (const P of PEOPLE) updatePerson(P, wdt, W);
+  for (const f of CITY.upd || []) f(wdt);
   updateTraffic(wdt); updateSky(G.scr === 'play' ? V3(0, 0, 0).lerp(ME_POS, .4) : V3());
   if (G.scr === 'play') updateHud(); drawHud(); AU.update();
 }
@@ -1478,7 +1991,7 @@ async function boot() {
     addEventListener('pointerdown', () => AU.init(), { once: true }); addEventListener('keydown', () => AU.init(), { once: true });
   } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
 }
-window.__SN2 = { loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { renderer.shadowMap.needsUpdate = true; renderFrame(); }, G, IN, SET, PEOPLE, CITY, MISSIONS, STAGE, buildStage, setHide, PORT, startMission, fire, setScope, camera, scene, renderer, simShot, ME_POS, W, crimsAlive };
+window.__rayWorld = rayWorld; window.__SN2 = { loop(on) { RUN = on; if (on) { LASTT = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { renderer.shadowMap.needsUpdate = true; renderFrame(); }, setTOD, stageCivs, show, STAGES, VM, GUN, G, IN, SET, PEOPLE, CITY, MISSIONS, STAGE, buildStage, setHide, PORT, startMission, fire, setScope, camera, scene, renderer, simShot, ME_POS, W, crimsAlive };
 boot();
 </script>
 <script id="cljson" type="application/json">{"chars":{"W_Adventurer":{"gender":"W","mats":[["Skin",0.6172,0.4179,0.2384],["White",0.4575,0.4575,0.4575],["Brown2",0.1065,0.0763,0.032],["LightGreen",0.0985,0.0848,0.0371],["Gold",0.4287,0.2423,0.0666],["Green",0.0607,0.0505,0.0189],["Brown_02",0.1789,0.1268,0.0513],["Hair_Brown",0.0482,0.0343,0.0222],["Brown",0.0311,0.0182,0.0113]],"bones":[["Root",-1,0,0,0.072289,0,0,0,1,1,1,1],["Body",0,0.000453,0.937146,-0.003995,0,0.23553,0,0.971867,1,1,1],["Hips",1,-0.000797,0.028695,0.009495,-0.069429,0.0,-0.0,0.997587,1,1,1.0],["Abdomen",2,0.0,0.106104,-0.0,-0.019335,-0.0,-0.0,0.999813,1,1,1],["Torso",3,0.0,0.141789,-0.0,0.153868,-0.237706,-0.005293,0.959058,1,1.0,1.0],["Chest",4,-0.0,0.130402,0.0,-0.000207,0.0,0.0,1,1.0,1.0,1],["Neck",5,0.0,0.133251,-0.0,-0.009471,0.0,-0.0,0.999955,1.0,1.0,1.0],["Head",6,0.0,0.076729,0.0,-0.024511,-0.0,0.000127,0.9997,1.0,1.0,1.0],["Shoulder.L",5,0.068513,0.038163,0.030799,-0.269814,-0.417607,-0.40977,0.764783,1.0,1,1],["UpperArm.L",8,0.0,0.063542,0.0,-0.741918,-0.041393,-0.176409,0.645542,1.0,1.0,1.0],["LowerArm.L",9,0.0,0.217008,-0.0,-0.11985,-0.020959,-0.19429,0.973369,1,1.0,1],["Wrist.L",10,0.0,0.235667,-0.0,0.009301,0.006304,0.023192,0.999668,1.0,1.0,1.0],["Index1.L",11,0.0,0.0272,0.0,-0.053651,-0.058323,-0.09078,0.992713,1,1.0,1.0],["Index2.L",12,-0.0,0.121023,-0.0,-0.004401,0.145898,0.093083,0.984901,1.0,1.0,1.0],["Index3.L",13,0.0,0.031775,0.0,-0.08226,-0.002798,0.020905,0.996388,1.0,1,1.0],["Index4.L",14,0.0,0.028649,0.0,-0.03024,0.012725,0.006021,0.999444,1.0,1,1.0],["Middle1.L",11,0.0,0.0272,0.0,-0.011616,-0.011794,0.016503,0.999727,1.0,1.0,1],["Middle2.L",16,-0.0,0.119848,-0.0,-0.05565,0.056641,0.046072,0.995777,1,1.0,1.0],["Middle3.L",17,0,0.039186,0.0,-0.120008,-0.004372,-0.021021,0.992541,1,1.0,1.0],["Middle4.L",18,-0.0,0.039165,0.0,-0.019048,0.035249,-0.007437,0.999169,1.0,1.0,1.0],["Ring1.L",11,-0.0,0.0272,0.0,-0.030456,-0.028963,0.128329,0.990841,1,1,1.0],["Ring2.L",20,-0.0,0.119257,0.0,-0.043931,0.106429,-0.040844,0.992509,1.0,1.0,1.0],["Ring3.L",21,-0.0,0.032924,0.0,-0.119294,0.057258,-0.039888,0.990404,1,1.0,1.0],["Ring4.L",22,0.0,0.032186,-0.0,-0.074809,0.027954,-0.007629,0.996777,1,1.0,1],["Pinky1.L",11,0.0,0.0272,0.0,-0.031091,-0.027353,0.227078,0.972996,1.0,1.0,1],["Pinky2.L",24,-0.0,0.115961,0.0,-0.091298,0.034092,-0.086657,0.99146,1,1.0,1],["Pinky3.L",25,0.0,0.02577,0.0,-0.089486,-0.037928,-0.022308,0.995016,1,1.0,1.0],["Pinky4.L",26,-0.0,0.026759,-0.0,-0.116958,-0.009655,-0.00323,0.993085,1,1.0,1.0],["Thumb1.L",11,0.0,0.0272,0.0,-0.317099,-0.317893,-0.180712,0.875063,1.0,1.0,1],["Thumb2.L",28,-0.0,0.082884,-0.0,0.131836,0.274653,-0.010817,0.952401,1.0,1.0,1.0],["Thumb3.L",29,0.0,0.031121,-0.0,-0.059697,0.031869,0.117547,0.990759,1.0,1.0,1],["Shoulder.R",5,-0.067834,0.038167,0.030791,-0.269814,0.417607,0.40977,0.764783,1.0,1.0,1.0],["UpperArm.R",31,0.0,0.063542,0.0,-0.741143,0.171119,0.108826,0.639987,1.0,1.0,1.0],["LowerArm.R",32,0.0,0.217008,0.0,-0.203003,-0.203246,0.331849,0.898531,1.0,1.0,1.0],["Wrist.R",33,-0.0,0.235667,-0.0,0.008225,-0.00982,-0.052007,0.998565,1.0,1.0,1.0],["Index1.R",34,0.0,0.0272,0.0,-0.053651,0.058323,0.09078,0.992713,1.0,1,1],["Index2.R",35,0.0,0.121023,-0.0,-0.016248,-0.144091,-0.094652,0.984893,1.0,1.0,1.0],["Index3.R",36,-0.0,0.031775,-0.0,-0.091963,0.003052,-0.020453,0.995548,1.0,1,1.0],["Index4.R",37,-0.0,0.028649,0.0,-0.03024,-0.012725,-0.006021,0.999444,1.0,1,1],["Middle1.R",34,-0.0,0.0272,0.0,-0.011616,0.011794,-0.016503,0.999727,1.0,1.0,1.0],["Middle2.R",39,0.0,0.119848,-0.0,-0.064598,-0.055152,-0.028093,0.99599,1.0,1,1],["Middle3.R",40,0.0,0.039186,0.0,-0.120008,0.004372,0.021021,0.992541,1.0,1.0,1.0],["Middle4.R",41,0.0,0.039165,0.0,-0.019048,-0.035249,0.007437,0.999169,1.0,1.0,1.0],["Ring1.R",34,-0.0,0.0272,0.0,-0.030456,0.028963,-0.128329,0.990841,1.0,1.0,1],["Ring2.R",43,-0.0,0.119257,-0.0,-0.043931,-0.106429,0.040844,0.992509,1.0,1.0,1.0],["Ring3.R",44,-0.0,0.032924,0.0,-0.119294,-0.057258,0.039888,0.990404,1.0,1,1.0],["Ring4.R",45,0.0,0.032186,-0.0,-0.074809,-0.027954,0.007629,0.996777,1,1.0,1.0],["Pinky1.R",34,-0.0,0.0272,0.0,-0.031091,0.027353,-0.227078,0.972996,1.0,1.0,1.0],["Pinky2.R",47,0.0,0.115961,0.0,-0.076603,-0.060813,0.182085,0.978406,1.0,1,1.0],["Pinky3.R",48,-0.0,0.02577,0.0,-0.089486,0.037928,0.022308,0.995016,1,1,1],["Pinky4.R",49,0.0,0.026758,-0.0,-0.116958,0.009655,0.00323,0.993085,1.0,1.0,1.0],["Thumb1.R",34,0.0,0.0272,0.0,-0.254289,0.351549,0.248254,0.866095,1.0,1.0,1],["Thumb2.R",51,0.0,0.082884,-0.0,0.131836,-0.274653,0.010817,0.952401,1.0,1.0,1],["Thumb3.R",52,0.0,0.031121,-0.0,-0.059697,-0.031869,-0.117547,0.990759,1.0,1.0,1.0],["UpperLeg.L",1,0.096406,0.063335,-0.02323,0.96787,0.07718,-0.222048,0.089249,1.0,1.0,1.000009],["LowerLeg.L",54,0,0.481815,0.0,0.247458,-0.0,0.0,0.968899,1.0,0.999999,1.0],["UpperLeg.R",1,-0.097312,0.063335,-0.02323,0.965092,-0.018397,0.171005,0.197524,1,1.0,1.000009],["LowerLeg.R",56,0,0.481815,0.0,0.222987,0.0,0.0,0.974821,1.0,0.999999,1.0],["Foot.L",0,0.096859,0.022752,-0.187028,0.614423,0.348027,-0.34617,0.617679,1.0,1,1.0],["PT.L",0,0.544518,0.650245,0.227107,-0.002674,0,0,0.999996,1,1,1],["Foot.R",0,-0.044775,0.022755,0.173686,0.704032,0.040989,-0.04077,0.707811,1,1,1],["PT.R",0,0.005565,0.446997,0.658934,-0.002674,0,0,0.999996,1,1,1]],"ibm":[98652,992],"box":[-0.82462,-0.00051,-0.20118,0.82462,1.82758,0.25924],"pos":[0,11556],"joint":[23112,15408],"weight":[38520,15408],"slot":[53928,3852],"idx":[57780,20436]},"M_Adventurer":{"gender":"M","mats":[["Skin",0.6172,0.4179,0.2384],["Green",0.0607,0.0505,0.0189],["LightGreen",0.0985,0.0848,0.0371],["Grey",0.0497,0.0497,0.0497],["Black",0.0176,0.0176,0.0176],["Eyebrows",0.0482,0.0343,0.0222],["Hair",0.0668,0.0274,0.009],["Eye",0.0311,0.0182,0.0113],["Brown",0.1789,0.1268,0.0513],["Brown2",0.1065,0.0763,0.032],["Gold",0.2789,0.1746,0.0395]],"bones":[["Root",-1,0,0,0.072289,0,0.0,0,1,1,1,1],["Body",0,0.000453,0.828953,-0.045606,0,0.23553,0,0.971867,1,1,1],["Hips",1,-0.000797,0.028695,0.033075,-0.069429,-0.0,-0.0,0.997587,1.0,1,1],["Abdomen",2,-0.0,0.106105,-0.0,0.047782,0.0,0.0,0.998858,1,1.0,1],["Torso",3,0.0,0.162004,0.0,0.085465,-0.237483,0.011578,0.967555,1,1,1.0],["Chest",4,0.0,0.216292,-0.0,0.003636,0.0,-0.0,0.999993,1.0,1.0,1.0],["Neck",5,-0.0,0.133251,-0.0,-0.009471,1e-06,-0.0,0.999955,1,1,1.0],["Head",6,0.0,0.076728,0.0,-0.024511,-0.000275,0.00012,0.9997,1.0,1,1],["Shoulder.L",5,0.098735,0.029018,0.021276,-0.456199,-0.840231,-0.106907,0.272881,1.0,1.0,1],["UpperArm.L",8,-0.0,0.065633,-0.0,-0.674998,0.403884,0.387776,0.480506,1,1.0,1],["LowerArm.L",9,0.0,0.181908,-0.0,-0.121328,-0.029565,-0.184313,0.974902,1.0,1.0,1.0],["Wrist.L",10,0.0,0.23528,0.0,0.01124,0.017744,0.010479,0.999725,1.0,1.0,1.0],["Index1.L",11,-0.0,0.028038,-0.0,-0.008858,0.014218,-0.09332,0.995495,1.0,1.0,1.0],["Index2.L",12,-0.0,0.124368,0.0,-0.040891,-0.032146,0.067043,0.996393,1.0,1.0,1.0],["Index3.L",13,-0.0,0.032754,-0.0,-0.079074,0.011656,0.025053,0.996486,1.0,1.0,1],["Index4.L",14,0,0.029531,0.0,-0.029872,0.009781,0.004962,0.999494,1.0,1.0,1.0],["Middle1.L",11,0.0,0.028038,0.0,0.025723,-0.019409,0.016911,0.999338,1.0,1.0,1],["Middle2.L",16,-0.0,0.123878,0.0,-0.093559,0.024963,0.040087,0.994493,1.0,1.0,1.0],["Middle3.L",17,-0.0,0.040394,0.0,-0.12041,0.006239,-0.018847,0.992526,1,1.0,1],["Middle4.L",18,-0.0,0.040372,-0.0,-0.019046,0.009172,-0.011121,0.999715,1,1.0,1],["Ring1.L",11,0.0,0.028038,0.0,0.009113,-0.050341,0.127957,0.990459,1,1.0,1],["Ring2.L",20,-0.0,0.122903,-0.0,-0.081933,0.160517,-0.036554,0.982947,1.0,1,1.0],["Ring3.L",21,-0.0,0.033939,-0.0,-0.118164,0.040226,-0.041463,0.991312,1.0,1.0,1.0],["Ring4.L",22,0.0,0.033177,0.0,-0.07518,0.030085,-0.00748,0.996688,1.0,1.0,1],["Pinky1.L",11,0.0,0.028038,0.0,0.017033,-0.07192,0.226359,0.971236,1,1.0,1],["Pinky2.L",24,0.0,0.119494,0.0,-0.129029,0.157212,-0.064622,0.976965,1,1.0,1.0],["Pinky3.L",25,0.0,0.026564,-0.0,-0.090798,-0.056609,-0.023062,0.993992,1,1.0,1.0],["Pinky4.L",26,-0.0,0.027583,-0.0,-0.11695,-0.018361,-0.002899,0.992964,1.0,1.0,1.0],["Thumb1.L",11,-0.0,0.028038,0.0,0.003877,0.198608,-0.345762,0.917054,1.0,1,1],["Thumb2.L",28,0.0,0.08231,0.0,0.041728,-0.122015,0.085182,0.987985,1.0,1.0,1.0],["Thumb3.L",29,-0.0,0.03208,-0.0,-0.088588,-0.055603,0.121992,0.987005,1.0,1.0,1],["Shoulder.R",5,-0.09806,0.029018,0.021276,-0.456199,0.840232,0.106908,0.272881,1.0,1.0,1.0],["UpperArm.R",31,-0.0,0.065633,0.0,-0.626873,-0.307534,-0.439376,0.565157,1.0,1.0,1],["LowerArm.R",32,-0.0,0.181908,0.0,-0.205763,-0.193786,0.323958,0.902862,1.0,1.0,1],["Wrist.R",33,0.0,0.23528,0.0,0.010542,-0.021214,-0.039322,0.998946,1,1.0,1.0],["Index1.R",34,-0.0,0.028038,-0.0,-0.008858,-0.014218,0.09332,0.995495,1,1.0,1.0],["Index2.R",35,0.0,0.124367,-0.0,-0.052857,0.033641,-0.066489,0.995818,1.0,1,1],["Index3.R",36,0.0,0.032754,-0.0,-0.088783,-0.011362,-0.024742,0.995679,1,1,1],["Index4.R",37,-0.0,0.029531,0.0,-0.029872,-0.009781,-0.004962,0.999494,1,1.0,1.0],["Middle1.R",34,0.0,0.028038,0.0,0.025723,0.019409,-0.016911,0.999338,1.0,1.0,1],["Middle2.R",39,-0.0,0.123878,-0.0,-0.101904,-0.022827,-0.021885,0.994291,1.0,1.0,1.0],["Middle3.R",40,0.0,0.040394,-0.0,-0.12041,-0.006239,0.018847,0.992526,1.0,1.0,1.0],["Middle4.R",41,-0.0,0.040372,-0.0,-0.019046,-0.009172,0.011121,0.999715,1,1,1],["Ring1.R",34,-0.0,0.028038,0.0,0.009113,0.050341,-0.127957,0.990459,1.0,1,1.0],["Ring2.R",43,0.0,0.122903,-0.0,-0.081933,-0.160517,0.036554,0.982947,1,1,1.0],["Ring3.R",44,-0.0,0.033939,0.0,-0.118164,-0.040226,0.041463,0.991312,1.0,1.0,1.0],["Ring4.R",45,-0.0,0.033177,-0.0,-0.07518,-0.030085,0.00748,0.996688,1,1.0,1.0],["Pinky1.R",34,0.0,0.028038,0.0,0.017033,0.07192,-0.226359,0.971236,1.0,1,1.0],["Pinky2.R",47,0.0,0.119494,0.0,-0.126589,-0.179584,0.161972,0.962024,1.0,1.0,1],["Pinky3.R",48,-0.0,0.026564,-0.0,-0.090798,0.056609,0.023062,0.993992,1.0,1,1],["Pinky4.R",49,0.0,0.027583,0.0,-0.11695,0.018361,0.002899,0.992964,1,1,1],["Thumb1.R",34,0.0,0.028038,0.0,0.019558,-0.185723,0.435159,0.880773,1.0,1.0,1.0],["Thumb2.R",51,0.0,0.08231,-0.0,0.041728,0.122015,-0.085182,0.987985,1,1,1.0],["Thumb3.R",52,-0.0,0.03208,0.0,-0.088588,0.055603,-0.121992,0.987005,1,1,1.0],["UpperLeg.L",1,0.120138,0.098749,0.018381,0.535611,-0.021101,-0.835662,0.119769,0.999999,0.999999,0.999974],["LowerLeg.L",54,-0.0,0.432979,-0.0,0.186823,0.681981,-0.186823,0.68198,1,1.0,1.0],["UpperLeg.R",1,-0.121045,0.098749,0.018381,0.554986,0.125434,0.80482,0.168885,1.0,1.0,0.999973],["LowerLeg.R",56,-0.0,0.432979,-0.0,0.167543,-0.686972,0.167543,0.686971,1.0,1,1],["Foot.L",0,0.120592,0.022752,-0.187028,0.614414,0.348044,-0.346153,0.617689,1.0,1.0,1.0],["PT.L",0,0.568219,0.626512,0.227077,-0.002674,3.4e-05,-0.0,0.999996,1,1,1],["Foot.R",0,-0.068507,0.022752,0.173686,0.704033,0.040969,-0.04079,0.70781,1,1,1],["PT.R",0,-0.018166,0.423264,0.658941,-0.002674,-3.4e-05,0.0,0.999996,1,1,1]],"ibm":[248212,992],"box":[-0.83773,-0.00122,-0.26302,0.83773,1.85594,0.28669],"pos":[102620,16875],"joint":[136372,22500],"weight":[158872,22500],"slot":[181372,5625],"idx":[187000,30606]},"W_Casual":{"gender":"W","mats":[["Skin",0.6172,0.4179,0.2384],["White",0.4575,0.4575,0.4575],["Grey",0.0497,0.0497,0.0497],["Hair_Brown",0.0482,0.0343,0.0222],["Brown",0.0311,0.0182,0.0113],["Hair_Blond",0.2598,0.1787,0.0628],["Orange",0.3424,0.1214,0.0398]],"bones":[["Root",-1,0,0,0.072289,0,0,0,1,1,1,1],["Body",0,0.000453,0.937146,-0.003995,0,0.23553,0,0.971867,1,1,1],["Hips",1,-0.000797,0.028695,0.009495,-0.069429,0.0,-0.0,0.997587,1,1,1.0],["Abdomen",2,0.0,0.106104,-0.0,-0.019335,-0.0,-0.0,0.999813,1,1,1],["Torso",3,0.0,0.141789,-0.0,0.153868,-0.237706,-0.005293,0.959058,1,1.0,1.0],["Chest",4,-0.0,0.130402,0.0,-0.000207,0.0,0.0,1,1.0,1.0,1],["Neck",5,0.0,0.133251,-0.0,-0.009471,0.0,-0.0,0.999955,1.0,1.0,1.0],["Head",6,0.0,0.076729,0.0,-0.024511,-0.0,0.000127,0.9997,1.0,1.0,1.0],["Shoulder.L",5,0.068513,0.038163,0.030799,-0.269814,-0.417607,-0.40977,0.764783,1.0,1,1],["UpperArm.L",8,0.0,0.063542,0.0,-0.741918,-0.041393,-0.176409,0.645542,1.0,1.0,1.0],["LowerArm.L",9,0.0,0.217008,-0.0,-0.11985,-0.020959,-0.19429,0.973369,1,1.0,1],["Wrist.L",10,0.0,0.235667,-0.0,0.009301,0.006304,0.023192,0.999668,1.0,1.0,1.0],["Index1.L",11,0.0,0.0272,0.0,-0.053651,-0.058323,-0.09078,0.992713,1,1.0,1.0],["Index2.L",12,-0.0,0.121023,-0.0,-0.004401,0.145898,0.093083,0.984901,1.0,1.0,1.0],["Index3.L",13,0.0,0.031775,0.0,-0.08226,-0.002798,0.020905,0.996388,1.0,1,1.0],["Index4.L",14,0.0,0.028649,0.0,-0.03024,0.012725,0.006021,0.999444,1.0,1,1.0],["Middle1.L",11,0.0,0.0272,0.0,-0.011616,-0.011794,0.016503,0.999727,1.0,1.0,1],["Middle2.L",16,-0.0,0.119848,-0.0,-0.05565,0.056641,0.046072,0.995777,1,1.0,1.0],["Middle3.L",17,0,0.039186,0.0,-0.120008,-0.004372,-0.021021,0.992541,1,1.0,1.0],["Middle4.L",18,-0.0,0.039165,0.0,-0.019048,0.035249,-0.007437,0.999169,1.0,1.0,1.0],["Ring1.L",11,-0.0,0.0272,0.0,-0.030456,-0.028963,0.128329,0.990841,1,1,1.0],["Ring2.L",20,-0.0,0.119257,0.0,-0.043931,0.106429,-0.040844,0.992509,1.0,1.0,1.0],["Ring3.L",21,-0.0,0.032924,0.0,-0.119294,0.057258,-0.039888,0.990404,1,1.0,1.0],["Ring4.L",22,0.0,0.032186,-0.0,-0.074809,0.027954,-0.007629,0.996777,1,1.0,1],["Pinky1.L",11,0.0,0.0272,0.0,-0.031091,-0.027353,0.227078,0.972996,1.0,1.0,1],["Pinky2.L",24,-0.0,0.115961,0.0,-0.091298,0.034092,-0.086657,0.99146,1,1.0,1],["Pinky3.L",25,0.0,0.02577,0.0,-0.089486,-0.037928,-0.022308,0.995016,1,1.0,1.0],["Pinky4.L",26,-0.0,0.026759,-0.0,-0.116958,-0.009655,-0.00323,0.993085,1,1.0,1.0],["Thumb1.L",11,0.0,0.0272,0.0,-0.317099,-0.317893,-0.180712,0.875063,1.0,1.0,1],["Thumb2.L",28,-0.0,0.082884,-0.0,0.131836,0.274653,-0.010817,0.952401,1.0,1.0,1.0],["Thumb3.L",29,0.0,0.031121,-0.0,-0.059697,0.031869,0.117547,0.990759,1.0,1.0,1],["Shoulder.R",5,-0.067834,0.038167,0.030791,-0.269814,0.417607,0.40977,0.764783,1.0,1.0,1.0],["UpperArm.R",31,0.0,0.063542,0.0,-0.741143,0.171119,0.108826,0.639987,1.0,1.0,1.0],["LowerArm.R",32,0.0,0.217008,0.0,-0.203003,-0.203246,0.331849,0.898531,1.0,1.0,1.0],["Wrist.R",33,-0.0,0.235667,-0.0,0.008225,-0.00982,-0.052007,0.998565,1.0,1.0,1.0],["Index1.R",34,0.0,0.0272,0.0,-0.053651,0.058323,0.09078,0.992713,1.0,1,1],["Index2.R",35,0.0,0.121023,-0.0,-0.016248,-0.144091,-0.094652,0.984893,1.0,1.0,1.0],["Index3.R",36,-0.0,0.031775,-0.0,-0.091963,0.003052,-0.020453,0.995548,1.0,1,1.0],["Index4.R",37,-0.0,0.028649,0.0,-0.03024,-0.012725,-0.006021,0.999444,1.0,1,1],["Middle1.R",34,-0.0,0.0272,0.0,-0.011616,0.011794,-0.016503,0.999727,1.0,1.0,1.0],["Middle2.R",39,0.0,0.119848,-0.0,-0.064598,-0.055152,-0.028093,0.99599,1.0,1,1],["Middle3.R",40,0.0,0.039186,0.0,-0.120008,0.004372,0.021021,0.992541,1.0,1.0,1.0],["Middle4.R",41,0.0,0.039165,0.0,-0.019048,-0.035249,0.007437,0.999169,1.0,1.0,1.0],["Ring1.R",34,-0.0,0.0272,0.0,-0.030456,0.028963,-0.128329,0.990841,1.0,1.0,1],["Ring2.R",43,-0.0,0.119257,-0.0,-0.043931,-0.106429,0.040844,0.992509,1.0,1.0,1.0],["Ring3.R",44,-0.0,0.032924,0.0,-0.119294,-0.057258,0.039888,0.990404,1.0,1,1.0],["Ring4.R",45,0.0,0.032186,-0.0,-0.074809,-0.027954,0.007629,0.996777,1,1.0,1.0],["Pinky1.R",34,-0.0,0.0272,0.0,-0.031091,0.027353,-0.227078,0.972996,1.0,1.0,1.0],["Pinky2.R",47,0.0,0.115961,0.0,-0.076603,-0.060813,0.182085,0.978406,1.0,1,1.0],["Pinky3.R",48,-0.0,0.02577,0.0,-0.089486,0.037928,0.022308,0.995016,1,1,1],["Pinky4.R",49,0.0,0.026758,-0.0,-0.116958,0.009655,0.00323,0.993085,1.0,1.0,1.0],["Thumb1.R",34,0.0,0.0272,0.0,-0.254289,0.351549,0.248254,0.866095,1.0,1.0,1],["Thumb2.R",51,0.0,0.082884,-0.0,0.131836,-0.274653,0.010817,0.952401,1.0,1.0,1],["Thumb3.R",52,0.0,0.031121,-0.0,-0.059697,-0.031869,-0.117547,0.990759,1.0,1.0,1.0],["UpperLeg.L",1,0.096406,0.063335,-0.02323,0.96787,0.07718,-0.222048,0.089249,1.0,1.0,1.000009],["LowerLeg.L",54,0,0.481815,0.0,0.247458,-0.0,0.0,0.968899,1.0,0.999999,1.0],["UpperLeg.R",1,-0.097312,0.063335,-0.02323,0.965092,-0.018397,0.171005,0.197524,1,1.0,1.000009],["LowerLeg.R",56,0,0.481815,0.0,0.222987,0.0,0.0,0.974821,1.0,0.999999,1.0],["Foot.L",0,0.096859,0.022752,-0.187028,0.614423,0.348027,-0.34617,0.617679,1.0,1,1.0],["PT.L",0,0.544518,0.650245,0.227107,-0.002674,0,0,0.999996,1,1,1],["Foot.R",0,-0.044775,0.022755,0.173686,0.704032,0.040989,-0.04077,0.707811,1,1,1],["PT.R",0,0.005565,0.446997,0.658934,-0.002674,0,0,0.999996,1,1,1]],"ibm":[341424,992],"box":[-0.82506,-0.00857,-0.09946,0.82506,1.84347,0.27081],"pos":[252180,10140],"joint":[272460,13520],"weight":[285980,13520],"slot":[299500,3380],"idx":[302880,19272]},"M_Casual_2":{"gender":"M","mats":[["Skin",0.6172,0.4179,0.2384],["LightBrown",0.305,0.2789,0.227],["Red_Dark",0.2051,0.0203,0.0343],["White",0.4575,0.4575,0.4575],["Skin_Darker",0.4869,0.3306,0.1896],["Eyebrows",0.0482,0.0343,0.0222],["Hair",0.0668,0.0274,0.009],["Eye",0.0311,0.0182,0.0113],["LightBlue",0.0331,0.0497,0.063]],"bones":[["Root",-1,0,0,0.072289,0,0.0,0,1,1,1,1],["Body",0,0.000453,0.828953,-0.045606,0,0.23553,0,0.971867,1,1,1],["Hips",1,-0.000797,0.028695,0.033075,-0.069429,-0.0,-0.0,0.997587,1.0,1,1],["Abdomen",2,-0.0,0.106105,-0.0,0.047782,0.0,0.0,0.998858,1,1.0,1],["Torso",3,0.0,0.162004,0.0,0.085465,-0.237483,0.011578,0.967555,1,1,1.0],["Chest",4,0.0,0.216292,-0.0,0.003636,0.0,-0.0,0.999993,1.0,1.0,1.0],["Neck",5,-0.0,0.133251,-0.0,-0.009471,1e-06,-0.0,0.999955,1,1,1.0],["Head",6,0.0,0.076728,0.0,-0.024511,-0.000275,0.00012,0.9997,1.0,1,1],["Shoulder.L",5,0.098735,0.029018,0.021276,-0.456199,-0.840231,-0.106907,0.272881,1.0,1.0,1],["UpperArm.L",8,-0.0,0.065633,-0.0,-0.674998,0.403884,0.387776,0.480506,1,1.0,1],["LowerArm.L",9,0.0,0.181908,-0.0,-0.121328,-0.029565,-0.184313,0.974902,1.0,1.0,1.0],["Wrist.L",10,0.0,0.23528,0.0,0.01124,0.017744,0.010479,0.999725,1.0,1.0,1.0],["Index1.L",11,-0.0,0.028038,-0.0,-0.008858,0.014218,-0.09332,0.995495,1.0,1.0,1.0],["Index2.L",12,-0.0,0.124368,0.0,-0.040891,-0.032146,0.067043,0.996393,1.0,1.0,1.0],["Index3.L",13,-0.0,0.032754,-0.0,-0.079074,0.011656,0.025053,0.996486,1.0,1.0,1],["Index4.L",14,0,0.029531,0.0,-0.029872,0.009781,0.004962,0.999494,1.0,1.0,1.0],["Middle1.L",11,0.0,0.028038,0.0,0.025723,-0.019409,0.016911,0.999338,1.0,1.0,1],["Middle2.L",16,-0.0,0.123878,0.0,-0.093559,0.024963,0.040087,0.994493,1.0,1.0,1.0],["Middle3.L",17,-0.0,0.040394,0.0,-0.12041,0.006239,-0.018847,0.992526,1,1.0,1],["Middle4.L",18,-0.0,0.040372,-0.0,-0.019046,0.009172,-0.011121,0.999715,1,1.0,1],["Ring1.L",11,0.0,0.028038,0.0,0.009113,-0.050341,0.127957,0.990459,1,1.0,1],["Ring2.L",20,-0.0,0.122903,-0.0,-0.081933,0.160517,-0.036554,0.982947,1.0,1,1.0],["Ring3.L",21,-0.0,0.033939,-0.0,-0.118164,0.040226,-0.041463,0.991312,1.0,1.0,1.0],["Ring4.L",22,0.0,0.033177,0.0,-0.07518,0.030085,-0.00748,0.996688,1.0,1.0,1],["Pinky1.L",11,0.0,0.028038,0.0,0.017033,-0.07192,0.226359,0.971236,1,1.0,1],["Pinky2.L",24,0.0,0.119494,0.0,-0.129029,0.157212,-0.064622,0.976965,1,1.0,1.0],["Pinky3.L",25,0.0,0.026564,-0.0,-0.090798,-0.056609,-0.023062,0.993992,1,1.0,1.0],["Pinky4.L",26,-0.0,0.027583,-0.0,-0.11695,-0.018361,-0.002899,0.992964,1.0,1.0,1.0],["Thumb1.L",11,-0.0,0.028038,0.0,0.003877,0.198608,-0.345762,0.917054,1.0,1,1],["Thumb2.L",28,0.0,0.08231,0.0,0.041728,-0.122015,0.085182,0.987985,1.0,1.0,1.0],["Thumb3.L",29,-0.0,0.03208,-0.0,-0.088588,-0.055603,0.121992,0.987005,1.0,1.0,1],["Shoulder.R",5,-0.09806,0.029018,0.021276,-0.456199,0.840232,0.106908,0.272881,1.0,1.0,1.0],["UpperArm.R",31,-0.0,0.065633,0.0,-0.626873,-0.307534,-0.439376,0.565157,1.0,1.0,1],["LowerArm.R",32,-0.0,0.181908,0.0,-0.205763,-0.193786,0.323958,0.902862,1.0,1.0,1],["Wrist.R",33,0.0,0.23528,0.0,0.010542,-0.021214,-0.039322,0.998946,1,1.0,1.0],["Index1.R",34,-0.0,0.028038,-0.0,-0.008858,-0.014218,0.09332,0.995495,1,1.0,1.0],["Index2.R",35,0.0,0.124367,-0.0,-0.052857,0.033641,-0.066489,0.995818,1.0,1,1],["Index3.R",36,0.0,0.032754,-0.0,-0.088783,-0.011362,-0.024742,0.995679,1,1,1],["Index4.R",37,-0.0,0.029531,0.0,-0.029872,-0.009781,-0.004962,0.999494,1,1.0,1.0],["Middle1.R",34,0.0,0.028038,0.0,0.025723,0.019409,-0.016911,0.999338,1.0,1.0,1],["Middle2.R",39,-0.0,0.123878,-0.0,-0.101904,-0.022827,-0.021885,0.994291,1.0,1.0,1.0],["Middle3.R",40,0.0,0.040394,-0.0,-0.12041,-0.006239,0.018847,0.992526,1.0,1.0,1.0],["Middle4.R",41,-0.0,0.040372,-0.0,-0.019046,-0.009172,0.011121,0.999715,1,1,1],["Ring1.R",34,-0.0,0.028038,0.0,0.009113,0.050341,-0.127957,0.990459,1.0,1,1.0],["Ring2.R",43,0.0,0.122903,-0.0,-0.081933,-0.160517,0.036554,0.982947,1,1,1.0],["Ring3.R",44,-0.0,0.033939,0.0,-0.118164,-0.040226,0.041463,0.991312,1.0,1.0,1.0],["Ring4.R",45,-0.0,0.033177,-0.0,-0.07518,-0.030085,0.00748,0.996688,1,1.0,1.0],["Pinky1.R",34,0.0,0.028038,0.0,0.017033,0.07192,-0.226359,0.971236,1.0,1,1.0],["Pinky2.R",47,0.0,0.119494,0.0,-0.126589,-0.179584,0.161972,0.962024,1.0,1.0,1],["Pinky3.R",48,-0.0,0.026564,-0.0,-0.090798,0.056609,0.023062,0.993992,1.0,1,1],["Pinky4.R",49,0.0,0.027583,0.0,-0.11695,0.018361,0.002899,0.992964,1,1,1],["Thumb1.R",34,0.0,0.028038,0.0,0.019558,-0.185723,0.435159,0.880773,1.0,1.0,1.0],["Thumb2.R",51,0.0,0.08231,-0.0,0.041728,0.122015,-0.085182,0.987985,1,1,1.0],["Thumb3.R",52,-0.0,0.03208,0.0,-0.088588,0.055603,-0.121992,0.987005,1,1,1.0],["UpperLeg.L",1,0.120138,0.098749,0.018381,0.535611,-0.021101,-0.835662,0.119769,0.999999,0.999999,0.999974],["LowerLeg.L",54,-0.0,0.432979,-0.0,0.186823,0.681981,-0.186823,0.68198,1,1.0,1.0],["UpperLeg.R",1,-0.121045,0.098749,0.018381,0.554986,0.125434,0.80482,0.168885,1.0,1.0,0.999973],["LowerLeg.R",56,-0.0,0.432979,-0.0,0.167543,-0.686972,0.167543,0.686971,1.0,1,1],["Foot.L",0,0.120592,0.022752,-0.187028,0.614414,0.348044,-0.346153,0.617689,1.0,1.0,1.0],["PT.L",0,0.568219,0.626512,0.227077,-0.002674,3.4e-05,-0.0,0.999996,1,1,1],["Foot.R",0,-0.068507,0.022752,0.173686,0.704033,0.040969,-0.04079,0.70781,1,1,1],["PT.R",0,-0.018166,0.423264,0.658941,-0.002674,-3.4e-05,0.0,0.999996,1,1,1]],"ibm":[426280,992],"box":[-0.83773,-0.0014,-0.168,0.83773,1.85658,0.28669],"pos":[345392,9246],"joint":[363884,12328],"weight":[376212,12328],"slot":[388540,3082],"idx":[391624,17328]}},"clips":{"M":{"Idle":{"dur":1.6667,"tracks":[["Body","p",430248,51,430452],["Body","q",431064,2,431072],["Abdomen","p",431088,2,431096],["Abdomen","q",431120,2,431128],["Torso","p",431144,2,431152],["Torso","q",431176,2,431184],["Chest","p",431200,2,431208],["Chest","q",431232,51,431436],["Neck","p",431844,2,431852],["Neck","q",431876,2,431884],["Head","p",431900,2,431908],["Head","q",431932,51,432136],["Shoulder.L","p",432544,2,432552],["Shoulder.L","q",432576,2,432584],["UpperArm.L","p",432600,2,432608],["UpperArm.L","q",432632,51,432836],["LowerArm.L","p",433244,2,433252],["LowerArm.L","q",433276,51,433480],["Wrist.L","p",433888,2,433896],["Wrist.L","q",433920,2,433928],["Shoulder.R","p",433944,2,433952],["Shoulder.R","q",433976,2,433984],["UpperArm.R","p",434000,2,434008],["UpperArm.R","q",434032,51,434236],["LowerArm.R","p",434644,2,434652],["LowerArm.R","q",434676,51,434880],["Wrist.R","p",435288,2,435296],["Wrist.R","q",435320,2,435328],["UpperLeg.L","q",435344,51,435548],["LowerLeg.L","q",435956,51,436160],["UpperLeg.R","q",436568,51,436772],["LowerLeg.R","q",437180,51,437384],["Foot.L","p",437792,2,437800],["Foot.L","q",437824,2,437832],["Foot.R","p",437848,2,437856],["Foot.R","q",437880,2,437888]]},"Idle_Neutral":{"dur":1.6667,"tracks":[["Body","p",437904,51,438108],["Body","q",438720,51,438924],["Abdomen","p",439332,2,439340],["Abdomen","q",439364,2,439372],["Torso","p",439388,2,439396],["Torso","q",439420,2,439428],["Chest","p",439444,2,439452],["Chest","q",439476,2,439484],["Neck","p",439500,2,439508],["Neck","q",439532,2,439540],["Head","p",439556,2,439564],["Head","q",439588,51,439792],["Shoulder.L","p",440200,51,440404],["Shoulder.L","q",441016,51,441220],["UpperArm.L","p",441628,2,441636],["UpperArm.L","q",441660,2,441668],["LowerArm.L","p",441684,2,441692],["LowerArm.L","q",441716,2,441724],["Wrist.L","p",441740,2,441748],["Wrist.L","q",441772,2,441780],["Shoulder.R","p",441796,51,442000],["Shoulder.R","q",442612,51,442816],["UpperArm.R","p",443224,2,443232],["UpperArm.R","q",443256,2,443264],["LowerArm.R","p",443280,2,443288],["LowerArm.R","q",443312,2,443320],["Wrist.R","p",443336,2,443344],["Wrist.R","q",443368,2,443376],["UpperLeg.L","q",443392,51,443596],["LowerLeg.L","q",444004,51,444208],["UpperLeg.R","q",444616,51,444820],["LowerLeg.R","q",445228,51,445432],["Foot.L","p",445840,2,445848],["Foot.L","q",445872,2,445880],["Foot.R","p",445896,2,445904],["Foot.R","q",445928,2,445936]]},"Walk":{"dur":1.3333,"tracks":[["Body","p",445952,41,446116],["Body","q",446608,41,446772],["Abdomen","p",447100,2,447108],["Abdomen","q",447132,2,447140],["Torso","p",447156,2,447164],["Torso","q",447188,41,447352],["Chest","p",447680,2,447688],["Chest","q",447712,41,447876],["Neck","p",448204,2,448212],["Neck","q",448236,41,448400],["Head","p",448728,2,448736],["Head","q",448760,41,448924],["Shoulder.L","p",449252,2,449260],["Shoulder.L","q",449284,2,449292],["UpperArm.L","p",449308,2,449316],["UpperArm.L","q",449340,41,449504],["LowerArm.L","p",449832,2,449840],["LowerArm.L","q",449864,41,450028],["Wrist.L","p",450356,2,450364],["Wrist.L","q",450388,41,450552],["Shoulder.R","p",450880,2,450888],["Shoulder.R","q",450912,2,450920],["UpperArm.R","p",450936,2,450944],["UpperArm.R","q",450968,41,451132],["LowerArm.R","p",451460,2,451468],["LowerArm.R","q",451492,41,451656],["Wrist.R","p",451984,2,451992],["Wrist.R","q",452016,41,452180],["UpperLeg.L","q",452508,41,452672],["LowerLeg.L","q",453000,41,453164],["UpperLeg.R","q",453492,41,453656],["LowerLeg.R","q",453984,41,454148],["Foot.L","p",454476,41,454640],["Foot.L","q",455132,41,455296],["Foot.R","p",455624,41,455788],["Foot.R","q",456280,41,456444]]},"Run":{"dur":0.8,"tracks":[["Body","p",456772,25,456872],["Body","q",457172,2,457180],["Abdomen","p",457196,2,457204],["Abdomen","q",457228,2,457236],["Torso","p",457252,2,457260],["Torso","q",457284,25,457384],["Chest","p",457584,2,457592],["Chest","q",457616,25,457716],["Neck","p",457916,2,457924],["Neck","q",457948,2,457956],["Head","p",457972,2,457980],["Head","q",458004,25,458104],["Shoulder.L","p",458304,2,458312],["Shoulder.L","q",458336,25,458436],["UpperArm.L","p",458636,2,458644],["UpperArm.L","q",458668,25,458768],["LowerArm.L","p",458968,2,458976],["LowerArm.L","q",459000,25,459100],["Wrist.L","p",459300,2,459308],["Wrist.L","q",459332,25,459432],["Shoulder.R","p",459632,2,459640],["Shoulder.R","q",459664,25,459764],["UpperArm.R","p",459964,2,459972],["UpperArm.R","q",459996,25,460096],["LowerArm.R","p",460296,2,460304],["LowerArm.R","q",460328,25,460428],["Wrist.R","p",460628,2,460636],["Wrist.R","q",460660,25,460760],["UpperLeg.L","q",460960,25,461060],["LowerLeg.L","q",461260,25,461360],["UpperLeg.R","q",461560,25,461660],["LowerLeg.R","q",461860,25,461960],["Foot.L","p",462160,25,462260],["Foot.L","q",462560,25,462660],["Foot.R","p",462860,25,462960],["Foot.R","q",463260,25,463360]]},"Wave":{"dur":1.6667,"tracks":[["Body","p",463560,51,463764],["Body","q",464376,51,464580],["Abdomen","p",464988,2,464996],["Abdomen","q",465020,2,465028],["Torso","p",465044,2,465052],["Torso","q",465076,2,465084],["Chest","p",465100,2,465108],["Chest","q",465132,51,465336],["Neck","p",465744,2,465752],["Neck","q",465776,2,465784],["Head","p",465800,2,465808],["Head","q",465832,51,466036],["Shoulder.L","p",466444,2,466452],["Shoulder.L","q",466476,2,466484],["UpperArm.L","p",466500,2,466508],["UpperArm.L","q",466532,51,466736],["LowerArm.L","p",467144,2,467152],["LowerArm.L","q",467176,51,467380],["Wrist.L","p",467788,2,467796],["Wrist.L","q",467820,51,468024],["Shoulder.R","p",468432,2,468440],["Shoulder.R","q",468464,2,468472],["UpperArm.R","p",468488,2,468496],["UpperArm.R","q",468520,51,468724],["LowerArm.R","p",469132,2,469140],["LowerArm.R","q",469164,51,469368],["Wrist.R","p",469776,2,469784],["Wrist.R","q",469808,2,469816],["UpperLeg.L","q",469832,51,470036],["LowerLeg.L","q",470444,51,470648],["UpperLeg.R","q",471056,51,471260],["LowerLeg.R","q",471668,51,471872],["Foot.L","p",472280,2,472288],["Foot.L","q",472312,2,472320],["Foot.R","p",472336,2,472344],["Foot.R","q",472368,2,472376]]},"Death":{"dur":1.0667,"tracks":[["Body","p",472392,33,472524],["Body","q",472920,33,473052],["Abdomen","p",473316,2,473324],["Abdomen","q",473348,2,473356],["Torso","p",473372,2,473380],["Torso","q",473404,33,473536],["Chest","p",473800,2,473808],["Chest","q",473832,33,473964],["Neck","p",474228,2,474236],["Neck","q",474260,33,474392],["Head","p",474656,2,474664],["Head","q",474688,33,474820],["Shoulder.L","p",475084,2,475092],["Shoulder.L","q",475116,2,475124],["UpperArm.L","p",475140,2,475148],["UpperArm.L","q",475172,33,475304],["LowerArm.L","p",475568,2,475576],["LowerArm.L","q",475600,33,475732],["Wrist.L","p",475996,2,476004],["Wrist.L","q",476028,33,476160],["Shoulder.R","p",476424,2,476432],["Shoulder.R","q",476456,2,476464],["UpperArm.R","p",476480,2,476488],["UpperArm.R","q",476512,33,476644],["LowerArm.R","p",476908,2,476916],["LowerArm.R","q",476940,33,477072],["Wrist.R","p",477336,2,477344],["Wrist.R","q",477368,33,477500],["UpperLeg.L","q",477764,33,477896],["LowerLeg.L","q",478160,33,478292],["UpperLeg.R","q",478556,33,478688],["LowerLeg.R","q",478952,33,479084],["Foot.L","p",479348,33,479480],["Foot.L","q",479876,33,480008],["Foot.R","p",480272,33,480404],["Foot.R","q",480800,33,480932]]},"HitRecieve":{"dur":0.5667,"tracks":[["Body","p",481196,18,481268],["Body","q",481484,18,481556],["Abdomen","p",481700,2,481708],["Abdomen","q",481732,2,481740],["Torso","p",481756,2,481764],["Torso","q",481788,2,481796],["Chest","p",481812,2,481820],["Chest","q",481844,18,481916],["Neck","p",482060,2,482068],["Neck","q",482092,2,482100],["Head","p",482116,2,482124],["Head","q",482148,18,482220],["Shoulder.L","p",482364,2,482372],["Shoulder.L","q",482396,2,482404],["UpperArm.L","p",482420,2,482428],["UpperArm.L","q",482452,18,482524],["LowerArm.L","p",482668,2,482676],["LowerArm.L","q",482700,18,482772],["Wrist.L","p",482916,2,482924],["Wrist.L","q",482948,2,482956],["Shoulder.R","p",482972,2,482980],["Shoulder.R","q",483004,2,483012],["UpperArm.R","p",483028,2,483036],["UpperArm.R","q",483060,18,483132],["LowerArm.R","p",483276,2,483284],["LowerArm.R","q",483308,18,483380],["Wrist.R","p",483524,2,483532],["Wrist.R","q",483556,2,483564],["UpperLeg.L","q",483580,18,483652],["LowerLeg.L","q",483796,18,483868],["UpperLeg.R","q",484012,18,484084],["LowerLeg.R","q",484228,18,484300],["Foot.L","p",484444,2,484452],["Foot.L","q",484476,2,484484],["Foot.R","p",484500,2,484508],["Foot.R","q",484532,2,484540]]}},"W":{"Idle":{"dur":2.0833,"tracks":[["Body","p",484556,51,484760],["Body","q",485372,2,485380],["Abdomen","p",485396,2,485404],["Abdomen","q",485428,2,485436],["Torso","p",485452,2,485460],["Torso","q",485484,2,485492],["Chest","p",485508,2,485516],["Chest","q",485540,51,485744],["Neck","p",486152,2,486160],["Neck","q",486184,2,486192],["Head","p",486208,2,486216],["Head","q",486240,51,486444],["Shoulder.L","p",486852,2,486860],["Shoulder.L","q",486884,2,486892],["UpperArm.L","p",486908,2,486916],["UpperArm.L","q",486940,51,487144],["LowerArm.L","p",487552,2,487560],["LowerArm.L","q",487584,51,487788],["Wrist.L","p",488196,2,488204],["Wrist.L","q",488228,2,488236],["Shoulder.R","p",488252,2,488260],["Shoulder.R","q",488284,2,488292],["UpperArm.R","p",488308,2,488316],["UpperArm.R","q",488340,51,488544],["LowerArm.R","p",488952,2,488960],["LowerArm.R","q",488984,51,489188],["Wrist.R","p",489596,2,489604],["Wrist.R","q",489628,2,489636],["UpperLeg.L","q",489652,51,489856],["LowerLeg.L","q",490264,51,490468],["UpperLeg.R","q",490876,51,491080],["LowerLeg.R","q",491488,51,491692],["Foot.L","p",492100,2,492108],["Foot.L","q",492132,2,492140],["Foot.R","p",492156,2,492164],["Foot.R","q",492188,2,492196]]},"Idle_Neutral":{"dur":2.0833,"tracks":[["Body","p",492212,51,492416],["Body","q",493028,51,493232],["Abdomen","p",493640,2,493648],["Abdomen","q",493672,2,493680],["Torso","p",493696,2,493704],["Torso","q",493728,2,493736],["Chest","p",493752,2,493760],["Chest","q",493784,2,493792],["Neck","p",493808,2,493816],["Neck","q",493840,2,493848],["Head","p",493864,2,493872],["Head","q",493896,51,494100],["Shoulder.L","p",494508,51,494712],["Shoulder.L","q",495324,51,495528],["UpperArm.L","p",495936,2,495944],["UpperArm.L","q",495968,2,495976],["LowerArm.L","p",495992,2,496000],["LowerArm.L","q",496024,2,496032],["Wrist.L","p",496048,2,496056],["Wrist.L","q",496080,2,496088],["Shoulder.R","p",496104,51,496308],["Shoulder.R","q",496920,51,497124],["UpperArm.R","p",497532,2,497540],["UpperArm.R","q",497564,2,497572],["LowerArm.R","p",497588,2,497596],["LowerArm.R","q",497620,2,497628],["Wrist.R","p",497644,2,497652],["Wrist.R","q",497676,2,497684],["UpperLeg.L","q",497700,51,497904],["LowerLeg.L","q",498312,51,498516],["UpperLeg.R","q",498924,51,499128],["LowerLeg.R","q",499536,51,499740],["Foot.L","p",500148,2,500156],["Foot.L","q",500180,2,500188],["Foot.R","p",500204,2,500212],["Foot.R","q",500236,2,500244]]},"Walk":{"dur":1.6667,"tracks":[["Body","p",500260,41,500424],["Body","q",500916,41,501080],["Abdomen","p",501408,2,501416],["Abdomen","q",501440,2,501448],["Torso","p",501464,2,501472],["Torso","q",501496,41,501660],["Chest","p",501988,2,501996],["Chest","q",502020,41,502184],["Neck","p",502512,2,502520],["Neck","q",502544,41,502708],["Head","p",503036,2,503044],["Head","q",503068,41,503232],["Shoulder.L","p",503560,2,503568],["Shoulder.L","q",503592,2,503600],["UpperArm.L","p",503616,2,503624],["UpperArm.L","q",503648,41,503812],["LowerArm.L","p",504140,2,504148],["LowerArm.L","q",504172,41,504336],["Wrist.L","p",504664,2,504672],["Wrist.L","q",504696,41,504860],["Shoulder.R","p",505188,2,505196],["Shoulder.R","q",505220,2,505228],["UpperArm.R","p",505244,2,505252],["UpperArm.R","q",505276,41,505440],["LowerArm.R","p",505768,2,505776],["LowerArm.R","q",505800,41,505964],["Wrist.R","p",506292,2,506300],["Wrist.R","q",506324,41,506488],["UpperLeg.L","q",506816,41,506980],["LowerLeg.L","q",507308,41,507472],["UpperLeg.R","q",507800,41,507964],["LowerLeg.R","q",508292,41,508456],["Foot.L","p",508784,41,508948],["Foot.L","q",509440,41,509604],["Foot.R","p",509932,41,510096],["Foot.R","q",510588,41,510752]]},"Run":{"dur":1.0,"tracks":[["Body","p",511080,25,511180],["Body","q",511480,2,511488],["Abdomen","p",511504,2,511512],["Abdomen","q",511536,2,511544],["Torso","p",511560,2,511568],["Torso","q",511592,25,511692],["Chest","p",511892,2,511900],["Chest","q",511924,25,512024],["Neck","p",512224,2,512232],["Neck","q",512256,2,512264],["Head","p",512280,2,512288],["Head","q",512312,25,512412],["Shoulder.L","p",512612,2,512620],["Shoulder.L","q",512644,25,512744],["UpperArm.L","p",512944,2,512952],["UpperArm.L","q",512976,25,513076],["LowerArm.L","p",513276,2,513284],["LowerArm.L","q",513308,25,513408],["Wrist.L","p",513608,2,513616],["Wrist.L","q",513640,25,513740],["Shoulder.R","p",513940,2,513948],["Shoulder.R","q",513972,25,514072],["UpperArm.R","p",514272,2,514280],["UpperArm.R","q",514304,25,514404],["LowerArm.R","p",514604,2,514612],["LowerArm.R","q",514636,25,514736],["Wrist.R","p",514936,2,514944],["Wrist.R","q",514968,25,515068],["UpperLeg.L","q",515268,25,515368],["LowerLeg.L","q",515568,25,515668],["UpperLeg.R","q",515868,25,515968],["LowerLeg.R","q",516168,25,516268],["Foot.L","p",516468,25,516568],["Foot.L","q",516868,25,516968],["Foot.R","p",517168,25,517268],["Foot.R","q",517568,25,517668]]},"Wave":{"dur":2.0833,"tracks":[["Body","p",517868,51,518072],["Body","q",518684,51,518888],["Abdomen","p",519296,2,519304],["Abdomen","q",519328,2,519336],["Torso","p",519352,2,519360],["Torso","q",519384,2,519392],["Chest","p",519408,2,519416],["Chest","q",519440,51,519644],["Neck","p",520052,2,520060],["Neck","q",520084,2,520092],["Head","p",520108,2,520116],["Head","q",520140,51,520344],["Shoulder.L","p",520752,2,520760],["Shoulder.L","q",520784,2,520792],["UpperArm.L","p",520808,2,520816],["UpperArm.L","q",520840,51,521044],["LowerArm.L","p",521452,2,521460],["LowerArm.L","q",521484,51,521688],["Wrist.L","p",522096,2,522104],["Wrist.L","q",522128,51,522332],["Shoulder.R","p",522740,2,522748],["Shoulder.R","q",522772,2,522780],["UpperArm.R","p",522796,2,522804],["UpperArm.R","q",522828,51,523032],["LowerArm.R","p",523440,2,523448],["LowerArm.R","q",523472,51,523676],["Wrist.R","p",524084,2,524092],["Wrist.R","q",524116,2,524124],["UpperLeg.L","q",524140,51,524344],["LowerLeg.L","q",524752,51,524956],["UpperLeg.R","q",525364,51,525568],["LowerLeg.R","q",525976,51,526180],["Foot.L","p",526588,2,526596],["Foot.L","q",526620,2,526628],["Foot.R","p",526644,2,526652],["Foot.R","q",526676,2,526684]]},"Death":{"dur":1.3333,"tracks":[["Body","p",526700,33,526832],["Body","q",527228,33,527360],["Abdomen","p",527624,2,527632],["Abdomen","q",527656,2,527664],["Torso","p",527680,2,527688],["Torso","q",527712,33,527844],["Chest","p",528108,2,528116],["Chest","q",528140,33,528272],["Neck","p",528536,2,528544],["Neck","q",528568,33,528700],["Head","p",528964,2,528972],["Head","q",528996,33,529128],["Shoulder.L","p",529392,2,529400],["Shoulder.L","q",529424,2,529432],["UpperArm.L","p",529448,2,529456],["UpperArm.L","q",529480,33,529612],["LowerArm.L","p",529876,2,529884],["LowerArm.L","q",529908,33,530040],["Wrist.L","p",530304,2,530312],["Wrist.L","q",530336,33,530468],["Shoulder.R","p",530732,2,530740],["Shoulder.R","q",530764,2,530772],["UpperArm.R","p",530788,2,530796],["UpperArm.R","q",530820,33,530952],["LowerArm.R","p",531216,2,531224],["LowerArm.R","q",531248,33,531380],["Wrist.R","p",531644,2,531652],["Wrist.R","q",531676,33,531808],["UpperLeg.L","q",532072,33,532204],["LowerLeg.L","q",532468,33,532600],["UpperLeg.R","q",532864,33,532996],["LowerLeg.R","q",533260,33,533392],["Foot.L","p",533656,33,533788],["Foot.L","q",534184,33,534316],["Foot.R","p",534580,33,534712],["Foot.R","q",535108,33,535240]]},"HitRecieve":{"dur":0.7083,"tracks":[["Body","p",535504,18,535576],["Body","q",535792,18,535864],["Abdomen","p",536008,2,536016],["Abdomen","q",536040,2,536048],["Torso","p",536064,2,536072],["Torso","q",536096,2,536104],["Chest","p",536120,2,536128],["Chest","q",536152,18,536224],["Neck","p",536368,2,536376],["Neck","q",536400,2,536408],["Head","p",536424,2,536432],["Head","q",536456,18,536528],["Shoulder.L","p",536672,2,536680],["Shoulder.L","q",536704,2,536712],["UpperArm.L","p",536728,2,536736],["UpperArm.L","q",536760,18,536832],["LowerArm.L","p",536976,2,536984],["LowerArm.L","q",537008,18,537080],["Wrist.L","p",537224,2,537232],["Wrist.L","q",537256,2,537264],["Shoulder.R","p",537280,2,537288],["Shoulder.R","q",537312,2,537320],["UpperArm.R","p",537336,2,537344],["UpperArm.R","q",537368,18,537440],["LowerArm.R","p",537584,2,537592],["LowerArm.R","q",537616,18,537688],["Wrist.R","p",537832,2,537840],["Wrist.R","q",537864,2,537872],["UpperLeg.L","q",537888,18,537960],["LowerLeg.L","q",538104,18,538176],["UpperLeg.R","q",538320,18,538392],["LowerLeg.R","q",538536,18,538608],["Foot.L","p",538752,2,538760],["Foot.L","q",538784,2,538792],["Foot.R","p",538808,2,538816],["Foot.R","q",538840,2,538848]]}}},"license":"CC0 1.0 (Quaternius, Ultimate Modular Men / Women)"}</script>
