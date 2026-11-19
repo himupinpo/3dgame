@@ -395,6 +395,7 @@ function stepBody(B, inp, dt, world) {
       B.v.x = nx / nl * K + _sv.x * .4; B.v.z = nz / nl * K + _sv.z * .4; B.v.y = Math.max(B.v.y, K * .5); B.tumble = c.o.tum || .9; B.dive = 0; B.kickCd = .45; B.ground = false; B.ev.push('bonk');
     }
   }
+  if (world.floor) world.floor(B, world);
   if (B.ground) {
     B.coyote = .1; B.air = 0;
     if (!wasG) { B.landV = -B.v.y; B.ev.push('land'); if (B.dive) { B.dive = 0; B.slide = .42; } }
@@ -539,7 +540,8 @@ function makeWorld() {
 function clearCourse() {
   if (CR.grp) { scene.remove(CR.grp); CR.grp.traverse(o => { if (o.geometry && !o.userData.shared) o.geometry.dispose(); }); }
   COL.length = 0; CR.grp = new THREE.Group(); scene.add(CR.grp);
-  Object.assign(CR, { upd: [], wps: [], cps: [], finishZ: -9999, fallY: -6, sweeps: [], movers: [], balls: [], tiles: [], hazards: [], spawn: null });
+  Object.assign(CR, { upd: [], wps: [], cps: [], finishZ: -9999, fallY: -6, sweeps: [], movers: [], balls: [], tiles: [], hazards: [], spawn: null, hex: null, floor: null });
+  if (SKYX.goo) SKYX.goo.position.y = -7;
 }
 // ---------- レース A：ぐるぐるコース ----------
 function courseA() {
@@ -611,8 +613,57 @@ function courseF() {
   CR.spawn = []; for (let k = 0; k < 20; k++) { const a = k / 20 * TAU + .1, d = 5 + (k % 3) * 3.4; CR.spawn.push([Math.cos(a) * d, 1, Math.sin(a) * d]); }
   CR.cps = []; CR.wps = [];
 }
+// ---------- さいごのラウンド：きえるタイル（六角のタイルが5だん。のると少しして消える。下のだんへ落ちて、さいごの1人まで） ----------
+const HEXD = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];   // となりの6つ（axial）
+function courseH() {
+  clearCourse(); Object.assign(CR, { id: 'H', kind: 'surv', name: 'きえるタイル' });
+  const RING = 9, S = 1.32, LAYERS = 5, GAP = 8, TH = .7, SQ3 = Math.sqrt(3), HOLD = .8;   // HOLD：のってから消えるまでの秒
+  const cols = [[PAL.pink, 0xff9ac8], [PAL.yel, 0xffe27a], [PAL.mint, 0x8af0c8], [PAL.sky, 0x9ad4ff], [PAL.purp, 0xcab0ff]];
+  const geo = new THREE.CylinderGeometry(S - .07, S - .07, TH, 6), mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: KTEX.dots, roughness: .5 });
+  const H = { layers: [], map: new Map(), S, TH, HOLD }; CR.hex = H; CR.fallY = -(LAYERS - 1) * GAP - 12; if (SKYX.goo) SKYX.goo.position.y = CR.fallY - 3;
+  const _m4 = new THREE.Matrix4(), _c = new THREE.Color(), white = new THREE.Color(0xfff8ff);
+  for (let L = 0; L < LAYERS; L++) {
+    const top = -L * GAP, cells = [];
+    for (let q = -RING; q <= RING; q++) for (let r = Math.max(-RING, -q - RING); r <= Math.min(RING, -q + RING); r++) cells.push([q, r]);
+    const im = new THREE.InstancedMesh(geo, mat, cells.length); im.castShadow = true; im.receiveShadow = true; CR.grp.add(im);
+    const Ly = { top, im, tiles: [], dirty: true, L };
+    cells.forEach(([q, r], i) => {
+      const x = S * SQ3 * (q + r / 2), z = S * 1.5 * r, ring = Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r));
+      const T = { q, r, x, z, L, top, i, hit: 0, gone: false, fallT: 0, y: top - TH / 2, vy: 0, vis: true, col: new THREE.Color(cols[L][(ring + (q & 1)) % 2]), nb: [] };
+      _m4.makeTranslation(x, T.y, z); im.setMatrixAt(i, _m4); im.setColorAt(i, T.col); Ly.tiles.push(T); H.map.set(L + ',' + q + ',' + r, T); CR.tiles.push(T);
+    });
+    for (const T of Ly.tiles) for (const [dq, dr] of HEXD) { const N = H.map.get(L + ',' + (T.q + dq) + ',' + (T.r + dr)); if (N) T.nb.push(N); }
+    // だんのふちの、うすい光の輪（どこまでがタイルか分かるように）
+    const ringM = new THREE.Mesh(new THREE.TorusGeometry(S * SQ3 * (RING + .55), .12, 6, 72).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: cols[L][0], transparent: true, opacity: .55 })); ringM.position.y = top - TH; CR.grp.add(ringM);
+    H.layers.push(Ly);
+  }
+  // 位置 → その段のタイル
+  H.cell = (Ly, x, z) => { const fq = (SQ3 / 3 * x - z / 3) / S, fr = (2 / 3 * z) / S, fs = -fq - fr; let q = Math.round(fq), r = Math.round(fr); const s = Math.round(fs), dq = Math.abs(q - fq), dr = Math.abs(r - fr), ds = Math.abs(s - fs);
+    if (dq > dr && dq > ds) q = -r - s; else if (dr > ds) r = -q - s; return H.map.get(Ly.L + ',' + q + ',' + r) || null; };
+  // 足もとの当たり：まん中の下のタイルがあれば、その上に立つ（消えたタイルの上は落ちる）
+  CR.floor = (B, world) => {
+    for (const Ly of H.layers) {
+      if (B.p.y - PH.R > Ly.top + .02 || B.p.y < Ly.top - TH - .1) continue;
+      const T = H.cell(Ly, B.p.x, B.p.z); if (!T || T.gone) continue;
+      if (B.p.y < Ly.top + PH.R) B.p.y = Ly.top + PH.R; if (B.v.y < 0) B.v.y = 0;
+      B.ground = true; B.gV.set(0, 0, 0); B.gN.set(0, 1, 0); if (world.live && !T.hit) T.hit = world.t; return;
+    }
+  };
+  CR.upd.push((t, dt) => {
+    for (const Ly of H.layers) {
+      for (const T of Ly.tiles) {
+        if (!T.vis) continue;
+        if (T.gone) { T.vy -= 22 * dt; T.y += T.vy * dt; if (T.y < Ly.top - 30) { T.vis = false; _m4.makeScale(0, 0, 0); } else _m4.makeTranslation(T.x, T.y, T.z); Ly.im.setMatrixAt(T.i, _m4); Ly.dirty = true; continue; }
+        if (T.hit) { const k = (t - T.hit) / HOLD; _c.copy(T.col).lerp(white, Math.min(1, k) * .9); Ly.im.setColorAt(T.i, _c); _m4.makeTranslation(T.x + (k > .45 ? Math.sin(t * 70 + T.i) * .06 : 0), T.y - k * .12, T.z); Ly.im.setMatrixAt(T.i, _m4); Ly.dirty = true; if (k >= 1) { T.gone = true; T.fallT = t; T.vy = -1; } }
+      }
+      if (Ly.dirty) { Ly.dirty = false; Ly.im.instanceMatrix.needsUpdate = true; if (Ly.im.instanceColor) Ly.im.instanceColor.needsUpdate = true; }
+    }
+  });
+  CR.spawn = []; for (let k = 0; k < 20; k++) { const a = k / 20 * TAU + .1, d = 3.6 + (k % 3) * 3.8; CR.spawn.push([Math.cos(a) * d, 1, Math.sin(a) * d]); }
+  CR.cps = []; CR.wps = [];
+}
 function startGrid(z0, z1, n) { const L = []; for (let i = 0; i < n; i++) { const row = i % 4, col = (i / 4) | 0; L.push([(col - 2) * 3.8 + (row % 2) * 1.2, 1, z0 - row * 3]); } return L; }
-const COURSE_LIST = [{ id: 'A', name: 'ぐるぐるコース', desc: '回る棒・はねる床・ハンマー・動く床・転がる大玉', build: courseA }, { id: 'B', name: 'ぴょんぴょんアイランド', desc: 'ベルト・シーソー・おし出す壁・回る円盤・はねる階段', build: courseB }, { id: 'F', name: 'くずれる床', desc: '乗ると落ちる床。回る棒をジャンプで！ さいごの1人', build: courseF }];
+const COURSE_LIST = [{ id: 'A', name: 'ぐるぐるコース', desc: '回る棒・はねる床・ハンマー・動く床・転がる大玉', build: courseA }, { id: 'B', name: 'ぴょんぴょんアイランド', desc: 'ベルト・シーソー・おし出す壁・回る円盤・はねる階段', build: courseB }, { id: 'F', name: 'くずれる床', desc: '乗ると落ちる床。回る棒をジャンプで！ さいごの1人', build: courseF }, { id: 'H', name: 'きえるタイル', desc: 'のると消える六角のタイルが5だん。ジャンプで節約しながら、さいごの1人に', build: courseH }];
 // =========================================================================================
 //  ボット：道しるべにそって走る。回る棒はジャンプ、ハンマーは待つ、動く床はタイミングを見てとぶ、大玉はよける。
 //  さいごのラウンドは、まだくずれていない床へ移りつづける
@@ -635,6 +686,7 @@ function botInput(P, dt) {
   if (B.done || B.out) return out;
   A.sweepCd -= dt;
   const jumpIf = c => { if (c && B.ground && Math.random() < A.jumpOK) out.jumpP = true; };
+  if (CR.hex) return botHex(P, dt, out);
   if (CR.kind === 'surv') return botSurv(P, dt, out);
   // 道しるべを進める
   let wp = CR.wps[A.wi];
@@ -698,6 +750,38 @@ function botSurv(P, dt, out) {
   if (sweepThreat(B) && A.sweepCd <= 0) { A.sweepCd = .5; if (B.ground && Math.random() < A.jumpOK) out.jumpP = true; }
   return out;
 }
+// きえるタイル：まだだれものっていないタイルへ移りつづける。足もとが消えそうなら次へ。前が穴ならジャンプ
+function botHex(P, dt, out) {
+  const B = P.B, A = P.ai, H = CR.hex; A.think -= dt;
+  const feet = B.p.y - PH.R; let Ly = null; for (const q of H.layers) if (feet > q.top - 1.2) { Ly = q; break; }   // いまいる（これから落ちる）段
+  if (!Ly) return out;
+  const fresh = T => T && !T.gone && !T.hit, under = H.cell(Ly, B.p.x, B.p.z);
+  const sk = 1 - A.react * 6;   // 強いほど 1 に近い
+  if (A.lyr !== Ly) { A.lyr = Ly; A.tile = null; A.think = 0; }
+  const need = !A.tile || A.tile.gone || A.tile.L !== Ly.L || (A.tile.hit && A.tile !== under) || (under && A.tile === under && under.hit);
+  if (need || A.think <= 0) {
+    A.think = rr(.25, .6) + A.react * 2;
+    let best = null, bs = -1e9;
+    for (const T of Ly.tiles) { if (!fresh(T)) continue; const d = Math.hypot(T.x - B.p.x, T.z - B.p.z); if (d > 7.5 || d < 1.2) continue;
+      let s = T.nb.filter(fresh).length * (.7 + .6 * sk) - Math.abs(d - 2.3) * .7 - Math.hypot(T.x, T.z) * .05 + rr(0, 1.6 - sk);
+      // 間に穴が多いと、行きにくい
+      for (let k = 1; k < 4; k++) { const C = H.cell(Ly, lerp(B.p.x, T.x, k / 4), lerp(B.p.z, T.z, k / 4)); if (!C || C.gone) s -= 2.5 + 2 * sk; }
+      for (const Q of SHOW.active) if (Q !== P && !Q.B.out && Math.hypot(Q.B.p.x - T.x, Q.B.p.z - T.z) < 2.2) s -= 1.5;
+      if (s > bs) { bs = s; best = T; } }
+    A.tile = best;
+  }
+  if (A.tile) {
+    const dx = A.tile.x - B.p.x, dz = A.tile.z - B.p.z, d = Math.hypot(dx, dz) || 1; out.x = dx / d; out.z = dz / d; if (d < .5) { out.x *= d * 2; out.z *= d * 2; }
+    out.spd = A.hspd || (A.hspd = rr(.42, .62) + .1 * sk);   // ゆっくり、ぴょんぴょん（とんでいる間はタイルが消えない）
+    // 前のタイルが穴なら、ジャンプでこえる。足もとが消えはじめたら、ひとつ先へぴょん
+    const ahead = H.cell(Ly, B.p.x + dx / d * 1.25, B.p.z + dz / d * 1.25), hop = under && under.hit && CR.t - under.hit > A.react * 2;
+    if (B.ground && ((!ahead || ahead.gone) || hop) && Math.random() < A.jumpOK) out.jumpP = true;
+  } else if (under && !under.gone) {   // どこへも行けない：まわりで少しでも長くもつところへ
+    const nb = under.nb.find(fresh); if (nb) { const dx = nb.x - B.p.x, dz = nb.z - B.p.z, d = Math.hypot(dx, dz) || 1; out.x = dx / d; out.z = dz / d; }
+  }
+  if (CR.t < A.hes * .5) { out.x = out.z = 0; }
+  return out;
+}
 // =========================================================================================
 //  ゲーム：ショー（20人 → レース → レース → さいごのラウンド）、練習、カメラ、表示、音、メニュー
 // =========================================================================================
@@ -755,7 +839,7 @@ function buildPlayers(n, withMe = true) {
 function startShow() {
   AU.init(); G.mode = 'show'; buildPlayers(20); SHOW.over = false;
   const races = Math.random() < .5 ? ['A', 'B'] : ['B', 'A'];
-  SHOW.rounds = [{ c: races[0], q: 12 }, { c: races[1], q: 6 }, { c: 'F', q: 1 }]; SHOW.round = 0;
+  SHOW.rounds = [{ c: races[0], q: 12 }, { c: races[1], q: 6 }, { c: Math.random() < .5 ? 'F' : 'H', q: 1 }]; SHOW.round = 0;   // さいごは「くずれる床」か「きえるタイル」
   const st = loadStats(); st.shows++; saveStats(st);
   startRound(0);
 }
@@ -769,7 +853,7 @@ function startRound(i) {
   G.phase = 'intro'; G.t = 0; G.yaw = 0; G.pitch = CR.kind === 'surv' ? .62 : .3; G.dist = CR.kind === 'surv' ? 10 : 7.5; G.spect = null; G.endT = 0;
   AU.key = [0, 5, 7, 3][i % 4];
   show('play'); G.paused = false;
-  const goal = G.mode === 'practice' ? '練習：ゴールをめざそう' : CR.kind === 'surv' ? 'さいごの1人になったら優勝！' : `先に ${SHOW.quota} 人がゴールしたら終わり`;
+  const goal = CR.hex ? 'のったタイルはすぐ消える。ジャンプで節約しよう！' + (G.mode === 'practice' ? '' : '　さいごの1人が優勝') : G.mode === 'practice' ? '練習：ゴールをめざそう' : CR.kind === 'surv' ? 'さいごの1人になったら優勝！' : `先に ${SHOW.quota} 人がゴールしたら終わり`;
   msg(CR.name, (G.mode === 'show' ? `ラウンド ${i + 1}／${SHOW.rounds.length}　` : '') + goal, 3.2);
   $('feed').innerHTML = '';
 }
@@ -790,18 +874,20 @@ function endRound() {
   if (final) { const alive = SHOW.active.filter(P => !P.B.out); alive.forEach(P => (P.q = true)); SHOW.qual = alive; }
   for (const P of SHOW.active) if (!P.q) P.out = true;
   const meIn = SHOW.me && !SHOW.me.out;
-  if (final) { const w = SHOW.qual; if (w.length) { msg(w.length === 1 ? w[0].name + ' が優勝！' : '優勝！', '', 3, 'big'); if (meIn) { AU.win(); const st = loadStats(); st.wins++; saveStats(st); } else AU.qual(); } SHOW.over = true; }
+  if (final && G.mode === 'practice') { const alive = SHOW.qual; if (meIn) { msg(alive.length > 1 ? 'のこった！' : '勝ち！', 'のこった時間 ' + fmtT(G.survT || CR.t), 3, 'big'); AU.win(); } else msg('おしまい', 'のこった時間 ' + fmtT(G.survT || CR.t), 3, 'big'); SHOW.over = true; }
+  else if (final) { const w = SHOW.qual; if (w.length) { msg(w.length === 1 ? w[0].name + ' が優勝！' : '優勝！', '', 3, 'big'); if (meIn) { AU.win(); const st = loadStats(); st.wins++; saveStats(st); } else AU.qual(); } SHOW.over = true; }
   else if (G.mode === 'show') { msg('しゅうりょう！', meIn ? '勝ち抜け！' : '', 2.4, 'big'); if (SHOW.me && meIn) { const st = loadStats(); st.rounds++; saveStats(st); } }
   G.resT = 2.8;
 }
 function showResult() {
   const final = CR.kind === 'surv', meIn = SHOW.me && !SHOW.me.out;
-  $('resT').textContent = final ? (meIn ? '👑 優勝おめでとう！' : '優勝したのは…') : meIn ? 'ラウンド勝ち抜け！' : 'ざんねん、脱落…';
+  $('resT').textContent = final && G.mode === 'practice' ? `${CR.name}：のこった時間 ${fmtT(G.survT || CR.t)}` : final ? (meIn ? '👑 優勝おめでとう！' : '優勝したのは…') : meIn ? 'ラウンド勝ち抜け！' : 'ざんねん、脱落…';
   const list = SHOW.active.slice().sort((a, b) => (b.q - a.q) || (a.fin || 99) - (b.fin || 99));
-  $('resList').innerHTML = list.map(P => `<div class="${P.me ? 'me' : ''} ${P.out ? 'out' : ''}">${P.q ? (final ? '👑 ' : P.fin ? P.fin + '位 ' : '◎ ') : '× '}${P.name}</div>`).join('');
+  $('resList').innerHTML = list.map(P => `<div class="${P.me ? 'me' : ''} ${P.out ? 'out' : ''}">${P.q ? (final && G.mode !== 'practice' ? '👑 ' : P.fin ? P.fin + '位 ' : '◎ ') : '× '}${P.name}</div>`).join('');
   const btns = $('resBtns'); btns.innerHTML = '';
   const add = (t, cls, f) => { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = t; b.onclick = () => { AU.click(); f(); }; btns.appendChild(b); };
   if (!SHOW.over && SHOW.round < SHOW.rounds.length - 1) { if (meIn) add('次のラウンドへ', 'main', () => startRound(SHOW.round + 1)); else add('観戦をつづける', 'main', () => startRound(SHOW.round + 1)); }
+  else if (G.mode === 'practice') add('もう一度', 'main', () => startPractice(CR.id, G.bots));
   else add('もう一度ショーへ', 'main', startShow);
   add('タイトルへ', '', toTitle);
   show('result');
@@ -912,7 +998,7 @@ function myInput() {
 }
 const WORLD = { t: 0, fallY: -6 };
 function gameStep(dt) {
-  CR.t += dt; WORLD.t = CR.t; WORLD.fallY = CR.fallY; WORLD.live = G.phase === 'run' || G.phase === 'end';
+  CR.t += dt; WORLD.t = CR.t; WORLD.fallY = CR.fallY; WORLD.live = G.phase === 'run' || G.phase === 'end'; WORLD.floor = CR.floor;
   for (const f of CR.upd) f(CR.t, dt);
   const frozen = G.phase === 'intro' || G.phase === 'count';
   for (const P of SHOW.active) {
@@ -933,6 +1019,8 @@ function gameStep(dt) {
   }
   pushBodies(SHOW.active.map(P => P.B));
   if (CR.kind === 'surv' && G.mode === 'show' && G.phase === 'run') { const alive = SHOW.active.filter(P => !P.B.out); if (alive.length <= 1 || CR.t > 200) endRound(); }
+  // 練習のさいごのラウンド：自分が落ちたら（ボットといっしょなら、のこり1人になっても）おわり
+  if (CR.kind === 'surv' && G.mode === 'practice' && G.phase === 'run') { const alive = SHOW.active.filter(P => !P.B.out); if (!SHOW.me || SHOW.me.B.out || (SHOW.active.length > 1 && alive.length <= 1) || CR.t > 300) { G.survT = CR.t; endRound(); } }
   if (G.mode === 'show' && G.phase === 'run' && CR.kind === 'race' && CR.t > 200) endRound();
 }
 function poseAll(dt) {

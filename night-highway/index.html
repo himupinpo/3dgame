@@ -142,6 +142,23 @@ body.touch #mirrorF { top: calc(88px + env(safe-area-inset-top, 0px)); height: 4
 #rvPin { left: 0; top: 0; display: none; text-shadow: 2px 2px 0 #000; } #rvPin.on { display: block; } body.editing #rvPin { display: none !important; }
 #rvPin .pi { position: absolute; left: -70px; bottom: 0; width: 140px; text-align: center; } #rvPin canvas { display: block; width: 18px; height: 24px; margin: 1px auto 0; image-rendering: pixelated; }
 #rvPinT, .botPin span { font-size: 13px; color: #ffd0ea; white-space: nowrap; } .botPin span { color: #ffe0a0; } .botPin canvas { filter: hue-rotate(120deg) saturate(1.4); }
+/* 全員の順位と差 */
+#board { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(6px + env(safe-area-inset-top, 0px)); display: none; grid-auto-flow: column; grid-template-rows: repeat(var(--br, 8), auto); column-gap: 14px; font-size: 11px; line-height: 13px; background: rgba(5,5,26,.5); padding: 3px 7px; box-shadow: 0 0 0 2px rgba(0,0,0,.4); }
+body.bots.racing #board, body.editing.bots #board { display: grid; } #board div { white-space: nowrap; font-size: 11px; min-width: 104px; } #board i { font-style: normal; color: var(--dim); display: inline-block; width: 1.8em; } #board b { font-weight: 400; float: right; padding-left: 8px; font-size: 11px; }
+#board .bm { color: var(--cyan); } #board .ba b { color: var(--amber); } #board .bb b { color: #9ad0ff; } #board .bf b { color: var(--green); }
+body.touch #board { right: calc(64px + env(safe-area-inset-right, 0px)); } body.tall #board { left: calc(12px + env(safe-area-inset-left, 0px)); right: auto; top: calc(146px + env(safe-area-inset-top, 0px)); } body.bots.racing #cash { display: none; }
+.stand { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0 18px; margin: 4px 0 10px; text-align: left; font-size: 14px; line-height: 1.55; } .stand div { white-space: nowrap; } .stand i { font-style: normal; color: var(--dim); display: inline-block; width: 1.8em; } .stand b { float: right; font-weight: 400; color: var(--amber); } .stand .me { color: var(--cyan); }
+/* 周回数 */
+#fsLapsRow { display: flex; gap: 6px; align-items: center; margin: 4px 0 8px; } #fsLapsRow input { flex: 1; min-width: 60px; } #fsLapsRow button { font: 14px var(--f); color: var(--ink); background: rgba(20,16,60,.85); border: 2px solid var(--dim); padding: 6px 8px; cursor: pointer; } #fsLapsV { color: var(--amber); font-weight: 400; }
+/* ジャイロ */
+#gyMeter { position: relative; height: 18px; margin: 8px 0 2px; background: rgba(20,16,60,.85); border: 2px solid var(--dim); } #gyMeter::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--dim); }
+#gyMeter i, #tGy i { position: absolute; top: 2px; bottom: 2px; width: 10px; margin-left: -5px; left: 50%; background: var(--cyan); } #gyMeter.off i { background: var(--dim); }
+#tGy { left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 196px; height: 54px; flex-direction: column; justify-content: flex-end; font-size: 11px; padding-bottom: 4px; } #tGy i { top: 6px; bottom: auto; height: 22px; }
+#tGy::before { content: ''; position: absolute; left: 50%; top: 4px; height: 26px; width: 2px; background: rgba(244,241,255,.5); }
+body.touch.racing:not(.gyro) #tGy, body.touch.racing.gyro #tL, body.touch.racing.gyro #tR, body.touch.racing.gyro #tPad { display: none; }
+body.touch.tall #tGy { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.gyonly { display: none; } body.touch.gyset .gyonly { display: block; }
+body.smooth #c { image-rendering: auto; } body.editing.touch:not(.gyset) #tGy { display: none !important; }
 #lapN b.pos { color: var(--amber); font-size: 18px; font-weight: 400; }
 #fsStage { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; } #fsStage button { font: 15px var(--f); color: var(--ink); background: rgba(20,16,60,.85); border: 2px solid var(--dim); padding: 8px 6px; cursor: pointer; text-align: left; } #fsStage button small { display: block; color: var(--dim); font-size: 11px; margin-top: 2px; } #fsStage button.on { border-color: var(--cyan); background: #193a5e; } #fsStage button:disabled { opacity: .4; cursor: default; } #rvPin.edge { opacity: .75; } #rvPin.back #rvPinT { color: #ff8fd0; } body.touch .pconly { display: none; }
 #gauge { display: block; width: 210px; height: 210px; margin-left: auto; image-rendering: pixelated; image-rendering: crisp-edges; filter: drop-shadow(3px 3px 0 rgba(0,0,0,.6)); }
@@ -163,7 +180,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
 <div id="rot">
 <canvas id="c"></canvas><div id="crt"></div>
 <div class="hud" id="gap"><div id="gapT"><i id="gapMe">きみ</i><span id="gapD"></span><b id="gapRv">ライバル</b></div><div id="gapBar"><div id="gapF"></div></div><div id="gapN">0m</div></div>
-<div class="hud" id="info"><b id="secN"></b><small id="lapN"></small></div>
+<div class="hud" id="info"><b id="secN"></b><small id="lapN"></small></div><div class="hud" id="board"></div>
 <div class="hud" id="chat"><canvas id="chatF" width="32" height="32"></canvas><div><b id="chatN"></b><span id="chatT"></span></div></div>
 <div class="hud" id="cash"></div>
 <div class="hud" id="meter"><canvas id="gauge" width="128" height="128"></canvas><div id="dig"><div id="spdN">0<small>km/h</small></div><div id="tach"></div><div style="margin-top:6px"><span id="gearN">N</span><span id="bl">BOOST</span><span id="boost"><b id="boostB"></b></span></div></div></div>
@@ -171,7 +188,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
 <div class="hud" id="mirrorF"></div><div class="hud" id="rvPin"><div class="pi"><span id="rvPinT"></span><canvas id="rvPinC" width="12" height="16"></canvas></div></div>
 <div class="hud" id="msg"></div><div class="hud" id="sub"></div><div class="hud" id="slip">SLIPSTREAM</div><div class="hud" id="toast"></div>
 <button id="pauseB" class="px" type="button">Ⅱ</button>
-<div class="tb" id="tL">◀</div><div class="tb" id="tR">▶</div><div class="tb" id="tPad">◀ ハンドル ▶<i id="tKnob"></i></div>
+<div class="tb" id="tGy"><i></i><small>ジャイロ　タップでまっすぐ</small></div><div class="tb" id="tL">◀</div><div class="tb" id="tR">▶</div><div class="tb" id="tPad">◀ ハンドル ▶<i id="tKnob"></i></div>
 <div class="tb" id="tGas">アクセル</div><div class="tb" id="tBrake">ブレーキ</div><div class="tb" id="tCam">視点</div><div class="tb" id="tUp">▲<small>シフト</small></div><div class="tb" id="tDn">▼<small>シフト</small></div>
 <div id="layoutBar" hidden><span>ボタンや表示を<b>ドラッグ</b>で動かせます。タップで選んで大きさを変更</span><div class="row"><button class="mb" id="lSmall" type="button">小さく</button><button class="mb" id="lBig" type="button">大きく</button><button class="mb" id="lReset" type="button">もとにもどす</button><button class="mb go" id="lDone" type="button">完了</button></div></div>
 <div class="screen on" id="load"><h1>夜光ハイウェイ</h1><p id="loadmsg">夜の街を作っています…</p></div>
@@ -187,7 +204,8 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
   <h2>フリーラン</h2>
   <div class="lab">コース</div><div id="fsStage"></div>
   <div class="lab">車（すきな車とチューンで走れる。お金はいらない）</div><div id="fsCars"></div><div id="fsTune" hidden></div>
-  <div class="lab">いっしょに走る bot</div><div class="seg" id="fsBots"><button data-v="0">なし</button><button data-v="1">1台</button><button data-v="3">3台</button><button data-v="5">5台</button><button data-v="7">7台</button></div>
+  <div class="lab">周回数　<b id="fsLapsV"></b></div><div id="fsLapsRow"><button type="button" data-d="-10">−10</button><button type="button" data-d="-1">−1</button><input type="range" id="fsLaps" min="0" max="50" step="1"><button type="button" data-d="1">＋1</button><button type="button" data-d="10">＋10</button></div>
+  <div class="lab">いっしょに走る bot</div><div class="seg" id="fsBots"><button data-v="0">なし</button><button data-v="1">1台</button><button data-v="3">3台</button><button data-v="5">5台</button><button data-v="7">7台</button><button data-v="10">10台</button><button data-v="15">15台</button></div>
   <div id="fsLvRow"><div class="lab">bot の強さ</div><div class="seg" id="fsLv"><button data-v="0">弱い</button><button data-v="1">普通</button><button data-v="2">強い</button><button data-v="3">とても強い</button></div></div>
   <div class="lab">一般車の数</div><div class="seg" id="fsTraf"><button data-v="3">なし</button><button data-v="0">少ない</button><button data-v="1">ふつう</button><button data-v="2">多い</button></div>
   <div class="lab">天気</div><div class="seg" id="fsWx"><button data-v="0">晴れ</button><button data-v="1">雨</button><button data-v="2">ランダム</button></div>
@@ -208,7 +226,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
 </div></div>
 <div class="screen" id="settings"><div class="panel px">
   <h2>設定</h2>
-  <div class="lab">ドットの大きさ</div><div class="seg" id="sDot"><button data-v="0">こまかい</button><button data-v="1">ふつう</button><button data-v="2">あらい</button><button data-v="3">とてもあらい</button></div>
+  <div class="lab">ドットの大きさ</div><div class="seg" id="sDot"><button data-v="5">ドットなし</button><button data-v="4">とてもこまかい</button><button data-v="0">こまかい</button><button data-v="1">ふつう</button><button data-v="2">あらい</button><button data-v="3">とてもあらい</button></div>
   <div class="lab">ブラウン管風のしま</div><div class="seg" id="sCrt"><button data-v="0">なし</button><button data-v="1">あり</button></div>
   <div class="lab">BGM</div><div class="seg" id="sBgm"><button data-v="0">なし</button><button data-v="1">あり</button></div>
   <div class="lab">音量</div><input type="range" id="sVol" min="0" max="1" step="0.05">
@@ -217,8 +235,11 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
   <div class="lab">速度計</div><div class="seg" id="sMeter"><button data-v="0">針のメーター</button><button data-v="1">数字だけ</button></div>
   <div class="lab">ボタンと表示の配置・大きさ</div><button class="mb" id="sLayout" type="button">配置を変える<small>速度計・地図・ボタンなどを動かす</small></button>
   <div class="touchonly"><div class="lab">ボタンのこさ</div><input type="range" id="sOpa" min="0.15" max="1" step="0.05">
-  <div class="lab">スマホのハンドル</div><div class="seg" id="sSteer"><button data-v="0">ボタン</button><button data-v="1">スライド</button><button data-v="2">かたむけ</button></div>
-  <div class="lab">かたむけの強さ</div><input type="range" id="sTilt" min="0.5" max="2" step="0.1"><p id="tiltNote"></p>
+  <div class="lab">スマホのハンドル</div><div class="seg" id="sSteer"><button data-v="0">ボタン</button><button data-v="1">スライド</button><button data-v="2">ジャイロ</button></div>
+  <div class="lab">ジャイロ（スマホをハンドルのように回して曲がる）</div><button class="mb" id="sGyro" type="button">ジャイロを使う<small>センサーを許可して、いまの持ち方を「まっすぐ」にする</small></button>
+  <div id="gyMeter" class="off"><i></i></div><p id="tiltNote"></p>
+  <div class="lab">ジャイロの強さ</div><input type="range" id="sTilt" min="0.5" max="2" step="0.1">
+  <div class="lab">ジャイロの左右（右に回して、上のバーが左へ動くときは「反対」）</div><div class="seg" id="sTinv"><button data-v="0">ふつう</button><button data-v="1">反対</button></div>
   <div class="lab">オートアクセル</div><div class="seg" id="sAuto"><button data-v="0">なし</button><button data-v="1">あり</button></div></div>
   <div class="pconly"><div class="lab">キーの割り当て（ボタンを押してから、使いたいキーを押す）</div><div id="sKeys"></div><button class="mb" id="sKeyReset" type="button">キーをもとにもどす</button></div>
   <button class="mb" id="setBack" type="button">もどる</button>
@@ -238,6 +259,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
 <div class="screen" id="records"><div class="panel px"><h2>記録</h2><div id="recList"></div><button class="mb" id="recBack" type="button">もどる</button></div></div>
 <div class="screen" id="pause"><div class="panel px"><h2>一時停止</h2>
   <button class="mb go" id="pRes" type="button">つづける</button><button class="mb" id="pRetry" type="button">やりなおす</button>
+  <button class="mb gyonly" id="pGyro" type="button">ジャイロ：いまの持ち方をまっすぐに</button>
   <div class="row"><button class="mb" id="pSet" type="button">設定</button><button class="mb" id="pQuit" type="button">タイトルへ</button></div></div></div>
 <div class="screen" id="result"><div class="panel px"><div id="rTag" class="tag"></div><h1 id="rTitle"></h1><div id="rDetail"></div>
   <button class="mb go" id="rNext" type="button">つぎへ</button><div class="row"><button class="mb" id="rRetry" type="button">もういちど</button><button class="mb" id="rQuit" type="button">タイトルへ</button></div></div></div>
@@ -272,7 +294,7 @@ const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in wi
 if (IS_TOUCH) document.body.classList.add('touch');
 
 // ---------- 設定（この端末に保存） ----------
-const SET = { dot: 1, crt: 0, bgm: 1, vol: .8, cam: 0, steer: 0, auto: 0, meter: 0, mt: 0, opa: .55, tilt: 1, keys: {}, lay: {} };
+const SET = { dot: 1, crt: 0, bgm: 1, vol: .8, cam: 0, steer: 0, auto: 0, meter: 0, mt: 0, opa: .55, tilt: 1, tinv: 0, keys: {}, lay: {} };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('nhw-settings')) || {}); } catch (e) { /* はじめて */ }
 const saveSet = () => { try { localStorage.setItem('nhw-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
 // 3dgame のホーム画面から渡される設定（横画面・音）
@@ -289,7 +311,7 @@ renderer.setPixelRatio(1); renderer.toneMapping = THREE.ACESFilmicToneMapping; r
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 16 / 9, .3, 3200); camera.rotation.order = 'YXZ'; scene.add(camera);
 scene.fog = new THREE.FogExp2(0x221e26, .00082);   // うすいもや（遠くまで見える）
-const DOTS = [300, 240, 180, 135];   // 縦のドットの数（こまかい〜とてもあらい）
+const DOTS = [300, 240, 180, 135, 440, 0];   // 縦のドットの数（0〜3：こまかい〜とてもあらい、4：とてもこまかい、5：ドットなし＝画面の細かさのまま）
 const LOW = { w: 400, h: 240 };
 const PIX = {
   uniforms: { tDiffuse: { value: null }, lv: { value: 11 } },
@@ -302,12 +324,14 @@ void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; float d = b4(gl_FragCoord.xy
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }));
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .6, .5, .8); composer.addPass(bloom);
-composer.addPass(new OutputPass()); composer.addPass(new ShaderPass(PIX));
+const PIXP = new ShaderPass(PIX); composer.addPass(new OutputPass()); composer.addPass(PIXP);
 function onResize() {
   const r = $('rot'); r.style.width = VW() + 'px'; r.style.height = VH() + 'px'; r.style.transform = ROT.on ? 'rotate(90deg) translateY(-100%)' : 'none';
   document.documentElement.style.setProperty('--sw', VW() / 100 + 'px'); document.documentElement.style.setProperty('--sh', VH() / 100 + 'px');
   document.body.classList.toggle('short', VH() < 500); document.body.classList.toggle('tall', VW() < VH() * .8); document.body.classList.toggle('wide', VW() > VH() * 1.3 && VW() > 820);
-  LOW.h = DOTS[clamp(SET.dot | 0, 0, 3)]; LOW.w = Math.max(80, Math.round(LOW.h * VW() / VH()));
+  const dv = clamp(SET.dot | 0, 0, 5), noDot = dv === 5;   // ドットなし：画面の細かさ（重くならないよう 1.5倍・縦1080 まで）で描き、色をへらさない
+  LOW.h = noDot ? Math.round(Math.min(1080, VH() * Math.min(devicePixelRatio || 1, 1.5))) : DOTS[dv]; LOW.w = Math.max(80, Math.round(LOW.h * VW() / VH()));
+  PIXP.enabled = !noDot; document.body.classList.toggle("smooth", noDot);
   renderer.setSize(LOW.w, LOW.h, false); composer.setSize(LOW.w, LOW.h); camera.aspect = LOW.w / LOW.h; camera.updateProjectionMatrix();
   document.body.classList.toggle('crt', !!SET.crt); document.body.classList.toggle('rot', ROT.on);
 }
@@ -342,20 +366,43 @@ addEventListener('touchend', e => { if (!e.touches.length) resetTouch(); }, true
 // 毎フレーム：ハンドル（-1〜1、右が＋）・アクセル・ブレーキ
 function readInput(dt) {
   const k = IN.keys; let st = 0; if (k.ArrowLeft || k[BIND.left]) st -= 1; if (k.ArrowRight || k[BIND.right]) st += 1;
-  st += TB.tR - TB.tL; const analog = (TB.tPad && SET.steer === 1) || (SET.steer === 2 && IS_TOUCH && TILT.ok); if (analog) st = SET.steer === 2 ? TILT.v : IN.pad; st = clamp(st, -1, 1);
-  IN.steer = analog ? st : damp(IN.steer, st, st ? 6.5 : 11, dt);
+  st += TB.tR - TB.tL; const gyro = gyroOn(), analog = (TB.tPad && SET.steer === 1) || gyro; if (analog) st = gyro ? TILT.v : IN.pad; st = clamp(st, -1, 1);
+  IN.steer = gyro ? damp(IN.steer, st, 16, dt) : analog ? st : damp(IN.steer, st, st ? 6.5 : 11, dt);   // ジャイロは小さなふるえをならす
   IN.brake = k.ArrowDown || k[BIND.brake] || TB.tBrake ? 1 : 0;
   IN.gas = k.ArrowUp || k[BIND.gas] || TB.tGas || (SET.auto && IS_TOUCH && !IN.brake) ? 1 : 0;
 }
-// かたむけてハンドル：重力の向きを画面の向きに直して、左右のかたむきを読む
-const TILT = { v: 0, ok: false, last: 0, asked: false };
-addEventListener('devicemotion', e => {
-  const a = e.accelerationIncludingGravity; if (!a || a.x === null) return; TILT.ok = true; TILT.last = performance.now();
-  const ang = ((screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0) * Math.PI / 180;
-  let x = a.x * Math.cos(ang) + a.y * Math.sin(ang), y = -a.x * Math.sin(ang) + a.y * Math.cos(ang); if (ROT.on) { const t = x; x = -y; y = t; }
-  const raw = -x / (9.8 * Math.sin(.42)) * SET.tilt, dz = .06; TILT.v = clamp(Math.abs(raw) < dz ? 0 : raw - Math.sign(raw) * dz, -1, 1);
+// ジャイロ（かたむけてハンドル）：スマホをハンドルのように左右に回す。
+// 向きのセンサー（deviceorientation）があればそれを使い、なければ加速度（devicemotion）の重力から読む。
+// どちらも「画面の上の向き」が、画面の中でどれだけ回ったかを角度にする（手前・奥へのかたむきには左右されない）
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const TILT = { v: 0, ang: 0, c0: 0, ok: false, last: 0, asked: false, src: '', deny: false };
+const gyroOn = () => SET.steer === 2 && IS_TOUCH && TILT.ok && performance.now() - TILT.last < 1500;
+// 端末を左（反時計まわり）に何度回して持っているか。window.orientation（iPhone・Android とも：90＝左に回した横向き）を先に使う
+const devTurn = () => (typeof window.orientation === 'number' ? window.orientation : screen.orientation ? screen.orientation.angle : 0) * Math.PI / 180;
+function tiltUp(ux, uy) {   // 端末の座標での「上」の向き（重力の反対） → 画面の座標（右が x、上が y） → ハンドルの角度（右が＋）
+  const A = devTurn(); let x = ux * Math.cos(A) - uy * Math.sin(A), y = ux * Math.sin(A) + uy * Math.cos(A); if (ROT.on) { const t = x; x = -y; y = t; }
+  let a = Math.hypot(x, y) > 2.5 ? -Math.atan2(x, y) : -Math.asin(clamp(x / 9.8, -1, 1));   // 寝かせすぎのときは左右の成分だけで
+  if (SET.tinv) a = -a;
+  TILT.ok = true; TILT.last = performance.now(); TILT.ang = a; tiltApply();
+}
+function tiltApply() { const raw = (TILT.ang - TILT.c0) / .42 * SET.tilt, dz = .05; TILT.v = clamp(Math.abs(raw) < dz ? 0 : raw - Math.sign(raw) * dz, -1, 1); }
+addEventListener('deviceorientation', e => {
+  if (e.beta === null || e.gamma === null || (e.beta === 0 && e.gamma === 0 && !TILT.src)) return; TILT.src = 'ori';
+  const b = e.beta * Math.PI / 180, g = e.gamma * Math.PI / 180; tiltUp(-Math.cos(b) * Math.sin(g) * 9.8, Math.sin(b) * 9.8);
 });
-async function askTilt() { try { if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function' && !TILT.asked) { TILT.asked = true; await DeviceMotionEvent.requestPermission(); } } catch (e) { /* ことわられた */ } }
+addEventListener('devicemotion', e => {
+  if (TILT.src === 'ori' && performance.now() - TILT.last < 500) return;   // 向きのセンサーがあるときは、そちらを使う
+  const a = e.accelerationIncludingGravity; if (!a || a.x === null || a.y === null) return; if (!TILT.src) TILT.src = 'acc';
+  const k = IS_IOS ? -1 : 1; tiltUp(a.x * k, a.y * k);   // iPhone の加速度は、向きが Android と反対
+});
+// iPhone などは、ボタンを押したときに許可をもらう必要がある（向き・加速度の両方）
+async function askTilt() {
+  const P = [window.DeviceOrientationEvent, window.DeviceMotionEvent].filter(E => E && typeof E.requestPermission === 'function');
+  if (!P.length) return 'none'; TILT.asked = true;
+  try { const r = await Promise.all(P.map(E => E.requestPermission())); TILT.deny = r.every(x => x !== 'granted'); return TILT.deny ? 'denied' : 'granted'; } catch (e) { return 'error'; }
+}
+// いまの持ち方を「まっすぐ」にする（大きくかたむいているときは合わせない）
+function tiltCenter(force) { if (!TILT.ok) return false; if (!force && Math.abs(TILT.ang) > .5) return false; TILT.c0 = TILT.ang; tiltApply(); return true; }
 
 // ---------- 絵（キャンバス） ----------
 const newCanvas = (w, h = w) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -773,11 +820,12 @@ function wallQuad(G, key, i, x, y, w, h, side, uv, col = WHITE) { const k = ((i 
 // 道路にかく表示（走る向きに読める）
 function decal(G, s, x, w, l, uv) { G.quad('deco', rowS(s, x - w / 2, .012), rowS(s, x + w / 2, .012), rowS(s + l, x + w / 2, .012), rowS(s + l, x - w / 2, .012), uv); }
 const SIGNS = [];   // [サンプル, 看板の番号, 電光掲示板の番号 or -1]
+const tunNear = i => { const T = TRK; for (let d = -60; d <= 60; d += 10) if (isTun(T.sec[(i + d + T.n) % T.n])) return true; return false; };
 function placeSigns() {
   const T = TRK, add = (i, k, led = -1) => SIGNS.push([i, k, led]);
   for (let j = 0; j < CP.length; j++) { const a = T.cpS[j], sec = CP[j][3], prev = CP[(j - 1 + CP.length) % CP.length][3]; if (sec === prev) continue; const i = ((a - 300 + T.n) % T.n) & ~1;
-    const [k, led] = STG.signOf(sec); add(i, k, led); }
-  for (let i = 0; i < T.n; i += 420) if (!SIGNS.some(q => Math.abs(q[0] - i) < 150) && !isTun(T.sec[i]) && T.sec[i] !== 'bridge') { const curvy = Math.abs(T.k[(i + 150) % T.n]) > .0028; add(i & ~1, curvy ? 5 : pick(STG.filler, R), curvy ? 0 : R() < .5 ? 2 : -1); }
+    const [k, led] = STG.signOf(sec); let q = i; for (let t = 0; t < 900 && tunNear(q); t += 2) q = (q - 2 + T.n) % T.n; if (!tunNear(q)) add(q & ~1, k, led); }
+  for (let i = 0; i < T.n; i += 420) if (!SIGNS.some(q => Math.abs(q[0] - i) < 150) && !tunNear(i) && T.sec[i] !== 'bridge') { const curvy = Math.abs(T.k[(i + 150) % T.n]) > .0028; add(i & ~1, curvy ? 5 : pick(STG.filler, R), curvy ? 0 : R() < .5 ? 2 : -1); }
 }
 function buildChunk(c) {
   const T = TRK, G = new GB(), grp = new THREE.Group(), i0 = c.i0, i1 = c.i1;
@@ -863,9 +911,9 @@ function tunnelStuff(G, i, k, yw) {
   if (i % 4 === 0 || (entry && i % 2 === 0)) for (const s of [-1, 1]) { const p = row(i, s * 5.45, 5.18); G.box('paint', p[0], p[1], p[2], .44, .16, 1.3, yw, [.28, .28, .3]); const q = row(i, s * 5.4, 5.08); G.box('emis', q[0], q[1], q[2], .34, .04, 1.2, yw, LC, 'y'); }
   if (i % 6 === 0) for (const s of [-1, 1]) { const p = row(i, s * 6.56, .86); G.box('emis', p[0], p[1], p[2], .05, .1, .12, yw, s < 0 ? [1.8, 1.9, 1.8] : [.3, 1.7, .7]); }
   if (i % 76 === 38) for (const lx of [-1.05, 1.05]) { const p = row(i, lx, 6.15), cg = new THREE.CylinderGeometry(.62, .62, 4.2, 10).rotateX(Math.PI / 2).rotateY(yw).translate(p[0], p[1], p[2]); G.geo('steel', cg, [.34, .35, .38]); const q = row(i, lx, 6.85); G.box('steel', q[0], q[1], q[2], .12, .5, .12, yw); }
-  if (i % 26 === 0) { const p = row(i, -6.55, 1.62); G.box('emis', p[0], p[1], p[2], .06, .14, .14, yw, [3.2, .25, .12]); wallQuad(G, 'atE', i, -6.58, 1.25, .62, .43, 1, AT.m4, [1, 1, 1]); }
-  if (i % 100 === 50) { const p = row(i, -6.42, .6); G.box('paint', p[0], p[1], p[2], .3, 1.2, .7, yw, [.95, .58, .12]); wallQuad(G, 'atE', i, -6.58, 1.85, .8, .6, 1, AT.m2, [1.1, 1.1, 1.1]); }
-  if (i % 176 === 88) for (const s of [-1, 1]) { wallQuad(G, 'paint', i, s * -6.58, 1.05, 1.0, 2.1, s, undefined, [.18, .2, .2]); wallQuad(G, 'atE', i, s * -6.57, 2.5, .9, .62, s, AT.m3, [1.3, 1.3, 1.3]); }
+  if (i % 26 === 0) { const p = row(i, -6.55, 1.62); G.box('emis', p[0], p[1], p[2], .06, .14, .14, yw, [3.2, .25, .12]); }
+  if (i % 100 === 50) { const p = row(i, -6.42, .6); G.box('paint', p[0], p[1], p[2], .3, 1.2, .7, yw, [.95, .58, .12]); }
+  if (i % 176 === 88) for (const s of [-1, 1]) { wallQuad(G, 'paint', i, s * -6.58, 1.05, 1.0, 2.1, s, undefined, [.18, .2, .2]); }
 }
 // トンネルの入口：門の形のコンクリートと名前の板、入口の灯
 function tunnelPortal(G, i, yw, pi = 0) {
@@ -2311,15 +2359,20 @@ function updateHud(dt) {
     setH('lapN', `${R.r.name} / ${CARS[R.r.car].name}`);
     setH('cash', yen(SAVE.money));
   } else if (R.bots) {
-    const o = freeOrder(), me = o.indexOf(PL) + 1, ahead = o[me - 2], gap = ahead ? Math.round(progOf(ahead) - progOf(PL)) : 0;
-    setH('lapN', R.phase === 'count' ? `bot ${R.bots}台・${BOT_LV[R.lv].name}` : `<b class="pos">${me}位</b> / ${o.length}台　${ahead ? '前の ' + ahead.name + ' まで ' + gap + 'm' : 'トップ！'}<br>LAP ${R.lap + 1}　${fmtT(R.lapT)}${R.best ? '　BEST ' + fmtT(R.best) : ''}`);
+    const o = freeOrder(), me = o.indexOf(PL) + 1, ahead = o[me - 2], gap = ahead ? progOf(ahead) - progOf(PL) : 0;
+    setH('lapN', R.phase === 'count' ? `bot ${R.bots}台・${BOT_LV[R.lv].name}${R.laps ? '・' + R.laps + '周' : ''}` : `<b class="pos">${me}位</b> / ${o.length}台　${ahead ? '前の ' + ahead.name + ' まで ' + gapTxt(gap).slice(1) : 'トップ！'}<br>${lapStr(R)}　${fmtT(R.lapT)}${R.best ? '　BEST ' + fmtT(R.best) : ''}`);
+    drawBoard(R, o, dt);
     setH('cash', '<small style="color:var(--dim)">bot と走る：賞金なし</small>');
   } else {
-    setH('lapN', `LAP ${R.lap + 1}　${fmtT(R.lapT)}${R.best ? '<br>BEST ' + fmtT(R.best) : ''}`);
+    setH('lapN', `${lapStr(R)}　${fmtT(R.lapT)}${R.best ? '<br>BEST ' + fmtT(R.best) : ''}${R.laps ? '<br>TIME ' + fmtT(R.t) : ''}`);
     setH('cash', R.freeCar ? `<small style="color:var(--dim)">${CARS[PL.id].name}（自由に選んだ車）<br>賞金なし</small>` : `${yen(SAVE.money)}<br><small style="color:var(--green)">+${yen(R.earn)}</small>`);
   }
   setSt('slip', 'opacity', c.draft > .25 && c.v > 39 ? String(Math.min(1, c.draft * 1.5)) : '0');
-  rivalPin(R); let nb = 0; for (const b of BOTS) { const on = R.phase !== 'end' && Math.abs(wrapD(b.s - PL.s)) < 350; carPin(b.pin, b, b.name, on, null, undefined, on && wrapD(b.s - PL.s) < 0 ? nb++ : 0); }   // 近い bot だけ。うしろの bot はずらして重ならないように
+  // bot のピン：近い（350m 以内の）6台まで。名前の札が重ならないよう、上へずらす。きょりは「進んだきょりの差」（周回の差もふくむ）
+  rivalPin(R); let nb = 0; PINR.length = 0; const ad = b => Math.abs(wrapD(b.s - PL.s)), near = R.phase === 'end' ? [] : BOTS.filter(b => ad(b) < 350).sort((a, b) => ad(a) - ad(b)).slice(0, 6);
+  for (const b of BOTS) if (!near.includes(b)) carPin(b.pin, b, '', false);
+  for (const b of near) carPin(b.pin, b, b.name, true, null, gapTxt(progOf(b) - progOf(PL)), wrapD(b.s - PL.s) < 0 ? nb++ : 0, PINR);
+  document.body.classList.toggle('gyset', SET.steer === 2); document.body.classList.toggle('gyro', gyroOn()); if (gyroOn()) { const k = $('tGy').firstElementChild, l = (50 + IN.steer * 46).toFixed(1) + '%'; if (k.style.left !== l) k.style.left = l; }
   if (MSGT > 0) { MSGT -= dt; if (MSGT <= 0) $('msg').style.opacity = 0; } if (SUBT > 0) { SUBT -= dt; if (SUBT <= 0) $('sub').style.opacity = 0; } if (TOASTT > 0) { TOASTT -= dt; if (TOASTT <= 0) $('toast').style.opacity = 0; }
   drawMini();
 }
@@ -2343,18 +2396,29 @@ function drawMini() {
 }
 
 // ---------- ライバルの頭の上のピン（遠くても、うしろにいても、どこにいるか分かる） ----------
-const _pp = V3();
+const _pp = V3(), PINR = [];
+const lapStr = R => R.laps ? (R.lap >= R.laps ? 'GOAL' : `LAP ${R.lap + 1}/${R.laps}`) : `LAP ${R.lap + 1}`;
+// 全員の順位と、自分との差（進んだきょり）。0.25秒ごとに書きかえる
+const BOARD = { t: 0 };
+function drawBoard(R, o, dt) {
+  BOARD.t -= dt; if (BOARD.t > 0) return; BOARD.t = .25; const el = $('board'), n = o.length, tall = document.body.classList.contains('tall');
+  el.style.setProperty('--br', tall ? (n <= 8 ? n : Math.ceil(n / 2)) : n <= 6 ? n : n <= 12 ? Math.ceil(n / 2) : Math.ceil(n / 3));
+  el.innerHTML = o.map((c, i) => { const g = progOf(c) - progOf(PL), fin = c.finT !== undefined && R.laps, cl = c === PL ? 'bm' : fin ? 'bf' : g >= 0 ? 'ba' : 'bb';
+    return `<div class="${cl}"><i>${i + 1}</i>${c === PL ? 'きみ' : c.name}<b>${c === PL ? (R.laps ? lapStr(R) : '') : fin ? 'ゴール' : gapTxt(g)}</b></div>`; }).join('');
+}
 function rivalPin(R) { const on = R && R.type === 'battle' && R.phase !== 'end' && RV; carPin($('rvPin'), RV, on ? R.r.name : '', !!on, $('rvPinT'), Math.round(Math.abs(PL.dist - (RV ? RV.dist : 0)))); }
 // 車の頭の上のピン（画面の外・うしろにいるときは、はしに出す）
-function carPin(el, C, name, on, tEl, dist, stack = 0) {
+function carPin(el, C, name, on, tEl, dist, stack = 0, rects = null) {
   if (!el) return; el.classList.toggle('on', !!on); if (!on || !C) return;
   tPos(C.s, C.x, C.hero.sh.H + .55, _pp); _pp.project(camera);
   const W = VW(), H = VH(), d = dist !== undefined ? dist : Math.round(Math.abs(wrapD(C.s - PL.s))), behind = _pp.z > 1 || wrapD(C.s - PL.s) < -2 && (SET.cam === 2 || Math.abs(_pp.x) > 1.2);
   let x = (_pp.x * .5 + .5) * W, y = (-_pp.y * .5 + .5) * H; const edge = behind || x < 14 || x > W - 14 || y < 60 || y > H - 30;
-  if (behind) { x = clamp(W / 2 + (C.x - PL.x) * 9 + stack * 70, 40, W - 40); y = H - 40 - stack * 18; }
+  if (behind) { x = clamp(W / 2 + (C.x - PL.x) * 9 + stack * 70, 70, W - (IS_TOUCH ? 70 : 250)); y = (IS_TOUCH ? H * (document.body.classList.contains('tall') ? .6 : .66) : H - 40) - stack * 18; }   // スマホはボタンにかからない高さ
   x = clamp(x, 26, W - 26); y = clamp(y, 64, H - 30);
+  const t = `${behind ? '▼ ' : ''}${name} ${typeof d === 'string' ? d : d + 'm'}`;
+  if (rects) { let w = 14; for (const ch of t) w += ch.charCodeAt(0) > 255 ? 13 : 7.5; for (let k = 0; k < 10 && rects.some(r => Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - y) < 16); k++) y -= 17; rects.push({ x, y, w }); }
   el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; el.classList.toggle('back', behind);
-  const t = `${behind ? '▼ ' : ''}${name} ${d}m`, te = tEl || el.querySelector('span'); if (te.textContent !== t) te.textContent = t; el.classList.toggle('edge', edge && !behind);
+  const te = tEl || el.querySelector('span'); if (te.textContent !== t) te.textContent = t; el.classList.toggle('edge', edge && !behind);
 }
 function drawPinIcon() {
   const g = $('rvPinC').getContext('2d'); g.clearRect(0, 0, 12, 16);
@@ -2683,8 +2747,9 @@ const BOT_LV = [
   { name: '弱い', top: 228, acc: .9, grip: .94, skill: .2 }, { name: '普通', top: 262, acc: 1.0, grip: 1.0, skill: .5 },
   { name: '強い', top: 292, acc: 1.07, grip: 1.06, skill: .75 }, { name: 'とても強い', top: 324, acc: 1.15, grip: 1.12, skill: .95 }];
 const BOTS = [];
-const FREE = { bots: 3, lv: 1, traffic: 1, stage: 0, wx: 0 };
+const FREE = { bots: 3, lv: 1, traffic: 1, stage: 0, wx: 0, laps: 3 };
 try { Object.assign(FREE, JSON.parse(localStorage.getItem('nhw-free')) || {}); } catch (e) { /* はじめて */ }
+FREE.laps = clamp(Math.round(+FREE.laps), 0, 50) || 0;
 const saveFree = () => { try { localStorage.setItem('nhw-free', JSON.stringify(FREE)); } catch (e) { /* なし */ } };
 // フリーランで自由に選ぶ車（お金はいらない・ガレージの記録は変えない）。FREE.car：'g'＝ガレージの車、または車の名前
 if (!FREE.tune || typeof FREE.tune !== 'object') FREE.tune = {}; if (!FREE.car || (FREE.car !== 'g' && !CARS[FREE.car])) FREE.car = 'g';
@@ -2710,11 +2775,16 @@ function drawFreeCar() {
 }
 // スタートの並び（自分は s0 のまん中の車線）：[前後, 車線]
 // 1台ずつ別の列にして、車線を左右にずらす（横にならばない・前後は 15m あける）
-const BOT_SLOT = [[15, -3.5], [-15, 3.5], [30, 3.5], [-30, -3.5], [45, 0], [-45, 0], [60, -3.5], [-60, 3.5]];
+// スタートの並び：同じ位置に2台ならばないよう、15m ずつ前後にずらす（最大15台）
+const BOT_SLOT = [[15, -3.5], [-15, 3.5], [30, 3.5], [-30, -3.5], [45, 0], [-45, 0], [60, -3.5], [-60, 3.5], [75, 3.5], [-75, -3.5], [90, 0], [-90, 0], [105, -3.5], [-105, 3.5], [120, 3.5]];
+// ライバル（8人）より多いときの、ほかの走り屋
+const BOT_MORE = ['レン', 'ナギ', 'ソラ', 'ユズ', 'イブキ', 'カエデ', 'ジン', 'ツバサ', 'ヒビキ', 'リク', 'マコ', 'セナ'];
+const BOT_COLS = [0x2f6fd8, 0xe8e8ee, 0xd8b020, 0x1a1a22, 0x2fa070, 0xd84040, 0x8a5ad0, 0xf08a2a, 0x40b8c8, 0xc8c8d0];
 function addBots(n, lv, s0) {
-  const L = BOT_LV[lv], pool = RIVALS.map((r, i) => i).sort(() => Math.random() - .5);
+  const L = BOT_LV[lv], seen = new Set(), riv = RIVALS.filter(r => !seen.has(r.name) && seen.add(r.name)).sort(() => Math.random() - .5);
+  const more = BOT_MORE.slice().sort(() => Math.random() - .5).map((name, k) => ({ name, car: CAR_IDS[(Math.random() * CAR_IDS.length) | 0], col: BOT_COLS[(k * 3 + ((Math.random() * 10) | 0)) % BOT_COLS.length] })), pool = [...riv, ...more];
   for (let i = 0; i < n; i++) {
-    const r = RIVALS[pool[i % pool.length]], st = statsOf(r.car, [0, 0, 0, 0, 0], { top: L.top * rr(.985, 1.015), acc: L.acc * rr(.98, 1.02), grip: L.grip });
+    const r = pool[i % pool.length], st = statsOf(r.car, [0, 0, 0, 0, 0], { top: L.top * rr(.985, 1.015), acc: L.acc * rr(.98, 1.02), grip: L.grip });
     const b = newCar(r.car, r.col, st); b.lv = L; b.name = r.name; b.bot = true; b.onShift = onShift; b.onWall = onWall; scene.add(b.hero.grp);
     const [ds, x] = BOT_SLOT[i % BOT_SLOT.length]; placeCar(b, s0 + ds, x, 100 / KMH); b.ai.tx = x; b.off = ds;
     const pin = $('rvPin').cloneNode(true); pin.removeAttribute('id'); pin.classList.add('botPin'); pin.querySelector('span').removeAttribute('id'); const cv = pin.querySelector('canvas'); cv.removeAttribute('id'); cv.getContext('2d').drawImage($('rvPinC'), 0, 0);
@@ -2724,14 +2794,14 @@ function addBots(n, lv, s0) {
 function dropBots() { for (const b of BOTS) { disposeHero(b.hero); if (b.pin) b.pin.remove(); } BOTS.length = 0; document.body.classList.remove('bots'); }
 // 進んだきょり（スタートの並びのずれもふくむ）と、順位
 const progOf = c => c.dist + (c.off || 0);
-const freeOrder = () => [PL, ...BOTS].sort((a, b) => progOf(b) - progOf(a));
+const freeOrder = () => [PL, ...BOTS].sort((a, b) => ((a.finT ?? 1e9) - (b.finT ?? 1e9)) || progOf(b) - progOf(a));
 // bot の走り方：強いほど、カーブで攻め・前をよく見て・反応が速い。遠く（170m 以上）はなれたら、一般車を気にせず平均のペース
 function botOpts(b) {
   const sk = b.lv.skill, R = GAME.race, far = R && R.phase === 'go' && Math.abs(wrapD(b.s - PL.s)) > 170;
   return { vmax: far ? b.st.top * (.8 + .12 * sk) : b.st.top * 1.1, margin: .72 + .22 * sk, look: 110 + 160 * sk, react: .45 - .28 * sk, others: [PL, ...BOTS.filter(o => o !== b)], ghost: far };
 }
 // ---------- バトル・フリーラン ----------
-function beginRace() { show(null); GAME.paused = false; document.body.classList.add('racing'); setTimeout(applyLayout, 0); document.body.classList.toggle('slide', SET.steer === 1); AUDIO.resume(); AUDIO.setBgm(1); CAM.psi = 0; HUD.tn = -1; for (const k in HC) delete HC[k]; }
+function beginRace() { if (SET.steer === 2) tiltCenter(false); show(null); GAME.paused = false; document.body.classList.add('racing'); setTimeout(applyLayout, 0); document.body.classList.toggle('slide', SET.steer === 1); AUDIO.resume(); AUDIO.setBgm(1); CAM.psi = 0; HUD.tn = -1; for (const k in HC) delete HC[k]; }
 function startBattle(i, hard = false) {
   if (PL.free) setPlayerCar(); const r = rivalOf(i), s0 = r.start, H = hard ? [1.05, 1.05, 1.04] : [1, 1, 1], dist = r.dist + (hard ? 1000 : 0); PL.st = myStats(); dropBots(); setDensity(TRAF_D[1]); setWeather(r.wx ? 1 : 0); setDawn(r.dawn ? .3 : 0);
   GAME.race = { type: 'battle', wx: WX.on, hard, i, r, skill: Math.min(1, r.skill + (hard ? .12 : 0)), phase: 'count', t: 0, s0, goal: dist, top: 0, hits: 0, nm: 0, earn: 0, win: false, why: '', endT: 0, flashed: false, beep: 3 };
@@ -2758,15 +2828,25 @@ async function startFree() {
   await loadStage(FREE.stage | 0);
   showFreeCar(); PL.st = PL.free ? freeSpec().st : myStats(); dropRival(); dropBots(); setDensity(TRAF_D[FREE.traffic] ?? TRAF_D[1]); setWeather(FREE.wx === 1 || (FREE.wx === 2 && Math.random() < .5));
   const nb = FREE.bots | 0, s0 = 0;
-  const bests = SAVE.bestS || {}; GAME.race = { type: 'free', freeCar: PL.free, wx: WX.on, phase: nb ? 'count' : 'go', t: 0, lap: 0, lapT: 0, best: bests[STG.id] || (STG.idx ? 0 : SAVE.best || 0), stage: STG.name, earn: 0, top: 0, hits: 0, nm: 0, km: 0, bots: nb, lv: FREE.lv, s0, beep: 4 };
+  const bests = SAVE.bestS || {}; PL.finT = undefined; GAME.race = { type: 'free', laps: FREE.laps | 0, freeCar: PL.free, wx: WX.on, phase: nb ? 'count' : 'go', t: 0, lap: 0, lapT: 0, best: bests[STG.id] || (STG.idx ? 0 : SAVE.best || 0), stage: STG.name, earn: 0, top: 0, hits: 0, nm: 0, km: 0, bots: nb, lv: FREE.lv, s0, beep: 4 };
   placeCar(PL, s0, 0, (nb ? 100 : 80) / KMH); PL.off = 0; IN.shift = 0;
   if (nb) addBots(nb, FREE.lv, s0);
   resetTraffic(PL.s, [{ s: s0 }, ...BOTS.map(b => ({ s: b.s }))]);
   beginRace(); document.body.classList.remove('battle'); document.body.classList.toggle('bots', nb > 0);
-  if (nb) { msg('3', `フリーラン　bot ${nb}台・${BOT_LV[FREE.lv].name}`, 1); AUDIO.beep(false); }
+  const lapTxt = FREE.laps ? `${FREE.laps}周（${(FREE.laps * TRK.L / 1000).toFixed(1)}km）` : '周回なし';
+  if (nb) { msg('3', `フリーラン　bot ${nb}台・${BOT_LV[FREE.lv].name}・${lapTxt}`, 1); AUDIO.beep(false); }
+  else if (FREE.laps) msg('FREE RUN', `${lapTxt}　${WX.on ? '雨・すべりやすい　' : ''}ゴールまで走ろう`, 2.2);
   else msg('FREE RUN', (WX.on ? '雨の夜。すべりやすいので注意　' : '') + (PL.free ? `${CARS[PL.id].name}で自由に走る（賞金なし）` : '1kmごとに賞金。ニアミスでボーナス'), 2.2);
   if (nb && WX.on) toast('雨の夜。すべりやすいので注意', 2.4);
 }
+// 決めた周回を走りきった：ゴールした順（まだの bot は、進んだきょりの順）
+function freeFinish(R) {
+  PL.finT = R.t; R.phase = 'end'; R.endT = 0; R.fin = R.t; const o = freeOrder(), me = o.indexOf(PL) + 1; R.place = me;
+  const key = STG.id + '_' + R.laps; SAVE.bestRun = SAVE.bestRun || {}; R.newRec = !SAVE.bestRun[key] || R.t < SAVE.bestRun[key]; R.prevRec = SAVE.bestRun[key]; if (R.newRec) SAVE.bestRun[key] = R.t;
+  if (R.bots) { SAVE.freeWins = (SAVE.freeWins || 0) + (me === 1 ? 1 : 0); save(); msg(me === 1 ? 'WIN' : `${me}位`, `ゴール！　${fmtT(R.t)}`, 3.2); if (me === 1) AUDIO.win(); else AUDIO.lose(); }
+  else { save(); msg('GOAL', `${R.laps}周　${fmtT(R.t)}${R.newRec ? '　記録更新！' : ''}`, 3.2); AUDIO.win(); }
+}
+const gapTxt = g => { const a = Math.abs(Math.round(g)), s = !a ? '±' : g >= 0 ? '+' : '−'; return a < 1000 ? `${s}${a}m` : `${s}${(a / 1000).toFixed(2)}km`; };
 function drawStages() {
   const box = $('fsStage'); box.innerHTML = STAGES.map((s, i) => `<button type="button" data-s="${i}" class="${i === (FREE.stage | 0) ? 'on' : ''}">${s.name}<small>${s.sub}</small></button>`).join('');
   for (const b of box.querySelectorAll('button')) b.onclick = () => { AUDIO.click(); FREE.stage = +b.dataset.s; saveFree(); openFreeSet(); };
@@ -2774,11 +2854,12 @@ function drawStages() {
 // フリーランの準備：コース・bot の数と強さ・一般車の数
 function openFreeSet() {
   const seg = (id, key) => { for (const b of $(id).querySelectorAll('button')) b.classList.toggle('on', +b.dataset.v === (FREE[key] | 0)); };
-  setWeather(0); setDawn(0); seg('fsBots', 'bots'); seg('fsLv', 'lv'); seg('fsTraf', 'traffic'); seg('fsWx', 'wx'); drawStages(); showFreeCar(); drawFreeCar();
+  setWeather(0); setDawn(0); showLaps(); seg('fsBots', 'bots'); seg('fsLv', 'lv'); seg('fsTraf', 'traffic'); seg('fsWx', 'wx'); drawStages(); showFreeCar(); drawFreeCar();
   $('fsLvRow').style.opacity = FREE.bots ? 1 : .45;
   $('fsNote').textContent = FREE.bots ? 'bot といっしょに走るときは、お金はもらえません（順位とベストラップだけ）。' : useFreeCar() ? '自由に選んだ車で走るときは、賞金はありません（ガレージの車なら、1kmごとに賞金）。' : '1人で走るときは、1kmごとに賞金。一般車のすぐ横をぬけるとボーナス。';
   show('freeSet');
 }
+function showLaps() { const n = FREE.laps | 0; $('fsLaps').value = n; $('fsLapsV').textContent = n ? `${n}周` : 'なし（ずっと走る）'; }
 function retryRace() { const R = GAME.race || GAME.last; if (!R) return; if (R.type === 'battle') startBattle(R.i, R.hard); else startFree(); }
 function earn(n, why) { SAVE.money += n; if (GAME.race) GAME.race.earn += n; if (why) toast(`${why}　+${yen(n)}`); AUDIO.coin(); save(); }
 function raceStep(dt) {
@@ -2798,7 +2879,10 @@ function raceStep(dt) {
     if (R.t >= 3) { R.phase = 'go'; R.t = 0; PL.dist = 0; for (const b of BOTS) b.dist = 0; msg('GO!', '', 1); AUDIO.beep(true); }
   } else if (R.phase === 'go') {
     R.lapT += dt;
-    if (PL.dist >= (R.lap + 1) * TRK.L) { const t = R.lapT; R.lap++; R.lapT = 0; if (!R.best || t < R.best) { R.best = t; SAVE.bestS = SAVE.bestS || {}; SAVE.bestS[STG.id] = t; if (!STG.idx) SAVE.best = t; save(); toast(`ベストラップ ${fmtT(t)}`, 2.4); } else toast(`LAP ${fmtT(t)}`, 2); }
+    if (PL.dist >= (R.lap + 1) * TRK.L) { const t = R.lapT; R.lap++; R.lapT = 0; if (!R.best || t < R.best) { R.best = t; SAVE.bestS = SAVE.bestS || {}; SAVE.bestS[STG.id] = t; if (!STG.idx) SAVE.best = t; save(); toast(`ベストラップ ${fmtT(t)}`, 2.4); } else toast(`LAP ${fmtT(t)}`, 2);
+      if (R.laps && R.lap >= R.laps) { freeFinish(R); return; }
+      if (R.laps && R.lap === R.laps - 1) msg('FINAL LAP', R.laps > 1 ? 'さいごの1周' : '', 1.6); }
+    if (R.laps) for (const b of BOTS) if (b.finT === undefined && progOf(b) >= R.laps * TRK.L) { b.finT = R.t; const k = BOTS.filter(o => o.finT !== undefined).length; toast(`${b.name} がゴール（${k}位）`, 1.8); }
     const km = Math.floor(PL.dist / 1000); if (km > R.km) { R.km = km; if (!R.bots && !R.freeCar) earn(150, `${km}km`); SAVE.km = (SAVE.km || 0) + 1; }
     if (R.bots) { const me = freeOrder().indexOf(PL) + 1; if (R.pos && me !== R.pos && R.t > 1) toast(me < R.pos ? `${me}位にあがった！` : `${me}位にさがった`, 1.4); R.pos = me; }
   }
@@ -2840,10 +2924,15 @@ function showResult() {
     $('rNext').textContent = R.win ? 'つぎへ' : 'ガレージへ';
   } else {
     $('rTag').textContent = (R.bots ? `FREE RUN　bot ${R.bots}台・${BOT_LV[R.lv].name}` : 'FREE RUN') + `　${R.stage || ''}${R.wx ? '　雨' : ''}`;
-    if (R.bots) { const o = freeOrder(), me = o.indexOf(PL) + 1; h.textContent = `${me}位 / ${o.length}台`; h.className = me === 1 ? '' : 'lose';
+    if (R.laps) $('rTag').textContent += `　${R.laps}周`;
+    const fin = R.fin !== undefined, recTxt = fin ? `<br>タイム <b>${fmtT(R.fin)}</b>${R.newRec ? '　<b style="color:var(--green)">記録更新！</b>' : R.prevRec ? `　（記録 ${fmtT(R.prevRec)}）` : ''}` : '';
+    if (R.bots && fin) { const o = freeOrder(), me = o.indexOf(PL) + 1; h.textContent = `${me}位 / ${o.length}台`; h.className = me === 1 ? '' : 'lose';
+      $('rDetail').innerHTML = `<div class="stand">${o.map((c, i) => `<div class="${c === PL ? 'me' : ''}"><i>${i + 1}</i>${c === PL ? 'きみ' : c.name}<b>${c.finT !== undefined ? fmtT(c.finT) : 'あと ' + gapTxt(R.laps * TRK.L - progOf(c)).slice(1)}</b></div>`).join('')}</div>`
+        + `最高速 <b>${Math.round(R.top)} km/h</b>　・　ベストラップ <b>${R.best ? fmtT(R.best) : '—'}</b>${recTxt}<br><small style="color:var(--dim)">bot と走るときは賞金なし</small>`; }
+    else if (R.bots) { const o = freeOrder(), me = o.indexOf(PL) + 1; h.textContent = `${me}位 / ${o.length}台`; h.className = me === 1 ? '' : 'lose';
       $('rDetail').innerHTML = `順位：${o.map((c, i) => (c === PL ? '<b>きみ</b>' : c.name) + (i < o.length - 1 ? ' → ' : '')).join('')}<br>走った距離 <b>${(PL.dist / 1000).toFixed(1)} km</b>　・　最高速 <b>${Math.round(R.top)} km/h</b>　・　ベストラップ <b>${R.best ? fmtT(R.best) : '—'}</b><br><small style="color:var(--dim)">bot と走るときは賞金なし</small>`; }
-    else { h.textContent = 'おつかれさま'; h.className = '';
-      $('rDetail').innerHTML = `走った距離 <b>${(PL.dist / 1000).toFixed(1)} km</b>　・　最高速 <b>${Math.round(R.top)} km/h</b><br>ベストラップ <b>${R.best ? fmtT(R.best) : '—'}</b>　・　ニアミス <b>${R.nm}</b><br>かせいだお金 <b>+${yen(R.earn)}</b>`; }
+    else { h.textContent = fin ? 'GOAL' : 'おつかれさま'; h.className = '';
+      $('rDetail').innerHTML = `走った距離 <b>${(PL.dist / 1000).toFixed(1)} km</b>　・　最高速 <b>${Math.round(R.top)} km/h</b><br>ベストラップ <b>${R.best ? fmtT(R.best) : '—'}</b>　・　ニアミス <b>${R.nm}</b>${recTxt}<br>かせいだお金 <b>+${yen(R.earn)}</b>`; }
     $('rNext').textContent = 'ガレージへ';
   }
   GAME.race = null; dropBots(); show('result');
@@ -2859,13 +2948,14 @@ function openRecords() {
   $('recList').innerHTML = row('最高速', (S.top || 0) + ' km/h') + row('走ったきょり', (S.km || 0).toFixed(1) + ' km') + row('バトル', `${S.wins || 0}勝　${S.losses || 0}敗`)
     + row('ストーリー', `${story} / ${RIVALS.length}${S.beaten[8] ? '　＋ 最終戦 ★' : ''}`) + row('本気の再戦', `${hard} / ${RIVALS.length}`) + row('雨のバトルで勝った', (S.rainWins || 0) + ' 回')
     + row('ニアミス', (S.nm || 0) + ' 回') + row('持っている車', `${Object.keys(S.cars).length} / ${CAR_IDS.length}`) + row('所持金', yen(S.money))
-    + '<div class="gsec">ベストラップ</div>' + STAGES.map((st, i) => row(st.name, (S.bestS || {})[st.id] ? fmtT(S.bestS[st.id]) : !i && S.best ? fmtT(S.best) : '—')).join('');
+    + '<div class="gsec">ベストラップ</div>' + STAGES.map((st, i) => row(st.name, (S.bestS || {})[st.id] ? fmtT(S.bestS[st.id]) : !i && S.best ? fmtT(S.best) : '—')).join('')
+    + (S.bestRun && Object.keys(S.bestRun).length ? '<div class="gsec">周回レースの記録</div>' + Object.keys(S.bestRun).sort().map(k => { const [id, n] = k.split('_'), st = STAGES.find(q => q.id === id); return row(`${st ? st.name : id}　${n}周`, fmtT(S.bestRun[k])); }).join('') : '');
   show('records');
 }
 // ---------- 一時停止 ----------
 function pauseGame() { if (!GAME.race || GAME.race.phase === 'end' || GAME.paused) return; GAME.paused = true; AUDIO.stopCar(); show('pause'); }
 function resumeGame() { if (!GAME.paused) return; GAME.paused = false; show(null); resetTouch(); }
-function quitRace() { const R = GAME.race; GAME.paused = false; if (R && R.type === 'free' && (R.earn > 0 || R.bots && R.phase === 'go' && PL.dist > 300)) { R.phase = 'end'; showResult(); } else toTitle(); }
+function quitRace() { const R = GAME.race; GAME.paused = false; if (R && R.type === 'free' && (R.earn > 0 || (R.bots || R.laps) && R.phase === 'go' && PL.dist > 300)) { R.phase = 'end'; showResult(); } else toTitle(); }
 
 // ---------- ガレージ ----------
 function openGarage() { GAME.race = null; document.body.classList.remove('racing', 'battle'); dropRival(); dropBots(); setWeather(0); setDawn(0); if (PL.free) setPlayerCar(); GAME.view = 'garage'; AUDIO.setBgm(0); renderGarage(); show('garage'); }
@@ -2899,20 +2989,34 @@ function renderGarage() {
   for (const b of $('gCars').querySelectorAll('button')) b.onclick = () => { const k = b.dataset.k, c = CARS[k]; if (k === SAVE.car) return; if (!SAVE.cars[k]) { if (SAVE.money < c.price) return; SAVE.money -= c.price; SAVE.cars[k] = { up: UP0.slice(), col: c.col, gear: 2, boost: 1, wing: 0, rim: 0, wo: 9 }; AUDIO.coin(); } else AUDIO.click(); SAVE.car = k; save(); setPlayerCar(); renderGarage(); };
 }
 // ---------- 設定 ----------
+// ジャイロを使いはじめる：許可 → 少し待って値が来ていれば、まっすぐを合わせる
+async function gyroStart(center) {
+  const r = await askTilt(); tiltNote(r);
+  setTimeout(() => { if (center && TILT.ok) tiltCenter(true); tiltNote(r); }, 700);
+}
+// 設定の画面にいる間、ジャイロのいまの値を見せる
+let GYT = 0;
+function gyroMeter() {
+  if (GAME.scr !== 'settings') { GYT = 0; return; } GYT = requestAnimationFrame(gyroMeter);
+  const on = TILT.ok && performance.now() - TILT.last < 1500, el = $('gyMeter'); el.classList.toggle('off', !on); el.firstElementChild.style.left = (50 + TILT.v * 46) + '%';
+  if (on !== el._on) { el._on = on; tiltNote(); }
+}
 function openSettings(from) {
   SCR.back = from; const seg = (id, key) => { for (const b of $(id).querySelectorAll('button')) b.classList.toggle('on', +b.dataset.v === (SET[key] | 0)); };
-  seg('sDot', 'dot'); seg('sCrt', 'crt'); seg('sBgm', 'bgm'); seg('sCam', 'cam'); seg('sSteer', 'steer'); seg('sAuto', 'auto'); seg('sMeter', 'meter'); seg('sMt', 'mt'); $('sVol').value = SET.vol; $('sOpa').value = SET.opa; $('sTilt').value = SET.tilt; drawKeys(); tiltNote(); show('settings');
+  seg('sDot', 'dot'); seg('sCrt', 'crt'); seg('sBgm', 'bgm'); seg('sCam', 'cam'); seg('sSteer', 'steer'); seg('sAuto', 'auto'); seg('sMeter', 'meter'); seg('sMt', 'mt'); seg('sTinv', 'tinv'); $('sVol').value = SET.vol; $('sOpa').value = SET.opa; $('sTilt').value = SET.tilt; drawKeys(); tiltNote(); show('settings'); if (!GYT) gyroMeter();
 }
 function wireSettings() {
-  const segs = { sDot: 'dot', sCrt: 'crt', sBgm: 'bgm', sCam: 'cam', sSteer: 'steer', sAuto: 'auto', sMeter: 'meter', sMt: 'mt' };
+  const segs = { sDot: 'dot', sCrt: 'crt', sBgm: 'bgm', sCam: 'cam', sSteer: 'steer', sAuto: 'auto', sMeter: 'meter', sMt: 'mt', sTinv: 'tinv' };
   for (const [id, key] of Object.entries(segs)) for (const b of $(id).querySelectorAll('button')) b.addEventListener('click', () => {
     SET[key] = +b.dataset.v; saveSet(); AUDIO.click(); for (const o of $(id).querySelectorAll('button')) o.classList.toggle('on', o === b);
-    if (key === 'dot' || key === 'crt') onResize(); if (key === 'bgm') AUDIO.setVol(); if (key === 'steer') { document.body.classList.toggle('slide', SET.steer === 1); if (SET.steer === 2) { askTilt(); setTimeout(tiltNote, 1500); } tiltNote(); }
+    if (key === 'tinv') { TILT.ang = -TILT.ang; TILT.c0 = -TILT.c0; tiltApply(); } if (key === 'dot' || key === 'crt') onResize(); if (key === 'bgm') AUDIO.setVol(); if (key === 'steer') { document.body.classList.toggle('slide', SET.steer === 1); if (SET.steer === 2) gyroStart(); tiltNote(); }
     if (key === 'meter') document.body.classList.toggle('meterD', SET.meter === 1); if (key === 'mt') { document.body.classList.toggle('mt', SET.mt === 1); IN.shift = 0; }
   });
   $('sVol').addEventListener('input', () => { SET.vol = +$('sVol').value; saveSet(); AUDIO.setVol(); });
   $('sOpa').addEventListener('input', () => { SET.opa = +$('sOpa').value; saveSet(); applyLayout(); });
-  $('sTilt').addEventListener('input', () => { SET.tilt = +$('sTilt').value; saveSet(); });
+  $('sTilt').addEventListener('input', () => { SET.tilt = +$('sTilt').value; saveSet(); tiltApply(); });
+  // ジャイロ：許可をもらって（iPhone）、ハンドルをジャイロにして、いまの持ち方をまっすぐにする
+  $('sGyro').addEventListener('click', () => { AUDIO.click(); SET.steer = 2; saveSet(); document.body.classList.remove('slide'); for (const o of $('sSteer').querySelectorAll('button')) o.classList.toggle('on', +o.dataset.v === 2); gyroStart(true); });
   $('sLayout').addEventListener('click', () => { AUDIO.click(); layoutEdit(true); });
   // キーの割り当て
   $('sKeys').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; KEYWAIT.on = b.dataset.a; drawKeys(); });
@@ -2931,7 +3035,7 @@ function wireSettings() {
   $('setBack').addEventListener('click', () => { AUDIO.click(); if (SCR.back === 'pause') show('pause'); else show('title'); });
 }
 // ---------- ボタンと表示の配置（ドラッグで動かす・大きさ）・キーの割り当ての表示 ----------
-const LAYOUT_IDS = ['meter', 'mini', 'info', 'cash', 'gap', 'chat', 'mirrorF', 'tL', 'tR', 'tPad', 'tGas', 'tBrake', 'tCam', 'tUp', 'tDn', 'pauseB'], LAYOUT_SEL = LAYOUT_IDS.map(q => '#' + q).join(', ');
+const LAYOUT_IDS = ['meter', 'mini', 'info', 'board', 'tGy', 'cash', 'gap', 'chat', 'mirrorF', 'tL', 'tR', 'tPad', 'tGas', 'tBrake', 'tCam', 'tUp', 'tDn', 'pauseB'], LAYOUT_SEL = LAYOUT_IDS.map(q => '#' + q).join(', ');
 const EDIT = { on: false, sel: null, drag: null };
 const elCenter = el => { const r = el.getBoundingClientRect(); return toStage(r.left + r.width / 2, r.top + r.height / 2); };
 function applyLayout() {
@@ -2953,7 +3057,12 @@ addEventListener('resize', () => setTimeout(applyLayout, 50));
 const KEYN = { left: 'ハンドル左', right: 'ハンドル右', gas: 'アクセル', brake: 'ブレーキ', up: 'シフトアップ', down: 'シフトダウン', cam: '視点', pause: '一時停止', retry: 'やりなおす' };
 const keyLabel = c => ({ Space: 'Space', ShiftLeft: '左Shift', ShiftRight: '右Shift', ControlLeft: '左Ctrl', ControlRight: '右Ctrl', AltLeft: '左Alt', AltRight: '右Alt' }[c] || c.replace(/^Key|^Digit|^Numpad/, ''));
 function drawKeys() { $('sKeys').innerHTML = Object.keys(KEYN).map(a => `<button type="button" data-a="${a}" class="${a === KEYWAIT.on ? 'wait' : ''}">${KEYN[a]}<b>${a === KEYWAIT.on ? '…' : keyLabel(BIND[a])}</b></button>`).join(''); }
-function tiltNote() { $('tiltNote').textContent = SET.steer === 2 ? (TILT.ok ? 'スマホをハンドルのように、左右にかたむけてください。' : 'かたむきを読みとれません（この画面では使えないかもしれません）。') : ''; }
+function tiltNote(r) {
+  const on = TILT.ok && performance.now() - TILT.last < 1500;
+  $('tiltNote').textContent = on ? (SET.steer === 2 ? 'ジャイロ ON：スマホをハンドルのように左右に回してください（右に回すと、上のバーが右へ動きます）。走っている間は、左下のバーをタップすると、いまの持ち方を「まっすぐ」にできます。' : 'ジャイロは使えます。「ジャイロを使う」を押すとハンドルがジャイロになります。')
+    : r === 'denied' ? 'ジャイロが許可されませんでした。もう一度「ジャイロを使う」を押して「許可」を選んでください。'
+    : TILT.ok ? 'ジャイロの値がとどいていません。' : (SET.steer === 2 ? 'ジャイロの値がまだ来ていません。「ジャイロを使う」を押してください（iPhone は許可が必要です）。この画面の中では、センサーが使えないこともあります。' : '');
+}
 // ---------- ボタン ----------
 function wireUI() {
   const on = (id, f) => $(id).addEventListener('click', e => { e.preventDefault(); AUDIO.resume(); f(); });
@@ -2963,6 +3072,12 @@ function wireUI() {
   for (const b of $('stMode').querySelectorAll('button')) b.addEventListener('click', () => { AUDIO.click(); STORY.hard = +b.dataset.v; openStory(); }); on('gBack', () => { AUDIO.click(); GAME.view = 'orbit'; toTitle(); });
   on('tNext', talkNext); on('pRes', () => { AUDIO.click(); resumeGame(); }); on('pRetry', () => { AUDIO.click(); retryRace(); }); on('pSet', () => { AUDIO.click(); openSettings('pause'); }); on('pQuit', () => { AUDIO.click(); quitRace(); });
   on('fsGo', () => { AUDIO.click(); saveFree(); startFree(); }); on('fsBack', () => { AUDIO.click(); toTitle(); });
+  // 周回数（0＝なし、1〜50）
+  $('fsLaps').addEventListener('input', () => { FREE.laps = +$('fsLaps').value; saveFree(); showLaps(); });
+  for (const b of document.querySelectorAll('#fsLapsRow button')) b.addEventListener('click', () => { AUDIO.click(); FREE.laps = clamp((FREE.laps | 0) + +b.dataset.d, 0, 50); saveFree(); showLaps(); });
+  // 走っている間：ジャイロのバーをタップ ＝ いまの持ち方をまっすぐに
+  $('tGy').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (tiltCenter(true)) toast('いまの持ち方を「まっすぐ」にしました', 1.4); });
+  $('pGyro').addEventListener('click', () => { AUDIO.click(); gyroStart(true); toast('いまの持ち方を「まっすぐ」にしました', 1.4); });
   for (const [id, key] of [['fsBots', 'bots'], ['fsLv', 'lv'], ['fsTraf', 'traffic'], ['fsWx', 'wx']]) for (const b of $(id).querySelectorAll('button')) b.addEventListener('click', () => { AUDIO.click(); FREE[key] = +b.dataset.v; saveFree(); openFreeSet(); });
   on('rNext', resultNext); on('rRetry', () => { AUDIO.click(); retryRace(); }); on('rQuit', () => { AUDIO.click(); toTitle(); });
   $('pauseB').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); AUDIO.resume(); pauseGame(); });
@@ -3073,7 +3188,7 @@ async function boot() {
     refreshTitle(); show('title'); LAST = performance.now(); requestAnimationFrame(frame);
   } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
 }
-window.__NH = { show, loadStage, STAGES, get STG() { return STG; }, MONO, WHEEL, BOTS, FREE, startFree, openFreeSet, freeOrder, progOf, setDensity, loop(on) { RUN = on; if (on) { LAST = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { composer.render(); renderMirror(); }, composer, GAME, SAVE, SET, TRK, TRAFFIC, RIVALS, CARS, AUDIO,
+window.__NH = { SIGNS, isTun, TILT, onResize, show, loadStage, STAGES, get STG() { return STG; }, MONO, WHEEL, BOTS, FREE, startFree, openFreeSet, freeOrder, progOf, setDensity, loop(on) { RUN = on; if (on) { LAST = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { composer.render(); renderMirror(); }, composer, GAME, SAVE, SET, TRK, TRAFFIC, RIVALS, CARS, AUDIO,
   get PL() { return PL; }, get RV() { return RV; }, MIRROR, LOW, renderMirror, MAT, TEX, CMAT, SPOT, hemi, moon, WORLD, startBattle, startFree, openGarage, layoutEdit, applyLayout, openSettings, LAMPS, RETRO, GLB, aiControl, statsOf, playerCtl, setWeather, setDawn, WX, get WET() { return WET; }, SPR, openRecords, STORY, FINAL, chatSay, freeSpec, drawFreeCar, time200, physics, openStory, preBattle, toTitle, showResult, IN, CAM, camera, scene, renderer };
 boot();
 </script>

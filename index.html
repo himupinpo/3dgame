@@ -508,7 +508,7 @@
     var g = DATA.games[current];
     if (fsOn) fsEnter();
     frame = document.createElement('iframe');
-    frame.setAttribute('allow', 'autoplay; fullscreen');
+    frame.setAttribute('allow', 'autoplay; fullscreen; accelerometer; gyroscope; magnetometer');
     if (g.src) {
       // 別のファイルになっているゲーム（Godot版など）。fpsの上限はゲームのページの中に入れてある
       frame.src = g.src;

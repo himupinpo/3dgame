@@ -55,6 +55,9 @@ h1 small { display: block; font-size: 15px; font-weight: 800; letter-spacing: .5
 .btn small { display: block; font-size: 12px; font-weight: 500; opacity: .85; margin-top: 2px; }
 .btn.main { background: linear-gradient(90deg, #ffb84a, #ff7a8a); border-color: rgba(255,255,255,.7); }
 .btn:hover { filter: brightness(1.1); }
+/* コースえらび（そらのぼり／雲のてっぺん） */
+.course { display: flex; gap: 8px; max-width: 360px; margin: -2vh auto 12px; } .course button { flex: 1; font: 900 15px var(--f); color: #fff; background: rgba(20,30,60,.45); border: 2px solid rgba(255,255,255,.3); border-radius: 14px; padding: 8px 10px; cursor: pointer; text-align: left; backdrop-filter: blur(6px); }
+.course button small { display: block; font-size: 11px; font-weight: 500; opacity: .85; margin-top: 1px; } .course button.on { background: rgba(255,255,255,.22); border-color: #fff; box-shadow: 0 0 0 2px rgba(255,184,74,.8); }
 h2 { font-size: 24px; font-weight: 900; margin: 6px 0 12px; }
 .card { background: var(--panel); border: 2px solid rgba(255,255,255,.25); border-radius: 18px; padding: 12px 16px; margin-bottom: 12px; backdrop-filter: blur(6px); }
 .opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; font-weight: 800; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,.1); } .opt:last-child { border-bottom: 0; }
@@ -77,7 +80,8 @@ input[type=range] { width: 150px; accent-color: #ffd25a; }
 
   <div id="title" class="scr veil"><div class="box">
     <h1>そらのぼり<small>SORA NOBORI ・ 5000m</small></h1>
-    <div class="lead">空にうかぶ物を足場にして、てっぺんの鐘まで登ろう</div>
+    <div class="lead">空にうかぶ物を足場にして、てっぺんまで登ろう</div>
+    <div class="course"><button class="on" id="cSora" type="button">そらのぼり<small>5000m・てっぺんの鐘</small></button><button id="cKumo" type="button">雲のてっぺん<small id="cKumoS">560m・てっぺんの星</small></button></div>
     <div class="menu">
       <button class="btn main" id="tCont">つづきから<small></small></button>
       <button class="btn" id="tNew">はじめから<small>港町の桟橋からスタート</small></button>
@@ -1257,6 +1261,9 @@ function pause(on) { G.paused = on; show(on ? 'pause' : 'play'); if (on && docum
 function wireUI() {
   $('tNew').onclick = () => { show('modeSel'); };
   $('tCont').onclick = () => startGame(true);
+  // もうひとつのコース「雲のてっぺん」（同じフォルダの kumo.html）へ
+  $('cKumo').onclick = () => { AU.click && AU.click(); location.href = 'kumo.html'; };
+  try { const r = JSON.parse(localStorage.getItem('kumo.rec') || 'null'); if (r && (r.best || r.clears)) $('cKumoS').textContent = `560m・ベスト ${Math.floor(r.best)}m${r.clears ? '・てっぺん ' + r.clears + '回' : ''}`; } catch (e) { /* なし */ }
   $('mNormal').onclick = () => { if (loadSave() && !confirm('いまのセーブを消して、はじめから登りますか？')) return; startGame(false, 0); };
   $('mHard').onclick = () => { if (loadSave() && !confirm('いまのセーブを消して、はじめから登りますか？')) return; startGame(false, 1); };
   $('mBack').onclick = () => show('title');
