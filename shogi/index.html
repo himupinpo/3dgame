@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>将棋</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800;900&family=Noto+Serif+JP:wght@700;900&display=swap">
+<style>
+/* 将棋（3D）：画面の文字・ボタン */
+:root { --ink: #fff8ec; --dim: #d8c8b0; --acc: #f0b85a; --red: #ff7a6a; --panel: rgba(34, 24, 16, .92); --line: rgba(255, 236, 205, .28); --f: "M PLUS Rounded 1c", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif; --m: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif; --sw: 1vw; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #1a120c; color: var(--ink); overflow: hidden; font-family: var(--f); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+#rot { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; overflow: hidden; }
+#c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { font-family: var(--f); }
+.hud { position: absolute; display: none; }
+body.playing .hud { display: flex; }
+/* 上：ふたりの名前・番 */
+#top { left: 50%; top: calc(10px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); gap: 10px; align-items: stretch; pointer-events: none; }
+.pc { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 16px; background: rgba(20, 14, 10, .72); border: 2px solid rgba(255,255,255,.12); min-width: 138px; transition: border-color .25s, box-shadow .25s; }
+.pc.turn { border-color: var(--acc); box-shadow: 0 0 0 2px rgba(240,184,90,.35), 0 0 18px rgba(240,184,90,.35); }
+.pc i { width: 26px; height: 30px; flex: none; background: linear-gradient(180deg, #f1d7a0, #c9a467); clip-path: polygon(50% 0, 88% 22%, 100% 100%, 0 100%, 12% 22%); font-style: normal; font-family: var(--m); font-weight: 900; font-size: 13px; color: #1a120a; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; }
+.pc.g i { transform: rotate(180deg); }
+.pc span { display: flex; flex-direction: column; line-height: 1.2; } .pc small { font-size: 11px; color: var(--dim); font-weight: 800; white-space: nowrap; } .pc b { font-size: 16px; font-weight: 900; white-space: nowrap; }
+.pc em { font-style: normal; font-size: 11px; color: var(--acc); font-weight: 800; height: 14px; white-space: nowrap; } .pc em.chk { color: var(--red); }
+#kifuL { left: 50%; top: calc(66px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); font-family: var(--m); font-weight: 700; font-size: 15px; padding: 3px 14px; border-radius: 10px; background: rgba(20,14,10,.55); pointer-events: none; white-space: nowrap; }
+#kifuL:empty { display: none; }
+/* 下：ボタン */
+#bot { left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); gap: 8px; }
+.hb { font-size: 14px; font-weight: 800; color: var(--ink); background: rgba(20, 14, 10, .78); border: 2px solid var(--line); border-radius: 14px; padding: 9px 14px; cursor: pointer; white-space: nowrap; }
+.hb:disabled { opacity: .35; cursor: default; } .hb:active:not(:disabled) { transform: translateY(1px); }
+#msg { left: 0; right: 0; top: 40%; justify-content: center; pointer-events: none; display: flex !important; }
+#msg span { font-size: min(40px, calc(8 * var(--sw))); font-weight: 900; padding: 10px 28px; border-radius: 20px; background: rgba(20,14,10,.78); text-shadow: 0 2px 6px rgba(0,0,0,.6); opacity: 0; transform: scale(.9); transition: opacity .25s, transform .25s; }
+#msg span.on { opacity: 1; transform: scale(1); } #msg span.chk { color: #ffb0a0; font-family: var(--m); }
+#think { left: 50%; top: calc(98px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); font-size: 13px; font-weight: 800; color: var(--dim); pointer-events: none; padding: 3px 12px; border-radius: 10px; background: rgba(20,14,10,.55); opacity: 0; transition: opacity .2s; }
+#think.on { opacity: 1; }
+#think i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); margin-left: 4px; animation: dot 1s infinite; } #think i:nth-child(2) { animation-delay: .15s; } #think i:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+/* 画面（メニュー） */
+.scr { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; z-index: 10; }
+.scr.on { display: flex; }
+.box { width: min(440px, 94vw); margin: auto; background: var(--panel); border: 2px solid var(--line); border-radius: 22px; padding: 20px 20px 16px; box-shadow: 0 10px 40px rgba(0,0,0,.5); text-align: center; }
+.box h2 { margin: 0 0 12px; font-size: 24px; font-weight: 900; color: var(--acc); }
+.mb { display: block; width: 100%; margin: 8px 0; padding: 13px 10px; font-size: 18px; font-weight: 900; color: var(--ink); background: rgba(255,255,255,.07); border: 2px solid var(--line); border-radius: 16px; cursor: pointer; text-decoration: none; }
+.mb.go { background: linear-gradient(180deg, #e9a948, #c97b2a); border-color: #ffd795; color: #2a1606; }
+.mb small { display: block; font-size: 12px; font-weight: 800; opacity: .8; margin-top: 2px; }
+.row { display: flex; gap: 8px; } .row .mb { flex: 1; }
+.lab { text-align: left; font-size: 13px; font-weight: 800; color: var(--dim); margin: 12px 0 4px; }
+.seg { display: flex; gap: 6px; } .seg button { flex: 1; padding: 9px 2px; font-size: 14px; font-weight: 800; color: var(--ink); background: rgba(255,255,255,.06); border: 2px solid var(--line); border-radius: 12px; cursor: pointer; }
+.seg button.on { background: rgba(240,184,90,.28); border-color: var(--acc); }
+input[type=range] { width: 100%; accent-color: var(--acc); }
+#title .box { background: rgba(28, 19, 12, .82); }
+#logo { font-family: var(--m); font-size: min(54px, calc(12 * var(--sw))); font-weight: 900; line-height: 1.1; margin: 4px 0 2px; letter-spacing: .12em; }
+#logoK { display: flex; justify-content: center; gap: 8px; margin: 6px 0 4px; } #logoK i { width: 34px; height: 40px; background: linear-gradient(180deg, #f1d7a0, #c9a467); clip-path: polygon(50% 0, 88% 22%, 100% 100%, 0 100%, 12% 22%); font-style: normal; font-family: var(--m); font-weight: 900; font-size: 17px; color: #1a120a; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; }
+#logoK i.r { color: #b3241b; }
+.sub { font-size: 13px; color: var(--dim); margin: 2px 0 10px; line-height: 1.6; }
+#resT { font-size: 40px; font-weight: 900; margin: 4px 0; } #resT.win { color: var(--acc); } #resT.lose { color: #9ab4d8; }
+#resS { font-size: 18px; font-weight: 900; margin: 4px 0 10px; font-family: var(--m); } #resD { font-size: 13px; color: var(--dim); margin-bottom: 8px; }
+.how { text-align: left; font-size: 14px; line-height: 1.8; } .how b { color: var(--acc); }
+#recT { width: 100%; border-collapse: collapse; font-size: 14px; } #recT td, #recT th { padding: 6px 4px; border-bottom: 1px dashed var(--line); } #recT th { color: var(--dim); font-weight: 800; font-size: 12px; }
+#kifuBox { max-height: 50vh; overflow-y: auto; text-align: left; font-family: var(--m); font-weight: 700; font-size: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 2px 12px; padding: 4px; touch-action: pan-y; }
+#kifuBox span i { font-style: normal; color: var(--dim); font-size: 11px; display: inline-block; width: 2.6em; font-family: var(--f); }
+/* 成る／成らない・確認 */
+.dlg { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 30; background: rgba(0,0,0,.25); }
+.dlg.on { display: flex; }
+.dlg .box { width: min(340px, 90vw); }
+.dlg p { font-size: 18px; font-weight: 900; margin: 6px 0 12px; line-height: 1.5; }
+#prK { display: flex; justify-content: center; gap: 22px; margin: 4px 0 10px; font-family: var(--m); font-weight: 900; font-size: 34px; } #prK b { color: #ff9a8a; }
+#loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1a120c; z-index: 40; font-weight: 800; color: var(--dim); }
+body.hub .scr { padding-left: 56px; }
+/* 低い画面（横向きのスマホなど）：タイトルとメニューをつめる */
+body.short .box { padding: 12px 16px 10px; } body.short #logoK, body.short #title .sub { display: none; } body.short #logo { font-size: 34px; margin: 0 0 4px; }
+body.short .mb { padding: 8px 10px; margin: 5px 0; font-size: 16px; } body.short .mb small { font-size: 11px; margin-top: 0; } body.short .lab { margin: 6px 0 3px; } body.short .seg button { padding: 6px 2px; }
+body.short #title .box { width: min(600px, 94vw); } body.short #tMain { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+@media (max-width: 460px) { .pc { min-width: 0; padding: 5px 10px 5px 6px; } .pc b { font-size: 14px; } .hb { padding: 8px 9px; font-size: 13px; } #top { gap: 6px; } }
+</style></head><body>
+<div id="rot">
+<canvas id="c"></canvas>
+<div class="hud" id="top"><div class="pc g" id="p1"><i>王</i><span><small>△ 後手</small><b id="n1">CPU</b><em id="e1"></em></span></div><div class="pc" id="p0"><i>玉</i><span><small>▲ 先手</small><b id="n0">きみ</b><em id="e0"></em></span></div></div>
+<div class="hud" id="kifuL"></div>
+<div class="hud" id="think">考えています<i></i><i></i><i></i></div>
+<div class="hud" id="bot"><button class="hb" id="bUndo" type="button">まった</button><button class="hb" id="bHint" type="button">ヒント</button><button class="hb" id="bView" type="button">真上から</button><button class="hb" id="bMenu" type="button">メニュー</button></div>
+<div class="hud" id="msg"><span id="msgT"></span></div>
+<div class="scr on" id="title"><div class="box">
+  <div id="logoK"><i>飛</i><i>角</i><i>玉</i><i class="r">と</i></div><div id="logo">将棋</div>
+  <div class="sub">9×9の盤で、相手の玉（王）を詰ませたら勝ち。取った駒は、自分の駒として使える。</div>
+  <div id="tMain">
+  <button class="mb go" id="tCpu" type="button">CPUと対戦<small>4つの強さ・先手／後手</small></button>
+  <button class="mb" id="t2p" type="button">ふたりで対戦<small>1台の画面で交代しながら</small></button>
+  <button class="mb" id="tCont" type="button">つづきから<small id="tContS"></small></button>
+  <a class="mb" id="tNet" href="online.html">オンライン対局<small>はなれた人と（2Dの盤）</small></a>
+  </div>
+  <div class="row"><button class="mb" id="tRec" type="button">記録</button><button class="mb" id="tHow" type="button">あそびかた</button><button class="mb" id="tSet" type="button">設定</button></div>
+</div></div>
+<div class="scr" id="cpuSel"><div class="box"><h2>CPUと対戦</h2>
+  <div class="lab">CPUの強さ</div><div class="seg" id="sLv"><button data-v="0">やさしい</button><button data-v="1">ふつう</button><button data-v="2">つよい</button><button data-v="3">めっちゃ<br>つよい</button></div>
+  <div class="sub" id="lvNote" style="margin-top:8px"></div>
+  <div class="lab">きみは</div><div class="seg" id="sSide"><button data-v="0">先手（▲）</button><button data-v="1">後手（△）</button><button data-v="2">ランダム</button></div>
+  <button class="mb go" id="cGo" type="button" style="margin-top:16px">はじめる</button><button class="mb" id="cBack" type="button">もどる</button>
+</div></div>
+<div class="scr" id="pause"><div class="box"><h2>メニュー</h2>
+  <button class="mb go" id="pRes" type="button">つづける</button>
+  <div class="row"><button class="mb" id="pKifu" type="button">棋譜</button><button class="mb" id="pResign" type="button">投了する</button></div>
+  <button class="mb" id="pNew" type="button">はじめから</button>
+  <div class="row"><button class="mb" id="pSet" type="button">設定</button><button class="mb" id="pHow" type="button">あそびかた</button></div><button class="mb" id="pQuit" type="button">タイトルへ</button>
+</div></div>
+<div class="scr" id="result"><div class="box"><div id="resT"></div><div id="resS"></div><div id="resD"></div>
+  <button class="mb go" id="rAgain" type="button">もう一局</button><div class="row"><button class="mb" id="rKifu" type="button">棋譜</button><button class="mb" id="rView" type="button">盤を見る</button></div><button class="mb" id="rQuit" type="button">タイトルへ</button>
+</div></div>
+<div class="scr" id="kifu"><div class="box"><h2>棋譜</h2><div id="kifuBox"></div><button class="mb" id="kBack" type="button" style="margin-top:12px">もどる</button></div></div>
+<div class="scr" id="settings"><div class="box"><h2>設定</h2>
+  <div class="lab">動かせるマスに印を出す</div><div class="seg" id="sHint"><button data-v="1">出す</button><button data-v="0">出さない</button></div>
+  <div class="lab">駒の字</div><div class="seg" id="sKoma"><button data-v="0">1文字（見やすい）</button><button data-v="1">2文字（本物ふう）</button></div>
+  <div class="lab">駒が動く速さ</div><div class="seg" id="sSpd"><button data-v="0">ゆっくり</button><button data-v="1">ふつう</button><button data-v="2">はやい</button></div>
+  <div class="lab">盤の色</div><div class="seg" id="sBoard"><button data-v="0">かや</button><button data-v="1">あかるい</button><button data-v="2">こい</button></div>
+  <div class="lab">ふたりで対戦：番の人のほうへ盤をまわす</div><div class="seg" id="sTurn"><button data-v="1">まわす</button><button data-v="0">まわさない</button></div>
+  <div class="lab">音量</div><input type="range" id="sVol" min="0" max="1" step="0.05">
+  <button class="mb" id="setBack" type="button" style="margin-top:14px">もどる</button>
+</div></div>
+<div class="scr" id="how"><div class="box"><h2>あそびかた</h2><div class="how">
+  <b>勝ち負け</b>：相手の玉（王）が、どう逃げても取られる形（詰み）にしたら勝ち。指せる手がなくなっても負け。同じ形が4回くり返されたら引き分け（千日手）。<br>
+  <b>駒の動き</b>：歩＝前に1つ。香＝前にまっすぐ何マスでも。桂＝前へ2・横へ1（とびこえる）。銀＝前3つとななめ後ろ。金＝前3つ・横・まうしろ。角＝ななめに何マスでも。飛＝たて・よこに何マスでも。玉＝まわり8マス。<br>
+  <b>成る</b>：相手の陣地（向こうの3段）に入る・出る・中で動くとき、ひっくり返して強くなれる（と・成香・成桂・成銀は金と同じ動き。馬＝角＋たてよこ1。龍＝飛＋ななめ1）。<br>
+  <b>持ち駒</b>：取った駒は、自分の番に空いているマスへ打てる。ただし、歩を同じ列に2枚（二歩）・動けない所・歩を打って詰ませる（打ち歩詰め）はだめ。<br>
+  <b>操作</b>：自分の駒をタップ → 光った点のマスをタップ。持ち駒（駒台の駒）もタップで選べる。画面をなぞると盤のまわりを見回せる（2本の指・ホイールで近く／遠く）。「真上から」で上から見る。<br>
+  <b>まった</b>：ひとつ前の自分の番にもどす。<b>ヒント</b>：CPU が考えた、よさそうな手を矢印で出す。
+</div><button class="mb" id="howBack" type="button" style="margin-top:12px">もどる</button></div></div>
+<div class="scr" id="records"><div class="box"><h2>記録</h2><table id="recT"></table><button class="mb" id="recBack" type="button" style="margin-top:12px">もどる</button></div></div>
+<div class="dlg" id="promo"><div class="box"><p>成りますか？</p><div id="prK"><span id="prA"></span><span>→</span><b id="prB"></b></div><div class="row"><button class="mb go" id="prYes" type="button">成る</button><button class="mb" id="prNo" type="button">成らない</button></div></div></div>
+<div class="dlg" id="ask"><div class="box"><p id="askT"></p><div class="row"><button class="mb go" id="askYes" type="button">はい</button><button class="mb" id="askNo" type="button">やめる</button></div></div></div>
+<div id="loading">盤を用意しています…</div>
+</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+// =========================================================================================
+//  将棋 — 3D の盤で指す将棋。CPU（4つの強さ）・ふたりで対戦（オンライン対局は 2D の盤：online.html）
+// =========================================================================================
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v), lerp = (a, b, t) => a + (b - a) * t, damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
+const TAU = Math.PI * 2, ease = t => t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2, V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+if (IS_TOUCH) document.body.classList.add('touch');
+// ---------- 設定（この端末に保存） ----------
+const SET = { hint: 1, spd: 1, board: 0, turn: 1, vol: .8, lv: 1, side: 0, koma: 0 };
+try { Object.assign(SET, JSON.parse(localStorage.getItem('sg3-settings')) || {}); } catch (e) { /* はじめて */ }
+const saveSet = () => { try { localStorage.setItem('sg3-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
+const HUB = { embedded: window.parent !== window, vol: 1 };
+if (HUB.embedded) document.body.classList.add('hub');
+const ROT = { on: false };
+const VW = () => (ROT.on ? innerHeight : innerWidth), VH = () => (ROT.on ? innerWidth : innerHeight);
+const toStage = (cx, cy) => (ROT.on ? { x: cy, y: innerWidth - cx } : { x: cx, y: cy });
+// ---------- 描く ----------
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 16 / 9, .1, 200); scene.add(camera);
+function onResize() {
+  const r = $('rot'); r.style.width = VW() + 'px'; r.style.height = VH() + 'px'; r.style.transform = ROT.on ? 'rotate(90deg) translateY(-100%)' : 'none';
+  document.documentElement.style.setProperty('--sw', VW() / 100 + 'px'); document.body.classList.toggle('short', VH() < 560);
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(VW(), VH(), false); camera.aspect = VW() / VH(); camera.updateProjectionMatrix();
+}
+addEventListener('resize', onResize);
+const newCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
+function ctex(c, rep) { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); } return t; }
+function hash(x, y) { let n = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0; n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; }
+function vnoise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); return lerp(lerp(hash(xi, yi), hash(xi + 1, yi), u), lerp(hash(xi, yi + 1), hash(xi + 1, yi + 1), u), v); }
+// 木目（年輪のすじ）
+function woodCanvas(W, H, c0, c1, k = 1) {
+  const [c, g] = newCanvas(W, H), img = g.createImageData(W, H), d = img.data;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const n = vnoise(x / 90, y / 12) * 2.2 + vnoise(x / 30, y / 4) * .5, t = .5 + .5 * Math.sin((y / H * 22 * k + n * 3.2) * Math.PI), f = Math.pow(t, 2.6) * .8 + vnoise(x / 3, y / 1.2) * .2, o = (y * W + x) * 4;
+    for (let q = 0; q < 3; q++) d[o + q] = lerp(c0[q], c1[q], f);
+    d[o + 3] = 255;
+  }
+  g.putImageData(img, 0, 0); return c;
+}
+
+// =========================================================================================
+//  ルール（盤は B[段-1][9-筋]。o=0 が先手（下＝手前から上へ）、o=1 が後手）と、CPU（ワーカーで考える）
+// =========================================================================================
+// 盤は B[段-1][9-筋]。o=0 が先手（下から上へ）、o=1 が後手
+const NAME={FU:'歩',KY:'香',KE:'桂',GI:'銀',KI:'金',KA:'角',HI:'飛',OU:'玉'};
+const PNAME={FU:'と',KY:'杏',KE:'圭',GI:'全',KA:'馬',HI:'龍'};            // 盤に出す成り駒の字
+const KNAME={FU:'と',KY:'成香',KE:'成桂',GI:'成銀',KA:'馬',HI:'龍'};        // 棋譜の書き方
+const HAND=['HI','KA','KI','GI','KE','KY','FU'];
+const PROMOTABLE=new Set(['FU','KY','KE','GI','KA','HI']);
+const ORTH=[[0,-1],[0,1],[-1,0],[1,0]],DIAG=[[-1,-1],[1,-1],[-1,1],[1,1]];
+const STEP={FU:[[0,-1]],KE:[[-1,-2],[1,-2]],GI:[[-1,-1],[0,-1],[1,-1],[-1,1],[1,1]],KI:[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[0,1]],OU:ORTH.concat(DIAG)};
+const SLIDE={KY:[[0,-1]],KA:DIAG,HI:ORTH};
+function vecs(p){if(p.pr){if(p.t==='KA')return[ORTH,DIAG];if(p.t==='HI')return[DIAG,ORTH];return[STEP.KI,[]]}return[STEP[p.t]||[],SLIDE[p.t]||[]]}
+const inB=(r,c)=>r>=0&&r<9&&c>=0&&c<9;
+// 駒がきいているマス（自分の駒があるマスはのぞく）
+function reach(B,r,c){const p=B[r][c],s=p.o===0?1:-1,out=[],[st,sl]=vecs(p);
+  for(const [dx,dy] of st){const a=r+dy*s,b=c+dx*s;if(inB(a,b)&&(!B[a][b]||B[a][b].o!==p.o))out.push([a,b])}
+  for(const [dx,dy] of sl){let a=r+dy*s,b=c+dx*s;while(inB(a,b)){const q=B[a][b];if(q){if(q.o!==p.o)out.push([a,b]);break}out.push([a,b]);a+=dy*s;b+=dx*s}}
+  return out}
+function attacked(B,r,c,by){for(let i=0;i<9;i++)for(let j=0;j<9;j++){const p=B[i][j];if(p&&p.o===by)for(const [a,b] of reach(B,i,j))if(a===r&&b===c)return true}return false}
+function kingAt(B,o){for(let i=0;i<9;i++)for(let j=0;j<9;j++){const p=B[i][j];if(p&&p.o===o&&p.t==='OU')return[i,j]}return null}
+function inCheck(S,o){const k=kingAt(S.B,o);return !!k&&attacked(S.B,k[0],k[1],1-o)}
+const copy=S=>({B:S.B.map(row=>row.map(x=>x&&{t:x.t,o:x.o,pr:x.pr})),H:[Object.assign({},S.H[0]),Object.assign({},S.H[1])],turn:S.turn});
+function doMove(S,m){const N=copy(S),o=S.turn;
+  if(m.drop){N.B[m.tr][m.tc]={t:m.drop,o,pr:false};if(!--N.H[o][m.drop])delete N.H[o][m.drop]}
+  else{const p=N.B[m.fr][m.fc],cap=N.B[m.tr][m.tc];if(cap)N.H[o][cap.t]=(N.H[o][cap.t]||0)+1;N.B[m.fr][m.fc]=null;if(m.pro)p.pr=true;N.B[m.tr][m.tc]=p}
+  N.turn=1-o;return N}
+const far=(o,r)=>o===0?r:8-r;                       // 相手陣の奥からの距離（0=いちばん奥）
+const zone=(o,r)=>far(o,r)<=2;
+const mustPro=(p,tr)=>!p.pr&&((p.t==='FU'||p.t==='KY')&&far(p.o,tr)===0||p.t==='KE'&&far(p.o,tr)<=1);
+const canPro=(p,fr,tr)=>!p.pr&&PROMOTABLE.has(p.t)&&(zone(p.o,fr)||zone(p.o,tr));
+// 盤の駒の合法手（動かしたあと自分の玉が取られないもの）
+function movesFrom(S,r,c){const p=S.B[r][c];if(!p||p.o!==S.turn)return[];return reach(S.B,r,c).filter(([a,b])=>!inCheck(doMove(S,{fr:r,fc:c,tr:a,tc:b}),S.turn))}
+// 持ち駒を打てるか（二歩・行き所のない駒・打ち歩詰めは禁止）
+function dropOK(S,t,r,c,inner){const o=S.turn;if(S.B[r][c])return false;
+  if((t==='FU'||t==='KY')&&far(o,r)===0||t==='KE'&&far(o,r)<=1)return false;
+  if(t==='FU')for(let i=0;i<9;i++){const q=S.B[i][c];if(q&&q.o===o&&q.t==='FU'&&!q.pr)return false}
+  const N=doMove(S,{drop:t,tr:r,tc:c});if(inCheck(N,o))return false;
+  if(t==='FU'&&!inner&&inCheck(N,1-o)&&!anyMove(N,true))return false;
+  return true}
+function dropsOf(S,t){const out=[];if(!S.H[S.turn][t])return out;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(dropOK(S,t,r,c))out.push([r,c]);return out}
+function anyMove(S,inner){for(let r=0;r<9;r++)for(let c=0;c<9;c++){const p=S.B[r][c];if(p&&p.o===S.turn&&movesFrom(S,r,c).length)return true}
+  for(const t in S.H[S.turn])for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(dropOK(S,t,r,c,inner))return true;return false}
+function start(){const B=Array.from({length:9},()=>Array(9).fill(null)),back=['KY','KE','GI','KI','OU','KI','GI','KE','KY'];
+  for(let c=0;c<9;c++){B[0][c]={t:back[c],o:1,pr:false};B[8][c]={t:back[c],o:0,pr:false};B[2][c]={t:'FU',o:1,pr:false};B[6][c]={t:'FU',o:0,pr:false}}
+  B[1][1]={t:'HI',o:1,pr:false};B[1][7]={t:'KA',o:1,pr:false};B[7][1]={t:'KA',o:0,pr:false};B[7][7]={t:'HI',o:0,pr:false};return{B,H:[{},{}],turn:0}}
+const posKey=S=>S.turn+S.B.map(row=>row.map(p=>p?(p.o?'v':'^')+p.t+(p.pr?'+':''):'.').join('')).join('/')+JSON.stringify(S.H.map(h=>HAND.map(t=>h[t]||0)));
+// 棋譜の1手（▲７六歩・△同　角成・▲５五角打 など）
+const ZEN='０１２３４５６７８９',KAN=['','一','二','三','四','五','六','七','八','九'];
+function moveText(S,m,prev){const o=S.turn,dest=prev&&prev.tr===m.tr&&prev.tc===m.tc?'同　':ZEN[9-m.tc]+KAN[m.tr+1];
+  if(m.drop)return(o?'△':'▲')+dest+NAME[m.drop]+'打';
+  const p=S.B[m.fr][m.fc],nm=p.t==='OU'?(o?'王':'玉'):p.pr?KNAME[p.t]:NAME[p.t];
+  return(o?'△':'▲')+dest+nm+(m.pro?'成':canPro(p,m.fr,m.tr)&&!mustPro(p,m.tr)?'不成':'')}
+// 指せる手か（CPU の答えのたしかめにも使う）
+function legal(S,m){if(!m)return false;if(m.drop)return !!S.H[S.turn][m.drop]&&dropOK(S,m.drop,m.tr,m.tc);const p=S.B[m.fr]&&S.B[m.fr][m.fc];if(!p||p.o!==S.turn)return false;
+  if(!movesFrom(S,m.fr,m.fc).some(([a,b])=>a===m.tr&&b===m.tc))return false;if(m.pro&&!canPro(p,m.fr,m.tr))return false;if(!m.pro&&mustPro(p,m.tr))return false;return true}
+// ================= CPU（ワーカーで考える。使えないときは、この画面で） =================
+// 駒：1歩 2香 3桂 4銀 5金 6角 7飛 8玉、+8 で成り（9と 10成香 11成桂 12成銀 14馬 15龍）。先手は正、後手は負。マス＝行×9＋列
+const SG_SRC = `
+const VAL = [0, 100, 300, 350, 500, 560, 820, 960, 0, 560, 520, 520, 560, 0, 1080, 1260];
+const HVAL = [0, 112, 330, 380, 540, 600, 920, 1080];
+const STEPV = [], SLIDEV = [];
+(function () {
+  const G = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0]], D = [[-1, -1], [-1, 1], [1, -1], [1, 1]], O = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const S = { 1: [[-1, 0]], 4: [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 1]], 5: G, 8: D.concat(O), 9: G, 10: G, 11: G, 12: G, 14: O, 15: D };
+  const L = { 2: [[-1, 0]], 6: D, 7: O, 14: D, 15: O };
+  for (let t = 0; t < 16; t++) { STEPV[t] = S[t] || []; SLIDEV[t] = L[t] || []; }
+})();
+// t の駒が、先手から見て (dr, dc) へ1歩でいけるか／すべっていけるか（3×3の表）
+const CANS = [], CANL = [];
+for (let t = 0; t < 16; t++) { CANS[t] = new Uint8Array(9); CANL[t] = new Uint8Array(9); for (const [a, b] of STEPV[t]) CANS[t][(a + 1) * 3 + b + 1] = 1; for (const [a, b] of SLIDEV[t]) { CANL[t][(a + 1) * 3 + b + 1] = 1; CANS[t][(a + 1) * 3 + b + 1] = 1; } }
+const DIR8 = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+// マス sq は、by 側の駒にねらわれているか
+function attacked(b, sq, by) {
+  const r = (sq / 9) | 0, c = sq % 9, sg = by ? -1 : 1;
+  for (let k = 0; k < 8; k++) {
+    const dr = DIR8[k][0], dc = DIR8[k][1];
+    let rr = r + dr, cc = c + dc, n = 1;
+    while (rr >= 0 && rr < 9 && cc >= 0 && cc < 9) {
+      const p = b[rr * 9 + cc];
+      if (p) {
+        if ((p > 0) === (by === 0)) { const t = p > 0 ? p : -p, vr = by ? dr : -dr, vc = by ? dc : -dc, idx = (vr + 1) * 3 + vc + 1; if (n === 1 ? CANS[t][idx] : CANL[t][idx]) return true; }
+        break;
+      }
+      rr += dr; cc += dc; n++;
+    }
+  }
+  // 桂馬
+  const kr = r + (by ? -2 : 2); if (kr >= 0 && kr < 9) for (const dc of [-1, 1]) { const cc = c + dc; if (cc >= 0 && cc < 9 && b[kr * 9 + cc] === 3 * sg) return true; }
+  return false;
+}
+function kingSq(b, o) { const k = o ? -8 : 8; for (let s = 0; s < 81; s++) if (b[s] === k) return s; return -1; }
+const inZone = (o, r) => (o ? r >= 6 : r <= 2);
+// 手：from（0〜80、打つときは 81＋駒）・to・成り
+const MV = (f, t, p) => f | (t << 7) | (p << 14);
+function gen(b, h, o, out, capsOnly) {
+  const sg = o ? -1 : 1;
+  for (let s = 0; s < 81; s++) {
+    const p = b[s]; if (!p || (p > 0) !== (o === 0)) continue;
+    const t = p * sg, r = (s / 9) | 0, c = s % 9;
+    const tryTo = (rr, cc) => {
+      const ts = rr * 9 + cc, q = b[ts]; if (q && (q > 0) === (o === 0)) return false; if (capsOnly && !q) return !q;
+      const canP = t <= 7 && t !== 5 && (inZone(o, r) || inZone(o, rr)), last = o ? 8 - rr : rr;
+      const must = (t === 1 || t === 2) && last === 0 || t === 3 && last <= 1;
+      if (canP) out.push(MV(s, ts, 1));
+      if (!must && !(canP && (t === 1 || t === 6 || t === 7))) out.push(MV(s, ts, 0));   // 歩・角・飛は、成れるなら成る
+      return !q;
+    };
+    for (const [dr, dc] of STEPV[t]) { const rr = r + (o ? -dr : dr), cc = c + (o ? -dc : dc); if (rr >= 0 && rr < 9 && cc >= 0 && cc < 9) tryTo(rr, cc); }
+    for (const [dr, dc] of SLIDEV[t]) { let rr = r + (o ? -dr : dr), cc = c + (o ? -dc : dc); while (rr >= 0 && rr < 9 && cc >= 0 && cc < 9) { const empty = !b[rr * 9 + cc]; if (!tryTo(rr, cc) || !empty) break; rr += o ? -dr : dr; cc += o ? -dc : dc; } }
+    if (t === 3) { const rr = r + (o ? 2 : -2); if (rr >= 0 && rr < 9) for (const dc of [-1, 1]) { const cc = c + dc; if (cc >= 0 && cc < 9) tryTo(rr, cc); } }
+  }
+  if (capsOnly) return out;
+  // 打つ（二歩・行き所のない駒はだめ。歩を玉の目の前に打つ手は、打ち歩詰めをさけるために使わない）
+  const ek = kingSq(b, 1 - o), ekf = ek >= 0 ? ek + (o ? -9 : 9) : -1;
+  for (let t = 1; t <= 7; t++) {
+    if (!h[o * 8 + t]) continue;
+    let pawnCol = null; if (t === 1) { pawnCol = new Uint8Array(9); for (let s = 0; s < 81; s++) if (b[s] === sg) pawnCol[s % 9] = 1; }
+    for (let s = 0; s < 81; s++) {
+      if (b[s]) continue; const r = (s / 9) | 0, last = o ? 8 - r : r;
+      if ((t === 1 || t === 2) && last === 0 || t === 3 && last <= 1) continue;
+      if (t === 1 && (pawnCol[s % 9] || s === ekf)) continue;
+      out.push(MV(81 + t, s, 0));
+    }
+  }
+  return out;
+}
+function make(b, h, o, m) {
+  const f = m & 127, to = (m >> 7) & 127, pr = m >> 14, sg = o ? -1 : 1;
+  if (f >= 81) { b[to] = (f - 81) * sg; h[o * 8 + f - 81]--; return 0; }
+  const cap = b[to], p = b[f]; b[f] = 0; b[to] = pr ? p + 8 * sg : p;
+  if (cap) { let ct = cap < 0 ? -cap : cap; if (ct > 8) ct -= 8; h[o * 8 + ct]++; }
+  return cap;
+}
+function unmake(b, h, o, m, cap) {
+  const f = m & 127, to = (m >> 7) & 127, pr = m >> 14, sg = o ? -1 : 1;
+  if (f >= 81) { b[to] = 0; h[o * 8 + f - 81]++; return; }
+  const p = b[to]; b[f] = pr ? p - 8 * sg : p; b[to] = cap;
+  if (cap) { let ct = cap < 0 ? -cap : cap; if (ct > 8) ct -= 8; h[o * 8 + ct]--; }
+}
+// 形勢：駒の価値＋持ち駒＋玉のまわりの守り・相手玉に近い攻め駒（先手から見た点を、o の側に直す）
+function evalS(b, h, o) {
+  let s = 0; const k0 = kingSq(b, 0), k1 = kingSq(b, 1); if (k0 < 0) return o ? 99999 : -99999; if (k1 < 0) return o ? -99999 : 99999;
+  const r0 = (k0 / 9) | 0, c0 = k0 % 9, r1 = (k1 / 9) | 0, c1 = k1 % 9;
+  for (let q = 0; q < 81; q++) {
+    const p = b[q]; if (!p) continue; const t = p > 0 ? p : -p; if (t === 8) continue;
+    const r = (q / 9) | 0, c = q % 9; let v = VAL[t];
+    const dOwn = p > 0 ? Math.max(Math.abs(r - r0), Math.abs(c - c0)) : Math.max(Math.abs(r - r1), Math.abs(c - c1)), dEn = p > 0 ? Math.max(Math.abs(r - r1), Math.abs(c - c1)) : Math.max(Math.abs(r - r0), Math.abs(c - c0));
+    if ((t === 4 || t === 5 || t >= 9 && t <= 12) && dOwn <= 2) v += 30;          // 金銀が玉のそば＝かたい
+    if (dEn <= 2) v += t === 6 || t === 7 || t >= 14 ? 45 : 25;                     // 相手玉のそばの攻め駒
+    if (t === 1) v += (p > 0 ? 6 - r : r - 2) * 3;                                  // 歩は少し前へ
+    s += p > 0 ? v : -v;
+  }
+  for (let t = 1; t <= 7; t++) s += (h[t] - h[8 + t]) * HVAL[t];
+  // 玉のまわりの空き・ねらわれているマス
+  for (const [k, kr, kc, sg] of [[k0, r0, c0, 1], [k1, r1, c1, -1]]) { let open = 0; for (const [a, d] of DIR8) { const rr = kr + a, cc = kc + d; if (rr < 0 || rr > 8 || cc < 0 || cc > 8) continue; const p = b[rr * 9 + cc]; if (!p) open++; } s -= sg * open * 9; void k; }
+  return o ? -s : s;
+}
+let NODES = 0, DEAD = 0; const ABORT = { a: 1 }, MATE = 90000;
+function order(b, ms) {
+  const sc = new Int32Array(ms.length);
+  for (let i = 0; i < ms.length; i++) { const m = ms[i], f = m & 127, to = (m >> 7) & 127, q = b[to]; let v = 0; if (q) { const ct = q < 0 ? -q : q; v = VAL[ct] * 10 - (f < 81 ? VAL[Math.abs(b[f])] : 50) + 100000; } if (m >> 14) v += 3000; if (f >= 81) v -= 200; sc[i] = v; }
+  const idx = Array.from(ms.keys()).sort((x, y) => sc[y] - sc[x]); return idx.map(i => ms[i]);
+}
+function qs(b, h, o, al, be, d) {
+  if ((++NODES & 4095) === 0 && Date.now() > DEAD) throw ABORT;
+  const stand = evalS(b, h, o); if (stand >= be) return stand; if (stand > al) al = stand; if (d > 5) return stand;
+  const ms = order(b, gen(b, h, o, [], true)); const ko = kingSq(b, o);
+  for (const m of ms) { const cap = make(b, h, o, m); const kq = (m & 127) === ko ? (m >> 7) & 127 : ko; if (kq >= 0 && attacked(b, kq, 1 - o)) { unmake(b, h, o, m, cap); continue; } const ct = cap < 0 ? -cap : cap; if (ct === 8) { unmake(b, h, o, m, cap); return MATE; }
+    const v = -qs(b, h, 1 - o, -be, -al, d + 1); unmake(b, h, o, m, cap); if (v >= be) return v; if (v > al) al = v; }
+  return al;
+}
+function ab(b, h, o, depth, al, be, ply) {
+  if ((++NODES & 4095) === 0 && Date.now() > DEAD) throw ABORT;
+  if (depth <= 0) return qs(b, h, o, al, be, 0);
+  const ms = order(b, gen(b, h, o, [], false)), ko = kingSq(b, o); let best = -MATE * 2, legal = 0;
+  for (const m of ms) {
+    const cap = make(b, h, o, m), kq = (m & 127) === ko ? (m >> 7) & 127 : ko;
+    if (kq >= 0 && attacked(b, kq, 1 - o)) { unmake(b, h, o, m, cap); continue; } legal++;
+    const v = -ab(b, h, 1 - o, depth - 1, -be, -al, ply + 1); unmake(b, h, o, m, cap);
+    if (v > best) { best = v; if (v > al) { al = v; if (al >= be) break; } }
+  }
+  if (!legal) return -MATE + ply;   // 詰み
+  return best;
+}
+// lv：0 よわい・1 ふつう・2 つよい・3 めっちゃつよい
+function think(bArr, hArr, o, lv, tl) {
+  const b = Int8Array.from(bArr), h = Int8Array.from(hArr), ko = kingSq(b, o);
+  const all = order(b, gen(b, h, o, [], false)).filter(m => { const cap = make(b, h, o, m), kq = (m & 127) === ko ? (m >> 7) & 127 : ko, ok = !(kq >= 0 && attacked(b, kq, 1 - o)); unmake(b, h, o, m, cap); return ok; });
+  if (!all.length) return { move: -1 };
+  const cfg = [{ d: 1, t: 400, noise: 160 }, { d: 3, t: 1300, noise: 18 }, { d: 6, t: 3200, noise: 6 }, { d: 9, t: 6500, noise: 2 }][lv], T = tl || cfg.t, t0 = Date.now();
+  DEAD = t0 + T; NODES = 0; let ord = all, best = all[0], bestV = 0, done = 0;
+  try {
+    for (let d = 1; d <= cfg.d; d++) {
+      const sc = [];
+      let al = -MATE * 2;
+      for (const m of ord) { const cap = make(b, h, o, m); const v = -ab(b, h, 1 - o, d - 1, -MATE * 2, lv === 0 ? MATE * 2 : -al + cfg.noise, 1) + (Math.random() - .5) * cfg.noise * 2; unmake(b, h, o, m, cap); sc.push([m, v]); if (v > al) al = v; }
+      sc.sort((x, y) => y[1] - x[1]); ord = sc.map(x => x[0]); best = sc[0][0]; bestV = sc[0][1]; done = d;
+      if (bestV > MATE - 100) break;
+      if (Date.now() - t0 > T * .45) break;   // つぎの深さは間に合わない
+    }
+  } catch (e) { if (e !== ABORT) throw e; }
+  return { move: best, val: Math.round(bestV), depth: done, nodes: NODES };
+}
+`;
+
+const SGE = new Function(SG_SRC + '\nreturn { think };')();
+const ECODE = { FU: 1, KY: 2, KE: 3, GI: 4, KI: 5, KA: 6, HI: 7, OU: 8 }, ETN = ['', 'FU', 'KY', 'KE', 'GI', 'KI', 'KA', 'HI'];
+const AIW = { w: null, id: 0, wait: new Map() };
+try {
+  const url = URL.createObjectURL(new Blob([SG_SRC + '\nonmessage = e => { const d = e.data; postMessage({ id: d.id, r: think(d.b, d.h, d.o, d.lv, d.tl) }); };'], { type: 'text/javascript' }));
+  AIW.w = new Worker(url);
+  AIW.w.onmessage = e => { const f = AIW.wait.get(e.data.id); if (f) { AIW.wait.delete(e.data.id); f(e.data.r); } };
+  AIW.w.onerror = () => { AIW.w = null; for (const f of AIW.wait.values()) f(null); AIW.wait.clear(); };
+} catch (e) { AIW.w = null; }
+function toEng(St) { const b = new Array(81).fill(0), h = new Array(16).fill(0); for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) { const p = St.B[r][c]; if (p) b[r * 9 + c] = (ECODE[p.t] + (p.pr ? 8 : 0)) * (p.o ? -1 : 1); } for (const o of [0, 1]) for (const t in St.H[o]) h[o * 8 + ECODE[t]] = St.H[o][t]; return { b, h }; }
+function fromEng(m) { const f = m & 127, to = (m >> 7) & 127, pr = m >> 14; if (f >= 81) return { drop: ETN[f - 81], tr: (to / 9) | 0, tc: to % 9 }; return { fr: (f / 9) | 0, fc: f % 9, tr: (to / 9) | 0, tc: to % 9, pro: !!pr }; }
+// CPU に聞く：答えは { move（ルールの形）, val }。ワーカーが答えないときは、この画面で考える
+function askCPU(St, lv, tl) {
+  const { b, h } = toEng(St), o = St.turn, local = () => new Promise(res => setTimeout(() => res(SGE.think(b, h, o, lv, tl)), 30));
+  const conv = r => r && r.move >= 0 ? { move: fromEng(r.move), val: r.val, depth: r.depth } : { move: null };
+  if (!AIW.w) return local().then(conv);
+  return new Promise(res => {
+    const id = ++AIW.id; let done = false; const fin = r => { if (done) return; done = true; if (r) res(conv(r)); else local().then(q => res(conv(q))); };
+    AIW.wait.set(id, fin); AIW.w.postMessage({ id, b, h, o, lv, tl });
+    setTimeout(() => { if (!done) { AIW.wait.delete(id); fin(null); } }, (tl || [400, 1300, 3200, 6500][lv] || 3000) + 6000);
+  });
+}
+// 局面ぜんぶを手から作りなおす：いまの局面・棋譜の文字・終わったか（詰み・指す手なし・千日手）
+function replayAll(moves, resigned) {
+  let S = start(); const texts = [], seen = {}; seen[posKey(S)] = 1; let rep = false;
+  for (let i = 0; i < moves.length; i++) { const m = moves[i]; texts.push(moveText(S, m, moves[i - 1])); S = doMove(S, m); const k = posKey(S); seen[k] = (seen[k] || 0) + 1; if (seen[k] >= 4) rep = true; }
+  let over = null;
+  if (resigned != null) over = { type: 'resign', win: 1 - resigned };
+  else if (!anyMove(S)) over = { type: inCheck(S, S.turn) ? 'mate' : 'stuck', win: 1 - S.turn };
+  else if (rep) over = { type: 'draw' };
+  return { S, texts, over };
+}
+
+// =========================================================================================
+//  3D の盤：木のテーブル・ランプの光・かやの盤・五角形の駒（字は表が黒、裏が赤）・駒台・印・カメラ
+//  マスの位置：列 c（0＝９筋 … 8＝１筋）→ x、段 r（0＝一段・向こう … 8＝九段・手前）→ z。先手は手前（z が＋）
+// =========================================================================================
+const CW = 1.0, CH = 1.08, KTH = .2, KBV = .025;
+const sqPos = (r, c, out = V3()) => out.set((c - 4) * CW, 0, (r - 4) * CH);
+const BRD = { sqObj: [], handObj: [[], []], kd: [null, null], marks: [], pieces: new Set(), lay: '' };
+const MAT = {}, KGEO = {}, KTEX = {};
+const KSC = { OU: 1, HI: .97, KA: .97, KI: .93, GI: .93, KE: .9, KY: .87, FU: .84 };
+const ONE = { FU: '歩', KY: '香', KE: '桂', GI: '銀', KI: '金', KA: '角', HI: '飛' }, ONE_P = { FU: 'と', KY: '杏', KE: '圭', GI: '全', KA: '馬', HI: '龍' };
+const TWO = { FU: '歩兵', KY: '香車', KE: '桂馬', GI: '銀将', KI: '金将', KA: '角行', HI: '飛車' }, TWO_P = { FU: 'と', KY: '成香', KE: '成桂', GI: '成銀', KA: '龍馬', HI: '龍王' };
+function buildScene() {
+  { const [c, g] = newCanvas(4, 256), gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#120c09'); gr.addColorStop(.6, '#2a1c12'); gr.addColorStop(1, '#3a2616'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256); scene.background = ctex(c); }
+  scene.fog = new THREE.Fog(0x2a1c12, 30, 70);
+  scene.add(new THREE.HemisphereLight(0xffe8cc, 0x2a1a10, .6));
+  const key = new THREE.DirectionalLight(0xffe2b8, 2.3); key.position.set(-5, 16, 7); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 2, far: 50 }); key.shadow.bias = -.0004; key.shadow.normalBias = .02; key.shadow.radius = 4; scene.add(key, key.target);
+  const fill = new THREE.PointLight(0xffb070, 34, 34, 1.6); fill.position.set(7, 6, -7); scene.add(fill);
+  // テーブル
+  const tw = ctex(woodCanvas(1024, 1024, [62, 40, 26], [104, 70, 44], .8), 3);
+  const table = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ map: tw, roughness: .62 })); table.rotation.x = -Math.PI / 2; table.position.y = -.5; table.receiveShadow = true; scene.add(table);
+  // 盤（上の面に線・星・数字）
+  const BW = 9 * CW + 1.1, BD = 9 * CH + 1.1; BRD.size = [BW, BD];
+  for (let k = 0; k < 3; k++) MAT['top' + k] = new THREE.MeshStandardMaterial({ map: boardTex(k, BW, BD), roughness: .5 });
+  const sideM = new THREE.MeshStandardMaterial({ map: ctex(woodCanvas(512, 128, [150, 108, 56], [196, 150, 88], 3)), roughness: .5 });
+  BRD.top = new THREE.Mesh(new THREE.BoxGeometry(BW, .5, BD), [sideM, sideM, MAT['top' + (SET.board | 0)] || MAT.top0, sideM, sideM, sideM]); BRD.top.position.y = -.25; BRD.top.castShadow = BRD.top.receiveShadow = true; scene.add(BRD.top);
+  // 駒の材質（つげの木）と字
+  MAT.koma = new THREE.MeshStandardMaterial({ map: ctex(woodCanvas(256, 256, [206, 160, 92], [236, 200, 136], 1.4)), roughness: .42 });
+  // 印：動かせるマス（点）・取れる駒（輪）・選んだマス・さいごの手・王手・指の下
+  MAT.dot = new THREE.MeshBasicMaterial({ color: 0xffd65a, transparent: true, opacity: .85, depthWrite: false });
+  MAT.ring = new THREE.MeshBasicMaterial({ color: 0xff8a5a, transparent: true, opacity: .9, depthWrite: false });
+  const dotG = new THREE.CircleGeometry(.12, 24).rotateX(-Math.PI / 2), ringG = new THREE.RingGeometry(.4, .48, 36).rotateX(-Math.PI / 2);
+  BRD.dots = []; for (let q = 0; q < 81; q++) { const m = new THREE.Mesh(dotG, MAT.dot); m.visible = false; m.renderOrder = 3; scene.add(m); const rg = new THREE.Mesh(ringG, MAT.ring); rg.visible = false; rg.renderOrder = 3; scene.add(rg); BRD.dots.push([m, rg]); }
+  const quad = (col, op) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(CW * .98, CH * .98).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op, depthWrite: false })); m.visible = false; m.renderOrder = 2; scene.add(m); return m; };
+  BRD.sel = quad(0xffe08a, .38); BRD.last1 = quad(0xff9a3a, .2); BRD.last2 = quad(0xff9a3a, .34); BRD.chk = quad(0xff3a2a, .45); BRD.hov = quad(0xfff4d8, .16);
+  // ヒントの矢印
+  const am = new THREE.MeshBasicMaterial({ color: 0x6af0a0, transparent: true, opacity: .9, depthWrite: false });
+  BRD.arrow = new THREE.Group(); const shaft = new THREE.Mesh(new THREE.BoxGeometry(.16, .04, 1), am), head = new THREE.Mesh(new THREE.ConeGeometry(.3, .55, 4).rotateX(-Math.PI / 2).rotateZ(Math.PI / 4), am);
+  BRD.arrow.add(shaft, head); BRD.arrow.userData = { shaft, head }; BRD.arrow.visible = false; BRD.arrow.renderOrder = 4; scene.add(BRD.arrow);
+  layoutStands();
+}
+// 盤の上の面：木目・9×9 の線・星・筋（９〜１）と段（一〜九）
+function boardTex(kind, BW, BD) {
+  const N = 1024, M = Math.round(N * BD / BW), cols = [[[214, 170, 98], [234, 196, 126]], [[232, 200, 138], [246, 222, 168]], [[176, 120, 58], [206, 152, 84]]][kind];
+  const w = woodCanvas(N, M, cols[0], cols[1], .5), g = w.getContext('2d'), sx = N / BW, sz = M / BD, x0 = (BW / 2 - 4.5 * CW) * sx, z0 = (BD / 2 - 4.5 * CH) * sz;
+  g.strokeStyle = 'rgba(24,14,6,.92)'; g.lineWidth = 3;
+  for (let k = 0; k <= 9; k++) { const x = x0 + k * CW * sx, z = z0 + k * CH * sz; g.beginPath(); g.moveTo(x, z0); g.lineTo(x, z0 + 9 * CH * sz); g.stroke(); g.beginPath(); g.moveTo(x0, z); g.lineTo(x0 + 9 * CW * sx, z); g.stroke(); }
+  g.lineWidth = 6; g.strokeRect(x0, z0, 9 * CW * sx, 9 * CH * sz);
+  g.fillStyle = 'rgba(24,14,6,.95)'; for (const [a, b] of [[3, 3], [3, 6], [6, 3], [6, 6]]) { g.beginPath(); g.arc(x0 + a * CW * sx, z0 + b * CH * sz, 8, 0, TAU); g.fill(); }
+  g.fillStyle = 'rgba(40,22,8,.78)'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${Math.round(.34 * sx)}px "Noto Serif JP", serif`;
+  for (let c = 0; c < 9; c++) g.fillText('９８７６５４３２１'[c], x0 + (c + .5) * CW * sx, z0 / 2);
+  for (let r = 0; r < 9; r++) g.fillText('一二三四五六七八九'[r], x0 + 9 * CW * sx + (N - (x0 + 9 * CW * sx)) / 2, z0 + (r + .5) * CH * sz);
+  return ctex(w);
+}
+function setBoardLook() { BRD.top.material[2] = MAT['top' + (SET.board | 0)] || MAT.top0; }
+// 駒の形（五角形の板。先が -z）
+function komaGeo(t) {
+  if (KGEO[t]) return KGEO[t];
+  const s = KSC[t], w = .8 * s, h = .92 * s, sh = new THREE.Shape();
+  sh.moveTo(0, h / 2); sh.lineTo(w * .4, h * .27); sh.lineTo(w / 2, -h / 2); sh.lineTo(-w / 2, -h / 2); sh.lineTo(-w * .4, h * .27); sh.closePath();
+  const g = new THREE.ExtrudeGeometry(sh, { depth: KTH - KBV * 2, bevelEnabled: true, bevelThickness: KBV, bevelSize: KBV, bevelSegments: 2 }); g.rotateX(-Math.PI / 2); g.translate(0, KBV, 0);
+  g.computeVertexNormals(); return (KGEO[t] = { g, w, h, s });
+}
+// 字の絵（style 0：1文字、1：2文字）。成り駒は赤
+function komaTex(txt, red) {
+  const k = txt + (red ? 'r' : ''); if (KTEX[k]) return KTEX[k];
+  const [c, g] = newCanvas(128, 160); g.fillStyle = red ? '#b3241b' : '#1a120a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (txt.length === 1) { g.font = '900 92px "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif'; g.fillText(txt, 64, 92); }
+  else { g.font = '900 60px "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif'; g.fillText(txt[0], 64, 58); g.fillText(txt[1], 64, 118); }
+  const t = ctex(c); return (KTEX[k] = new THREE.MeshStandardMaterial({ map: t, transparent: true, alphaTest: .25, roughness: .5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+}
+const labelOf = (t, o, pr) => { if (t === 'OU') return o ? (SET.koma ? '王将' : '王') : (SET.koma ? '玉将' : '玉'); return pr ? (SET.koma ? TWO_P : ONE_P)[t] : (SET.koma ? TWO : ONE)[t]; };
+const _mTop = new THREE.Matrix4().makeBasis(V3(1, 0, 0), V3(0, 0, -1), V3(0, 1, 0)), _mBot = new THREE.Matrix4().makeBasis(V3(-1, 0, 0), V3(0, 0, -1), V3(0, -1, 0));
+const LBL = {};
+function labelGeo(t, bot) { const k = t + bot; if (LBL[k]) return LBL[k]; const G = komaGeo(t), g = new THREE.PlaneGeometry(G.w * .74, G.w * .74 * 1.25).applyMatrix4(bot ? _mBot : _mTop).translate(0, bot ? -.004 : KTH + .004, G.h * .06); return (LBL[k] = g); }
+// 駒をつくる：root（位置・向き）→ flip（成ると裏返す）→ 木の板＋表の字＋裏の字
+function makeKoma(t, o, pr) {
+  const root = new THREE.Group(), flip = new THREE.Group(), G = komaGeo(t), body = new THREE.Mesh(G.g, MAT.koma); body.castShadow = body.receiveShadow = true;
+  flip.add(body); flip.add(new THREE.Mesh(labelGeo(t, 0), komaTex(labelOf(t, o, false), false)));
+  if (PROMOTABLE.has(t)) flip.add(new THREE.Mesh(labelGeo(t, 1), komaTex(labelOf(t, o, true), true)));
+  root.add(flip); root.rotation.y = o ? Math.PI : 0; setFlip(root, pr ? 1 : 0); root.userData = { t, o, pr, flip, body }; scene.add(root); BRD.pieces.add(root); return root;
+}
+function setFlip(root, k, lift = 0) { const f = root.children[0]; f.rotation.z = Math.PI * k; f.position.y = KTH * k + lift; }
+function dropKoma(root) { scene.remove(root); BRD.pieces.delete(root); }
+// ---------- 駒台：横長の画面は盤の右手前／左奥、たて長は手前／奥 ----------
+function standLayout() { return VW() >= VH() * 1.05 ? 'side' : 'end'; }
+function layoutStands() {
+  const L = standLayout(); if (L === BRD.lay && BRD.kd[0]) return false; BRD.lay = L;
+  for (const k of BRD.kd) if (k) scene.remove(k);
+  const [BW, BD] = BRD.size, m = MAT.stand || (MAT.stand = new THREE.MeshStandardMaterial({ map: ctex(woodCanvas(256, 256, [150, 106, 56], [190, 140, 80], 2)), roughness: .48 }));
+  BRD.st = L === 'side' ? { w: 3.1, d: 4.0, x: BW / 2 + .45 + 1.55, z: BD / 2 - 2.0, y: -.1 } : { w: 7.0, d: 2.05, x: 1.2, z: BD / 2 + .4 + 1.03, y: -.1 };
+  for (const o of [0, 1]) {
+    const S = BRD.st, g = new THREE.Group(), sgn = o ? -1 : 1; g.position.set(S.x * sgn, 0, S.z * sgn); scene.add(g); BRD.kd[o] = g;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(S.w, .14, S.d), m); top.position.y = S.y - .07; top.castShadow = top.receiveShadow = true; g.add(top);
+    for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(.22, -.5 - (S.y - .14), .22), m); leg.position.set(a * (S.w / 2 - .22), (-.5 + S.y - .14) / 2, b * (S.d / 2 - .22)); leg.castShadow = true; g.add(leg); }
+  }
+  return true;
+}
+// 持ち駒の置き場所（o の駒台の t の k 枚目 / n 枚）
+const HSLOT = { side: { HI: [0, 0], KA: [1, 0], KI: [0, 1], GI: [1, 1], KE: [0, 2], KY: [1, 2], FU: [0, 3, 2] }, end: { HI: [0, 0], KA: [1, 0], KI: [2, 0], GI: [3, 0], KE: [0, 1], KY: [1, 1], FU: [2, 1, 2] } };
+function handPos(o, t, k, n, out = V3()) {
+  const S = BRD.st, side = BRD.lay === 'side', cols = side ? 2 : 4, rows = side ? 4 : 2, [ci, ri, span = 1] = HSLOT[BRD.lay][t];
+  const cw = S.w / cols, rd = S.d / rows, sw = cw * span - .2, pw = komaGeo(t).w, dx = n > 1 ? Math.min(pw * .62, (sw - pw) / (n - 1)) : 0;
+  const lx = -S.w / 2 + cw * ci + (cw * span) / 2 - dx * (n - 1) / 2 + dx * k, lz = -S.d / 2 + rd * (ri + .5) + (k % 2 ? .04 : 0), sgn = o ? -1 : 1;
+  return out.set((S.x + lx) * sgn, S.y + k * .002, (S.z + lz) * sgn);
+}
+// ---------- 局面どおりに、駒をならべなおす（アニメーションなし） ----------
+function syncPieces(St) {
+  for (const p of [...BRD.pieces]) dropKoma(p); BRD.sqObj = []; BRD.handObj = [[], []];
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) { const p = St.B[r][c]; if (!p) continue; const k = makeKoma(p.t, p.o, p.pr); sqPos(r, c, k.position); BRD.sqObj[r * 9 + c] = k; }
+  for (const o of [0, 1]) for (const t of HAND) { const n = St.H[o][t] || 0; const arr = BRD.handObj[o][t] = []; for (let k = 0; k < n; k++) { const q = makeKoma(t, o, false); handPos(o, t, k, n, q.position); arr.push(q); } }
+}
+// ---------- うごき ----------
+const ANIMS = [];
+function anim(dur, upd, done, delay = 0) { ANIMS.push({ t: -delay, dur, upd, done }); }
+function stepAnims(dt) { for (let k = ANIMS.length - 1; k >= 0; k--) { const A = ANIMS[k]; A.t += dt; if (A.t < 0) continue; const f = Math.min(1, A.t / A.dur); A.upd(f); if (f >= 1) { ANIMS.splice(k, 1); A.done && A.done(); } } }
+const SPD = () => [1.45, 1, .55][SET.spd] ?? 1;
+// 指す：駒が弧をえがいてマスへ → パチッ → 取った駒は駒台へ → 成るなら、ひっくり返る
+function playMove(St, m, onDone) {
+  const sp = SPD(), o = St.turn, to = sqPos(m.tr, m.tc), from = V3(); let obj;
+  if (m.drop) { const arr = BRD.handObj[o][m.drop] || []; obj = arr[arr.length - 1]; }
+  else obj = BRD.sqObj[m.fr * 9 + m.fc];
+  if (!obj) { onDone(); return; }
+  from.copy(obj.position); const cap = m.drop ? null : BRD.sqObj[m.tr * 9 + m.tc], dist = from.distanceTo(to), h = .35 + Math.min(1.2, dist * .08);
+  anim((.26 + Math.min(.22, dist * .025)) * sp, f => { const e = ease(f); obj.position.lerpVectors(from, to, e); obj.position.y = lerp(from.y, 0, e) + Math.sin(Math.PI * f) * h; },
+    () => {
+      obj.position.copy(to); AU.koma(!!cap); bump(obj);
+      let left = 1 + (cap ? 1 : 0) + (m.pro ? 1 : 0); const fin = () => { if (--left === 0) onDone(); }; fin();
+      if (cap) {   // 取った駒：持ち主の駒台へ（向きを変えて、成っていたら表にもどす）
+        const n = (St.H[o][cap.userData.t] || 0) + 1, dst = handPos(o, cap.userData.t, n - 1, n), c0 = cap.position.clone(), y0 = cap.rotation.y, y1 = o ? Math.PI : 0, pk = cap.userData.pr ? 1 : 0;
+        anim(.42 * sp, f => { const e = ease(f); cap.position.lerpVectors(c0, dst, e); cap.position.y = lerp(c0.y, dst.y, e) + Math.sin(Math.PI * f) * 1.1; cap.rotation.y = lerp(y0, y1 + (y1 < y0 ? 0 : 0), e); setFlip(cap, pk * (1 - e)); }, () => { AU.koma(false, .5); fin(); }, .06);
+      }
+      if (m.pro) anim(.34 * sp, f => { setFlip(obj, ease(f), Math.sin(Math.PI * f) * .45); }, () => { setFlip(obj, 1); AU.pro(); fin(); }, .12);
+    });
+}
+function bump(d) { const y = d.position.y; anim(.1, f => { d.position.y = y + Math.sin(Math.PI * f) * .025; }, () => { d.position.y = y; }); }
+// 選んだ駒を少し持ち上げる
+function liftKoma(obj, on) { if (!obj) return; const y0 = obj.position.y, base = obj.userData.base ?? (obj.userData.base = y0), y1 = on ? base + .22 : base; anim(.1, f => { obj.position.y = lerp(y0, y1, f); }, () => { if (!on) delete obj.userData.base; }); }
+// ---------- 印 ----------
+function showTargets(list, St) { BRD.dots.forEach(([d, rg], k) => { const t = list[k]; d.visible = rg.visible = false; if (!t) return; const cap = !!St.B[t[0]][t[1]]; const m = cap ? rg : d; sqPos(t[0], t[1], m.position).y = cap ? .25 : .015; m.visible = true; }); }
+function markSq(q, r, c) { if (r === undefined || r < 0) { q.visible = false; return; } sqPos(r, c, q.position).y = .006; q.visible = true; }
+function showArrow(m) {
+  if (!m) { BRD.arrow.visible = false; return; }
+  const a = m.drop ? null : sqPos(m.fr, m.fc), b = sqPos(m.tr, m.tc), A = BRD.arrow, U = A.userData;
+  const p0 = a || b.clone().add(V3(0, 0, CH * .9)), dir = b.clone().sub(p0), L = Math.max(.3, dir.length() - .3);
+  A.position.copy(p0).setY(.42); A.rotation.set(0, Math.atan2(dir.x, dir.z) + Math.PI, 0); U.shaft.scale.z = L; U.shaft.position.z = -L / 2; U.head.position.z = -L - .15; A.visible = true; A.userData.t = 3.2;
+}
+function updMarks(dt, t) {
+  const s = 1 + Math.sin(t * 4) * .12; for (const [d, rg] of BRD.dots) { if (d.visible) d.scale.setScalar(s); if (rg.visible) rg.scale.setScalar(1 + Math.sin(t * 4) * .05); }
+  if (BRD.chk.visible) BRD.chk.material.opacity = .3 + .25 * (.5 + .5 * Math.sin(t * 7));
+  if (BRD.arrow.visible) { BRD.arrow.userData.t -= dt; BRD.arrow.children.forEach(m => (m.material.opacity = Math.min(.9, BRD.arrow.userData.t))); if (BRD.arrow.userData.t <= 0) BRD.arrow.visible = false; }
+}
+// ---------- カメラ：盤のまわりを回る（なぞる・2本指・ホイール） ----------
+const CAM = { az: 0, el: 1.0, zoom: 1, tAz: 0, tEl: 1.0, top: false, base: 0 };
+function camFit() {
+  const vf = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect), side = BRD.lay === 'side';
+  const HW = side ? 9.0 : 5.6, HH = (side ? 6.6 : 9.2) * (.55 + .45 * Math.sin(CAM.el));   // 盤と駒台が入る大きさ（上下は、ボタンの分も少しあける）
+  return Math.max(HW / Math.tan(hf / 2), HH / Math.tan(vf / 2));
+}
+function updateCam(dt) {
+  CAM.az = lerp(CAM.az, CAM.tAz, 1 - Math.exp(-10 * dt)); CAM.el = lerp(CAM.el, CAM.tEl, 1 - Math.exp(-10 * dt));
+  const r = camFit() * CAM.zoom, x = Math.sin(CAM.az) * Math.cos(CAM.el) * r, y = Math.sin(CAM.el) * r, z = Math.cos(CAM.az) * Math.cos(CAM.el) * r;
+  camera.position.set(x, y, z); camera.lookAt(0, -.3, 0);
+}
+function camView(top) { CAM.top = top; CAM.tEl = top ? 1.53 : 1.0; $('bView').textContent = top ? 'ななめから' : '真上から'; }
+// 画面の点 → マス、または駒台の駒
+const _ray = new THREE.Raycaster(), _nd = new THREE.Vector2(), _hit = V3();
+function pickAt(sx, sy) {
+  _nd.set(sx / VW() * 2 - 1, -(sy / VH()) * 2 + 1); _ray.setFromCamera(_nd, camera);
+  // 駒台
+  for (const o of [0, 1]) {
+    const S = BRD.st, sgn = o ? -1 : 1; if (!_ray.ray.intersectPlane(new THREE.Plane(V3(0, 1, 0), -(S.y + .08)), _hit)) continue;
+    const lx = _hit.x * sgn - S.x, lz = _hit.z * sgn - S.z; if (Math.abs(lx) > S.w / 2 + .1 || Math.abs(lz) > S.d / 2 + .1) continue;
+    let best = null, bd = 1e9; for (const t of HAND) { const arr = BRD.handObj[o][t]; if (!arr || !arr.length) continue; for (const q of arr) { const d = Math.hypot(q.position.x - _hit.x, q.position.z - _hit.z); if (d < bd) { bd = d; best = t; } } }
+    return best && bd < 1.2 ? { kind: 'hand', o, t: best } : { kind: 'none' };
+  }
+  if (!_ray.ray.intersectPlane(new THREE.Plane(V3(0, 1, 0), -.1), _hit)) return null;
+  const c = Math.floor(_hit.x / CW + 4.5), r = Math.floor(_hit.z / CH + 4.5); return c >= 0 && c < 9 && r >= 0 && r < 9 ? { kind: 'sq', r, c } : null;
+}
+
+// =========================================================================================
+//  対局の進み方・ボタン・音・はじまり
+// =========================================================================================
+const LV_NAME = ['やさしい', 'ふつう', 'つよい', 'めっちゃつよい'];
+const LV_NOTE = ['はじめての人に。駒の取り合いを少し見るだけ。', '3手先くらいまで読む、ふつうの強さ。', 'もっと先まで読みます。うっかりは少ない。', 'じっくり深く読む本気の相手。考えるのに少し時間がかかります。'];
+const G = { scr: 'title', mode: 'cpu', lv: 1, human: 0, moves: [], resigned: null, S: null, texts: [], over: null, sel: null, busy: false, thinking: false, req: 0, pend: null, chkShown: -1 };
+// ---------- 音（その場で作る：駒を打つ「パチッ」） ----------
+const AU = {
+  ctx: null, ok: false,
+  init() { if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; } try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    const c = this.ctx; this.master = c.createGain(); this.master.connect(c.destination); this.setVol();
+    const n = c.sampleRate, b = c.createBuffer(1, n, n), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; this.nb = b; this.ok = true; },
+  setVol() { if (this.master) this.master.gain.setTargetAtTime(clamp(SET.vol, 0, 1) * HUB.vol, this.ctx.currentTime, .03); },
+  hit(f, q, dur, vol, low, t0 = 0) {
+    if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain(); s.buffer = this.nb; fl.type = 'bandpass'; fl.frequency.value = f; fl.Q.value = q;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0005, t + dur); s.connect(fl); fl.connect(g); g.connect(this.master); s.start(t, Math.random() * .5); s.stop(t + dur + .02);
+    if (low) { const o = c.createOscillator(), og = c.createGain(); o.frequency.setValueAtTime(low, t); o.frequency.exponentialRampToValueAtTime(low * .6, t + .08); og.gain.setValueAtTime(vol * .5, t); og.gain.exponentialRampToValueAtTime(.0005, t + .1); o.connect(og); og.connect(this.master); o.start(t); o.stop(t + .12); }
+  },
+  tone(f, dur, vol, t0 = 0, type = 'triangle') { if (!this.ok) return; const c = this.ctx, t = c.currentTime + t0, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.0005, t + dur); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + .02); },
+  koma(cap, v = 1) { this.hit(2100, 2.2, .05, .95 * v, 240); this.hit(4200, 3, .025, .3 * v); if (cap) this.hit(1500, 1.5, .06, .4, 0, .05); },
+  pick() { this.hit(3200, 4, .025, .25); },
+  click() { this.hit(3000, 4, .03, .2); },
+  pro() { this.tone(660, .18, .06); this.tone(990, .3, .06, .08); },
+  check() { this.tone(330, .22, .08, 0, 'square'); this.tone(247, .35, .07, .12, 'square'); },
+  win() { [523, 659, 784, 1047, 1319].forEach((f, k) => this.tone(f, .6, .08, k * .11)); },
+  lose() { [440, 392, 349, 262].forEach((f, k) => this.tone(f, .5, .08, k * .16, 'sine')); },
+};
+// ---------- 記録・つづき ----------
+const REC = (() => { try { return JSON.parse(localStorage.getItem('sg3-rec')) || {}; } catch (e) { return {}; } })();
+if (!Array.isArray(REC.lv)) REC.lv = [0, 1, 2, 3].map(() => ({ w: 0, l: 0, d: 0, fast: null })); REC.p2 = REC.p2 || 0;
+const saveRec = () => { try { localStorage.setItem('sg3-rec', JSON.stringify(REC)); } catch (e) { /* なし */ } };
+function saveGame() { try { if (G.over) localStorage.removeItem('sg3-game'); else localStorage.setItem('sg3-game', JSON.stringify({ mode: G.mode, lv: G.lv, human: G.human, moves: G.moves })); } catch (e) { /* なし */ } }
+const loadGame = () => { try { const s = JSON.parse(localStorage.getItem('sg3-game')); return s && Array.isArray(s.moves) ? s : null; } catch (e) { return null; } };
+// ---------- 画面 ----------
+function show(id) { document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id === id)); G.scr = id || 'play'; if (!id) document.body.classList.add('playing'); if (id === 'title') document.body.classList.remove('playing'); }
+let MSGT = 0;
+function msg(t, dur = 1.4, cls = '') { const el = $('msgT'); el.textContent = t; el.className = 'on ' + cls; MSGT = dur; }
+let ASKF = null;
+function ask(t, f) { $('askT').textContent = t; ASKF = f; $('ask').classList.add('on'); }
+const isCPU = o => G.mode === 'cpu' && o !== G.human;
+const nameOf = o => G.mode === 'cpu' ? (o === G.human ? 'きみ' : `CPU（${LV_NAME[G.lv]}）`) : (o ? '後手の人' : '先手の人');
+function replay() { const R = replayAll(G.moves, G.resigned); G.S = R.S; G.texts = R.texts; G.over = R.over; }
+function updHud() {
+  const S = G.S, chk = !G.over && inCheck(S, S.turn);
+  for (const o of [0, 1]) { $('n' + o).textContent = nameOf(o); $('p' + o).classList.toggle('turn', !G.over && S.turn === o); const e = $('e' + o); e.textContent = !G.over && S.turn === o ? (chk ? '王手！' : 'の番') : ''; e.className = chk && S.turn === o ? 'chk' : ''; }
+  $('kifuL').textContent = G.moves.length ? `${G.moves.length}手目　${G.texts[G.texts.length - 1]}` : '';
+  const canUndo = !(G.busy && !G.thinking) && (G.moves.length > 0 || G.resigned != null) && !(G.mode === 'cpu' && G.moves.length === 1 && G.human === 1);
+  $('bUndo').disabled = !canUndo; $('bHint').disabled = G.busy || !!G.over || isCPU(S.turn); $('think').classList.toggle('on', G.thinking);
+  // さいごの手・王手のマス
+  const m = G.moves[G.moves.length - 1]; markSq(BRD.last2, m ? m.tr : -1, m && m.tc); markSq(BRD.last1, m && !m.drop ? m.fr : -1, m && m.fc);
+  if (chk) { const k = kingAt(S.B, S.turn); markSq(BRD.chk, k[0], k[1]); } else markSq(BRD.chk, -1);
+}
+// ---------- 選ぶ・動かす ----------
+function clearSel(keep) { if (G.sel && G.sel.obj) { if (keep) delete G.sel.obj.userData.base; else liftKoma(G.sel.obj, false); } G.sel = null; showTargets([], G.S); markSq(BRD.sel, -1); }
+function selectBoard(r, c) {
+  const S = G.S, tg = movesFrom(S, r, c), obj = BRD.sqObj[r * 9 + c]; clearSel(); G.sel = { type: 'b', r, c, tg, obj }; liftKoma(obj, true); AU.pick(); markSq(BRD.sel, r, c);
+  showTargets(SET.hint ? tg : [], S); if (!tg.length) msg('その駒は、いま動かせません', 1.1);
+}
+function selectHand(t) {
+  const S = G.S, tg = dropsOf(S, t), arr = BRD.handObj[S.turn][t] || [], obj = arr[arr.length - 1]; clearSel(); G.sel = { type: 'h', t, tg, obj }; liftKoma(obj, true); AU.pick();
+  showTargets(SET.hint ? tg : [], S); if (!tg.length) msg('その駒は、いま打てる所がありません', 1.3);
+}
+function onTap(sx, sy) {
+  if (G.scr !== 'play' || G.over || G.busy || G.pend || isCPU(G.S.turn)) return;
+  const p = pickAt(sx, sy), S = G.S; if (!p) { clearSel(); return; }
+  if (p.kind === 'hand') { if (p.o !== S.turn) { clearSel(); return; } if (G.sel && G.sel.type === 'h' && G.sel.t === p.t) { clearSel(); return; } selectHand(p.t); return; }
+  if (p.kind !== 'sq') { clearSel(); return; }
+  const q = S.B[p.r][p.c];
+  if (G.sel && G.sel.tg.some(([a, b]) => a === p.r && b === p.c)) {
+    if (G.sel.type === 'h') { const t = G.sel.t; playTurn({ drop: t, tr: p.r, tc: p.c }); return; }
+    const { r, c } = G.sel, pc = S.B[r][c], m = { fr: r, fc: c, tr: p.r, tc: p.c, pro: mustPro(pc, p.r) };
+    if (!m.pro && canPro(pc, r, p.r)) { G.pend = m; $('prA').textContent = ONE[pc.t]; $('prB').textContent = ONE_P[pc.t]; $('promo').classList.add('on'); return; }
+    playTurn(m); return;
+  }
+  if (q && q.o === S.turn) { if (G.sel && G.sel.type === 'b' && G.sel.r === p.r && G.sel.c === p.c) { clearSel(); return; } selectBoard(p.r, p.c); return; }
+  if (G.sel && q) msg('そこへは動けません', .9); clearSel();
+}
+function promoAnswer(yes) { const m = G.pend; $('promo').classList.remove('on'); G.pend = null; if (!m) return; m.pro = !!yes; playTurn(m); }
+// 1手すすめる（絵のうごきが終わってから、局面を進める）
+function playTurn(m) {
+  if (!legal(G.S, m)) return false;
+  G.busy = true; clearSel(true); showArrow(null); BRD.hov.visible = false; const req = G.req; updHud();
+  playMove(G.S, m, () => {
+    if (req !== G.req) return;
+    G.moves.push(m); replay(); syncPieces(G.S); G.busy = false; saveGame(); updHud();
+    if (!G.over && inCheck(G.S, G.S.turn)) { msg('王手', 1.1, 'chk'); AU.check(); }
+    nextTurn();
+  });
+  return true;
+}
+// ---------- はじまり・すすみ ----------
+function newGame(mode, lv, side) {
+  G.mode = mode; G.lv = lv; G.human = mode === 'cpu' ? (side === 2 ? (Math.random() < .5 ? 0 : 1) : side) : 0;
+  G.moves = []; G.resigned = null; G.req++; G.busy = false; G.thinking = false; G.pend = null; $('promo').classList.remove('on');
+  ANIMS.length = 0; replay(); syncPieces(G.S); clearSel(); showArrow(null);
+  CAM.base = mode === 'cpu' && G.human === 1 ? Math.PI : 0; CAM.tAz = CAM.base; CAM.zoom = 1; camView(false);
+  show(null); updHud(); saveGame();
+  msg(mode === 'cpu' ? (G.human === 0 ? 'きみは 先手（▲）' : 'きみは 後手（△）') : '先手の人から', 1.6);
+  setTimeout(() => nextTurn(), 500);
+}
+function resumeGame(s) {
+  G.mode = s.mode; G.lv = clamp(s.lv | 0, 0, 3); G.human = s.human ? 1 : 0; G.moves = s.moves; G.resigned = null; G.req++; G.busy = false; G.thinking = false; G.pend = null;
+  ANIMS.length = 0; replay(); syncPieces(G.S); clearSel(); CAM.base = G.mode === 'cpu' && G.human === 1 ? Math.PI : 0; CAM.tAz = CAM.base; camView(false); show(null); updHud(); nextTurn();
+}
+function nextTurn() {
+  if (G.scr === 'title') return;
+  if (G.over) return gameOver();
+  if (G.mode === '2p' && SET.turn) CAM.tAz = G.S.turn ? Math.PI : 0;
+  updHud(); if (isCPU(G.S.turn)) cpuMove();
+}
+async function cpuMove() {
+  const req = G.req; G.thinking = true; G.busy = true; updHud();
+  const t0 = performance.now(), r = await askCPU(G.S, G.lv);
+  const wait = Math.max(0, 650 - (performance.now() - t0)); if (wait) await new Promise(res => setTimeout(res, wait));
+  if (req !== G.req || G.over || G.scr === 'title') return;
+  G.thinking = false; G.busy = false;
+  let m = r && r.move; if (!legal(G.S, m)) { m = null; const S = G.S; for (let i = 0; i < 9 && !m; i++) for (let j = 0; j < 9 && !m; j++) { const p = S.B[i][j]; if (p && p.o === S.turn) { const t = movesFrom(S, i, j); if (t.length) m = { fr: i, fc: j, tr: t[0][0], tc: t[0][1], pro: mustPro(p, t[0][0]) }; } } }
+  if (m) playTurn(m); else updHud();
+}
+function gameOver() {
+  G.busy = false; G.thinking = false; clearSel(); updHud(); try { localStorage.removeItem('sg3-game'); } catch (e) { /* なし */ }
+  const O = G.over, n = G.moves.length, why = { mate: '詰み', resign: '投了', stuck: '指せる手なし', draw: '千日手' }[O.type];
+  let title, cls = '', det = '';
+  if (O.type === 'draw') { title = '引き分け'; if (G.mode === 'cpu') REC.lv[G.lv].d++; else REC.p2++; AU.lose(); }
+  else if (G.mode === 'cpu') {
+    const R = REC.lv[G.lv]; if (O.win === G.human) { title = 'きみの勝ち！'; cls = 'win'; R.w++; if (R.fast === null || n < R.fast) R.fast = n; AU.win(); } else { title = 'CPU の勝ち'; cls = 'lose'; R.l++; AU.lose(); }
+  } else { REC.p2++; title = (O.win ? '後手' : '先手') + 'の勝ち！'; cls = 'win'; AU.win(); }
+  if (G.mode === 'cpu') { const R = REC.lv[G.lv]; det = `CPU（${LV_NAME[G.lv]}）との成績：${R.w}勝 ${R.l}敗${R.d ? ' ' + R.d + '分' : ''}`; } else det = 'ふたりで対戦';
+  saveRec();
+  $('resT').textContent = title; $('resT').className = cls; $('resS').textContent = `まで ${n} 手（${why}）`; $('resD').textContent = det;
+  msg(O.type === 'mate' ? '詰み' : title, 1.6); setTimeout(() => { if (G.over && G.scr === 'play') show('result'); }, 1800);
+}
+// まった：自分の番までもどす（ふたりでなら1手）
+function undo() {
+  if (G.busy && !G.thinking) return; if (!G.moves.length && G.resigned == null) return;
+  G.req++; G.thinking = false; G.busy = false; ANIMS.length = 0; G.pend = null; $('promo').classList.remove('on');
+  if (G.resigned != null) G.resigned = null;
+  else { G.moves.pop(); if (G.mode === 'cpu') while (G.moves.length && G.moves.length % 2 !== G.human) G.moves.pop(); }
+  replay(); syncPieces(G.S); clearSel(); showArrow(null); if (G.scr !== 'play') show(null); AU.click(); saveGame(); updHud(); nextTurn();
+}
+async function hint() {
+  if (G.busy || G.over || isCPU(G.S.turn)) return; const req = G.req; G.thinking = true; G.busy = true; updHud();
+  const r = await askCPU(G.S, 2, 1600); G.thinking = false; G.busy = false; if (req !== G.req) return; updHud();
+  if (r && legal(G.S, r.move)) { showArrow(r.move); msg(moveText(G.S, r.move, G.moves[G.moves.length - 1]).slice(1) + ' がよさそう', 1.8); }
+}
+function resign() {
+  if (G.over || G.busy && !G.thinking) return; const who = G.mode === 'cpu' ? G.human : G.S.turn;
+  ask(`${G.mode === 'cpu' ? '' : (who ? '後手' : '先手') + 'が'}投了しますか？`, () => { G.req++; G.thinking = false; G.busy = false; G.resigned = who; replay(); show(null); updHud(); gameOver(); });
+}
+function openKifu(back) { $('kifuBox').innerHTML = G.texts.length ? G.texts.map((t, k) => `<span><i>${k + 1}</i>${t}</span>`).join('') : '<span>まだ指していません</span>'; SET_BACK = back; show('kifu'); }
+// ---------- 入力：タップで選ぶ・なぞって見回す・2本指／ホイールで近く遠く ----------
+function initInput() {
+  const P = new Map(); let drag = false, pd = 0, start = null;
+  canvas.addEventListener('pointerdown', e => {
+    AU.init(); const p = toStage(e.clientX, e.clientY); P.set(e.pointerId, p); try { canvas.setPointerCapture(e.pointerId); } catch (er) { /* なし */ }
+    if (P.size === 1) { drag = false; start = { x: p.x, y: p.y, t: performance.now() }; } else { drag = true; const [a, b] = [...P.values()]; pd = Math.hypot(a.x - b.x, a.y - b.y); }
+  });
+  canvas.addEventListener('pointermove', e => {
+    const p = toStage(e.clientX, e.clientY);
+    if (!P.has(e.pointerId)) { if (e.pointerType === 'mouse' && G.scr === 'play') hover(p); return; }
+    const q = P.get(e.pointerId); P.set(e.pointerId, p);
+    if (P.size >= 2) { const [a, b] = [...P.values()], d = Math.hypot(a.x - b.x, a.y - b.y); if (pd) CAM.zoom = clamp(CAM.zoom * pd / d, .5, 1.6); pd = d; CAM.tAz -= (p.x - q.x) * .5 * .007; CAM.tEl = clamp(CAM.tEl + (p.y - q.y) * .5 * .006, .35, 1.54); return; }
+    if (!drag && start && Math.hypot(p.x - start.x, p.y - start.y) > 10) drag = true;
+    if (drag) { CAM.tAz -= (p.x - q.x) * .007; CAM.tEl = clamp(CAM.tEl + (p.y - q.y) * .006, .35, 1.54); BRD.hov.visible = false; }
+  });
+  const up = e => { if (!P.has(e.pointerId)) return; const p = P.get(e.pointerId); P.delete(e.pointerId); if (!P.size) { if (!drag && start && performance.now() - start.t < 700) onTap(p.x, p.y); drag = false; start = null; pd = 0; } };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', e => { P.delete(e.pointerId); drag = false; start = null; });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); CAM.zoom = clamp(CAM.zoom * Math.exp(e.deltaY * .001), .5, 1.6); }, { passive: false });
+  addEventListener('keydown', e => { AU.init(); if (e.code === 'Escape') { if (G.pend) promoAnswer(false); else if (G.scr === 'play') show('pause'); else if (G.scr === 'pause') show(null); } if (G.scr === 'play' && (e.code === 'KeyZ' || e.code === 'Backspace')) undo(); if (G.scr === 'play' && e.code === 'KeyH') hint(); });
+}
+function hover(p) {
+  const h = pickAt(p.x, p.y), S = G.S; let ok = false;
+  if (h && h.kind === 'sq' && !G.busy && !G.over && !isCPU(S.turn)) { const q = S.B[h.r][h.c]; ok = (q && q.o === S.turn) || (G.sel && G.sel.tg.some(([a, b]) => a === h.r && b === h.c)); if (ok) markSq(BRD.hov, h.r, h.c); }
+  if (!ok) BRD.hov.visible = false; canvas.style.cursor = ok || (h && h.kind === 'hand' && h.o === S.turn) ? 'pointer' : 'default';
+}
+// ---------- ボタン ----------
+function seg(id, key, after) { const box = $(id); const draw = () => box.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === SET[key])); box.querySelectorAll('button').forEach(b => b.onclick = () => { SET[key] = +b.dataset.v; saveSet(); AU.click(); draw(); after && after(); }); draw(); }
+let SET_BACK = 'title';
+function wireUI() {
+  const on = (id, f) => $(id).addEventListener('click', e => { e.preventDefault(); AU.init(); AU.click(); f(); });
+  on('tCpu', () => show('cpuSel')); on('t2p', () => newGame('2p', 0, 0)); on('cBack', () => show('title'));
+  on('cGo', () => newGame('cpu', SET.lv, SET.side));
+  on('tCont', () => { const s = loadGame(); if (s) resumeGame(s); });
+  on('tRec', openRec); on('recBack', () => show('title')); on('tHow', () => { SET_BACK = 'title'; show('how'); }); on('howBack', () => show(SET_BACK));
+  on('tSet', () => { SET_BACK = 'title'; show('settings'); }); on('setBack', () => show(SET_BACK));
+  on('bUndo', undo); on('bHint', hint); on('bView', () => camView(!CAM.top)); on('bMenu', () => { clearSel(); $('pResign').disabled = !!G.over; show('pause'); });
+  on('pRes', () => show(null)); on('pResign', () => { show(null); resign(); }); on('pKifu', () => openKifu('pause'));
+  on('pNew', () => { const go = () => newGame(G.mode, G.lv, G.mode === 'cpu' ? G.human : 0); if (G.moves.length && !G.over) { show(null); ask('いまの対局をやめて、はじめから指しますか？', go); } else go(); });
+  on('pSet', () => { SET_BACK = 'pause'; show('settings'); }); on('pHow', () => { SET_BACK = 'pause'; show('how'); }); on('pQuit', toTitle);
+  on('rAgain', () => newGame(G.mode, G.lv, G.mode === 'cpu' ? SET.side : 0)); on('rView', () => { show(null); msg('メニューから、もう一局', 1.6); }); on('rQuit', toTitle); on('rKifu', () => openKifu('result'));
+  on('kBack', () => show(SET_BACK === 'pause' ? 'pause' : SET_BACK === 'result' ? 'result' : null));
+  on('prYes', () => promoAnswer(true)); on('prNo', () => promoAnswer(false));
+  on('askYes', () => { $('ask').classList.remove('on'); const f = ASKF; ASKF = null; f && f(); }); on('askNo', () => { $('ask').classList.remove('on'); ASKF = null; });
+  $('tNet').addEventListener('click', () => { AU.init(); AU.click(); });
+  seg('sLv', 'lv', () => { $('lvNote').textContent = LV_NOTE[SET.lv]; }); $('lvNote').textContent = LV_NOTE[SET.lv]; seg('sSide', 'side');
+  seg('sHint', 'hint', () => { if (G.sel) showTargets(SET.hint ? G.sel.tg : [], G.S); }); seg('sSpd', 'spd'); seg('sBoard', 'board', setBoardLook); seg('sTurn', 'turn');
+  seg('sKoma', 'koma', () => { for (const k in KTEX) delete KTEX[k]; syncPieces(G.S); });
+  $('sVol').value = SET.vol; $('sVol').addEventListener('input', () => { SET.vol = +$('sVol').value; saveSet(); AU.setVol(); });
+}
+function openRec() {
+  const R = REC.lv; $('recT').innerHTML = '<tr><th>CPU</th><th>勝ち</th><th>負け</th><th>引分</th><th>いちばん早い勝ち</th></tr>' + R.map((r, k) => `<tr><td>${LV_NAME[k]}</td><td>${r.w}</td><td>${r.l}</td><td>${r.d}</td><td>${r.fast === null ? '—' : r.fast + ' 手'}</td></tr>`).join('') + `<tr><td>ふたりで</td><td colspan="4">${REC.p2} 局 指した</td></tr>`;
+  show('records');
+}
+function toTitle() {
+  G.req++; G.busy = false; G.thinking = false; G.pend = null; $('promo').classList.remove('on'); clearSel(); showArrow(null); markSq(BRD.chk, -1);
+  const s = loadGame(); $('tCont').style.display = s ? '' : 'none'; if (s) $('tContS').textContent = (s.mode === 'cpu' ? `CPU（${LV_NAME[s.lv]}）と対戦中` : 'ふたりで対戦中') + `・${s.moves.length}手目`;
+  show('title');
+}
+// ---------- 毎フレーム ----------
+let LAST = 0, T = 0;
+function frame(t) {
+  requestAnimationFrame(frame); const dt = Math.min(.05, Math.max(.001, (t - LAST) / 1000)); LAST = t; T += dt;
+  stepAnims(dt); updMarks(dt, T);
+  if (G.scr === 'title') CAM.tAz += dt * .08;
+  updateCam(dt);
+  if (MSGT > 0) { MSGT -= dt; if (MSGT <= 0) $('msgT').classList.remove('on'); }
+  renderer.render(scene, camera);
+}
+async function boot() {
+  if (HUB.embedded) {
+    const applyHome = S => { if (!S || typeof S !== 'object') return; if (typeof S.land === 'boolean' && S.land !== ROT.on) { ROT.on = S.land; onResize(); } if (typeof S.sound === 'boolean' || typeof S.vol === 'number') { HUB.vol = S.sound === false ? 0 : clamp(typeof S.vol === 'number' ? S.vol : HUB.vol, 0, 1); AU.setVol(); } };
+    try { applyHome(JSON.parse(localStorage.getItem('3dame-settings'))); } catch (e) { /* なし */ } addEventListener('message', e => { if (e.data && e.data.h3dSet) applyHome(e.data.h3dSet); });
+  }
+  // 駒の字のフォント（来なければ、端末の明朝体）
+  try { await Promise.race([document.fonts.load('900 64px "Noto Serif JP"', '歩香桂銀金角飛玉王と杏圭全馬龍成兵車将行一二三四五六七八九'), new Promise(r => setTimeout(r, 3500))]); } catch (e) { /* なし */ }
+  onResize(); buildScene(); G.S = start(); syncPieces(G.S); initInput(); wireUI(); toTitle();
+  addEventListener('resize', () => { if (layoutStands() && G.S) syncPieces(G.S); });
+  CAM.tEl = CAM.el = .78; renderer.compile(scene, camera); $('loading').style.display = 'none'; requestAnimationFrame(t => { LAST = t; frame(t); });
+}
+window.__SG = { G, SET, CAM, BRD, newGame, playTurn, undo, hint, onTap, pickAt, toTitle, show, askCPU, AIW, legal, movesFrom, dropsOf, sqPos, render: () => renderer.render(scene, camera), step: dt => { stepAnims(dt); updMarks(dt, T += dt); updateCam(dt); }, ANIMS, camView, resign, start, replay };
+boot();
+</script>
+</body></html>
