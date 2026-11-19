@@ -70,13 +70,13 @@ input[type=range] { width: 150px; accent-color: #ffd25a; }
   <canvas id="c"></canvas>
   <div id="tArea"></div><div id="tStick"><i id="tKnob"></i></div>
   <div id="hTop" class="hud"><div><span id="hH">0</span><small>m</small></div><div id="hInfo">ベスト<b id="hBest">0</b>時間<b id="hTime">0:00</b>落ちた<b id="hFall">0</b></div><div id="modeTag"></div></div>
-  <div id="hBar" class="hud"><div id="hBarF"></div><div id="hBarB"></div><span class="t">1000m</span><span class="b">0m</span></div>
+  <div id="hBar" class="hud"><div id="hBarF"></div><div id="hBarB"></div><span class="t">5000m</span><span class="b">0m</span></div>
   <div id="banner" class="hud"></div><div id="msg" class="hud"></div><div id="sub" class="hud"></div><div id="climbN" class="hud"></div>
   <div class="tb" data-b="jump" id="bJump">ジャンプ</div><div class="tb" data-b="sprint" id="bSprint">ダッシュ</div><div class="tb" data-b="back" id="bBack">もどる</div>
   <button id="bPause">II</button>
 
   <div id="title" class="scr veil"><div class="box">
-    <h1>そらのぼり<small>SORA NOBORI ・ 1000m</small></h1>
+    <h1>そらのぼり<small>SORA NOBORI ・ 5000m</small></h1>
     <div class="lead">空にうかぶ物を足場にして、てっぺんの鐘まで登ろう</div>
     <div class="menu">
       <button class="btn main" id="tCont">つづきから<small></small></button>
@@ -125,7 +125,7 @@ input[type=range] { width: 150px; accent-color: #ffd25a; }
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // =========================================================================================
-//  そらのぼり — 空にうかぶ物を足場にして、ひたすら上へ。1000m のてっぺんの鐘をめざす（オリジナル作品）
+//  そらのぼり — 空にうかぶ物を足場にして、ひたすら上へ。5000m のてっぺんの鐘をめざす（オリジナル作品）
 //  港町 → 屋根の上の商店街 → 工事中の塔 → 浮かぶ神社の森 → 空の線路 → 気球の空 → 雷雲 → 星のはしご
 //  人のモデルは Quaternius「Ultimate Modular Men / Women」（CC0）。ほかの形・音はすべてその場で作る
 // =========================================================================================
@@ -574,7 +574,7 @@ function stepBody(P, inp, dt, gScale = 1) {
 // その点が当たり判定の上面にのっているか
 function onTop(c, x, y, z) { const q = closest(c, x, y + .05, z); return Math.hypot(x - q[0], z - q[2]) < .05 && Math.abs(q[1] - y) < .12; }
 // =========================================================================================
-//  コース：決まった乱数（毎回同じ）で、足場を 1000m までらせん状に積み上げる。
+//  コース：決まった乱数（毎回同じ）で、足場を 5000m までらせん状に積み上げる（1000m までは前と同じ）。
 //  8つのエリア。はしご・はねる床・上昇気流・上下に動く足場・横に動く足場・チェックポイント（ちょうちん）・てっぺんの鐘
 // =========================================================================================
 const ZONES = [
@@ -586,9 +586,18 @@ const ZONES = [
   { y0: 620, y1: 750, name: '気球の空', en: 'BALLOONS', kinds: ['basket', 'kite', 'basket', 'blimp', 'kite'], steps: { jump: 10, lift: 1.6, draft: 1, bounce: 1 }, gap: [1.1, 2.5], sky: 2 },
   { y0: 750, y1: 880, name: '雷雲', en: 'THUNDERCLOUDS', kinds: ['cloud', 'rod', 'cloud', 'cloud', 'rod'], steps: { jump: 10, bounce: 1.6, draft: 1.4, mover: 1 }, gap: [1.1, 2.5], sky: 3 },
   { y0: 880, y1: 1000, name: '星のはしご', en: 'STAR LADDER', kinds: ['crystal', 'panel', 'asteroid', 'crystal', 'panel'], steps: { jump: 10, bounce: 1.2, draft: 1.2, mover: 1 }, gap: [1.2, 2.7], sky: 4 },
+  // ここから上は 5000m までの続き（500m ずつ）
+  { y0: 1000, y1: 1500, name: '雲海の遺跡', en: 'RUINS ABOVE THE CLOUDS', kinds: ['pillar', 'ruin', 'arch', 'ruin', 'pillar'], steps: { jump: 10, ladder: 1.2, draft: 1.1, walk: 1 }, gap: [1.1, 2.6], sky: 5 },
+  { y0: 1500, y1: 2000, name: '氷の峰', en: 'ICE PEAKS', kinds: ['ice', 'snow', 'icicle', 'ice', 'snow'], steps: { jump: 10, bounce: 1.2, lift: 1.1, walk: .8 }, gap: [1.1, 2.6], sky: 5 },
+  { y0: 2000, y1: 2500, name: '飛行船の港', en: 'AIRSHIP HARBOR', kinds: ['container', 'crates', 'kite', 'beam', 'crates', 'kite'], steps: { jump: 10, mover: 1.3, lift: 1.3, ladder: 1 }, gap: [1.1, 2.6], sky: 6 },
+  { y0: 2500, y1: 3000, name: 'オーロラの海', en: 'AURORA SEA', kinds: ['ice', 'crystal', 'kite', 'nebula', 'panel'], steps: { jump: 10, draft: 1.5, bounce: 1.2, mover: .9 }, gap: [1.1, 2.6], sky: 7 },
+  { y0: 3000, y1: 3500, name: '人工衛星の道', en: 'SATELLITE ROAD', kinds: ['sat', 'panel', 'sat', 'module', 'panel'], steps: { jump: 10, mover: 1.5, lift: 1, walk: 1 }, gap: [1.1, 2.6], sky: 8 },
+  { y0: 3500, y1: 4000, name: '月の岩場', en: 'MOON ROCKS', kinds: ['moon', 'crater', 'moon', 'rod', 'asteroid'], steps: { jump: 10, bounce: 1.5, mover: 1, draft: .6 }, gap: [1.1, 2.7], sky: 8 },
+  { y0: 4000, y1: 4500, name: '宇宙ステーション', en: 'SPACE STATION', kinds: ['module', 'scaffold', 'panel', 'beam', 'sat'], steps: { jump: 10, lift: 1.4, ladder: 1, mover: 1.2, walk: 1 }, gap: [1.1, 2.6], sky: 9 },
+  { y0: 4500, y1: 5000, name: '銀河への門', en: 'GALAXY GATE', kinds: ['crystal', 'nebula', 'asteroid', 'crystal', 'panel'], steps: { jump: 10, draft: 1.3, bounce: 1.3, mover: 1.2 }, gap: [1.2, 2.7], sky: 9 },
 ];
 const zoneAt = y => ZONES.find(z => y < z.y1) || ZONES[ZONES.length - 1];
-const LV = { plats: [], steps: [], cps: [], seed: 20261117, top: 1000, summit: null, movers: [], pads: [], drafts: [], ladders: [], bell: null, lanterns: [] };
+const LV = { plats: [], steps: [], cps: [], seed: 20261117, top: 5000, summit: null, movers: [], pads: [], drafts: [], ladders: [], bell: null, lanterns: [] };
 // ---------- 絵（テクスチャ） ----------
 const TX = {};
 function makeTex() {
@@ -616,7 +625,7 @@ function makeMats() {
 }
 // ---------- 形をためる（材質ごと・高さの区切りごとにまとめて1つにする） ----------
 const BATCH = new Map(), CHUNK = 40;
-function bget(mat, y) { const key = Math.floor(clamp(y, 0, 1100) / CHUNK) + '|' + mat; let b = BATCH.get(key); if (!b) BATCH.set(key, (b = { mat, ck: Math.floor(clamp(y, 0, 1100) / CHUNK), pos: [], nor: [], uv: [], col: [], idx: [] })); return b; }
+function bget(mat, y) { const key = Math.floor(clamp(y, 0, 5100) / CHUNK) + '|' + mat; let b = BATCH.get(key); if (!b) BATCH.set(key, (b = { mat, ck: Math.floor(clamp(y, 0, 5100) / CHUNK), pos: [], nor: [], uv: [], col: [], idx: [] })); return b; }
 const _c = new THREE.Color();
 // 箱：中心 (cx,cy,cz)・大きさ (w,h,d)・向き yaw・色・UV（0: 面ごとに 0〜1、数字: 1m あたりのくり返し）
 function gBox(mat, cx, cy, cz, w, h, d, yaw = 0, col = 0xffffff, uvs = .5, pitch = 0) {
@@ -657,6 +666,7 @@ function finishBatches() {
   for (const b of BATCH.values()) {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(b.nor, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 3)); g.setIndex(b.idx); g.computeBoundingSphere();
+    for (const k in g.attributes) g.attributes[k].onUpload(function () { this.array = null; }); if (g.index) g.index.onUpload(function () { this.array = null; });   // 絵の板に送ったら、こちらの写しは捨てる（5000m 分の形でメモリが足りなくならないように）
     const m = new THREE.Mesh(g, MAT[b.mat]); m.castShadow = b.mat !== 'cloud'; m.receiveShadow = true; m.userData.ck = b.ck; scene.add(m); LV.chunks.push(m);
   }
   BATCH.clear();
@@ -699,6 +709,17 @@ function kindSize(kind, R) {
     case 'asteroid': return { s: 'c', r: r(1.4, 2.4), th: 1.6 };
     case 'big': return { s: 'c', r: 3.6, th: 1.5 };
     case 'pier': return { s: 'b', hx: 4, hz: 6, th: 1.0 };
+    case 'pillar': return { s: 'c', r: r(1.0, 1.5), th: .6 };
+    case 'ruin': return { s: 'b', hx: r(1.2, 1.8), hz: r(.9, 1.4), th: 1.0 };
+    case 'arch': return { s: 'b', hx: .55, hz: r(2.4, 3.4), th: .6, long: 1 };
+    case 'ice': return { s: 'c', r: r(1.2, 2.0), th: 1.2 };
+    case 'snow': return { s: 'c', r: r(1.5, 2.5), th: 1.3 };
+    case 'icicle': return { s: 'c', r: .62, th: .5 };
+    case 'sat': return { s: 'b', hx: .8, hz: r(3.0, 4.0), th: .25, long: 1 };
+    case 'module': return { s: 'b', hx: 1.1, hz: r(2.6, 3.6), th: 2.4, long: 1 };
+    case 'moon': return { s: 'c', r: r(1.5, 2.6), th: 1.6 };
+    case 'crater': return { s: 'c', r: r(2.4, 3.2), th: 1.2 };
+    case 'nebula': return { s: 'c', r: r(1.6, 2.4), th: .8 };
   }
   return { s: 'b', hx: 1, hz: 1, th: 1 };
 }
@@ -748,7 +769,40 @@ function buildPlat(kind, x, top, z, yaw, sz, R, zi) {
     case 'crystal': { const c = pk([0x7ad8ff, 0xc89aff, 0x9affd8, 0xffb0e8]); gCyl('glow', x, top - th / 2, z, sz.r, th, 6, c, .5, sz.r * .65); const g = new THREE.ConeGeometry(sz.r * .65, 1.4, 6); g.rotateX(Math.PI); gGeo('glow', g, M4(x, top - th - .7, z), new THREE.Color(c).multiplyScalar(.8).getHex(), top); col(addCyl(x, top - th / 2, z, sz.r * .9, th / 2)); break; }
     case 'panel': gBox('paint', x, cy, z, 1.6, .14, 4.0, yaw, 0x1a2a6a); for (let i = -1.75; i < 2; i += .5) gBox('glow', x + Math.sin(yaw) * i, top + .005, z + Math.cos(yaw) * i, 1.5, .01, .44, yaw, 0x2a4ad8); gBox('metal', x, cy - .7, z, .9, 1.2, .9, yaw, 0xd8c070); gCyl('paint', x, cy - 1.6, z, .05, 1.2, 6, 0xcccccc); col(addBox(x, cy, z, .8, .07, 2.0, yaw)); break;
     case 'asteroid': { const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, v = V3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const k = .8 + R() * .35; v.multiplyScalar(k); if (v.y > .3) v.y = .3; p.setXYZ(i, v.x, v.y, v.z); } g.computeVertexNormals(); gGeo('rock', g, M4(x, top - .3 * sz.r, z, yaw, sz.r, sz.r, sz.r), 0x9a8aa8, top); col(addCyl(x, top - .5, z, sz.r * .85, .5)); break; }
-    case 'big': { const g = new THREE.CylinderGeometry(3.6, 2.2, 1.5, 16); gGeo('rock', g, M4(x, cy - .03, z), 0xb0a090, top); gCyl('grass', x, top - .04, z, 3.6, .1, 20, 0xffffff, .4); col(addCyl(x, cy, z, 3.6, .75)); break; }
+    case 'big': { const g = new THREE.CylinderGeometry(3.6, 2.2, 1.5, 16); gGeo('rock', g, M4(x, cy - .03, z), zi >= 12 ? 0x8a8e9a : 0xb0a090, top);
+      // チェックポイントの島の上：エリアに合わせる（1000m までは草）
+      if (zi === 9 || zi === 11) gCyl('paint', x, top - .04, z, 3.6, .1, 20, 0xf2f8ff, .4);
+      else if (zi === 10) { gCyl('wood', x, top - .04, z, 3.6, .1, 20, 0xffffff, .5); }
+      else if (zi === 13) gCyl('rock', x, top - .04, z, 3.6, .1, 20, 0xc8c8d0, .4);
+      else if (zi >= 12) { gCyl('metal', x, top - .04, z, 3.6, .1, 20, 0xc8ccd8, .4); const rg = new THREE.TorusGeometry(3.3, .05, 6, 40); rg.rotateX(Math.PI / 2); gGeo('glow', rg, M4(x, top + .02, z), 0x6ac8ff, top); }
+      else gCyl('grass', x, top - .04, z, 3.6, .1, 20, 0xffffff, .4);
+      col(addCyl(x, cy, z, 3.6, .75)); break; }
+    // ---------- 5000m までの続きの足場 ----------
+    case 'pillar': gCyl('conc', x, top - .3, z, sz.r, .6, 16, 0xece4d6, .5); gCyl('conc', x, top - .7, z, sz.r * .85, .2, 16, 0xd8d0c0); gCyl('conc', x, top - 2.6, z, sz.r * .62, 3.6, 12, 0xe0d8c8, .5);
+      col(addCyl(x, top - .3, z, sz.r, .3)); break;   // 下の柱は飾り（ほかの段のジャンプのじゃまをしない）
+    case 'ruin': { const w = sz.hx * 2, d = sz.hz * 2; gBox('rock', x, cy, z, w, th, d, yaw, 0xd8ccb8, .5); gBox('grass', x, top - .03, z, w * .86, .08, d * .8, yaw, 0xc0e0a0, .5);
+      const ox = Math.cos(yaw) * sz.hx * .7, oz = -Math.sin(yaw) * sz.hx * .7; gBox('rock', x + ox, top + .3, z + oz, .5, .6, .5, yaw + .4, 0xc8bca8, .5); col(addBox(x, cy, z, sz.hx, th / 2, sz.hz, yaw)); break; }
+    case 'arch': { const L = sz.hz * 2; gBox('conc', x, cy, z, 1.1, th, L, yaw, 0xe4dccc, .5); gBox('conc', x, top + .05, z, 1.2, .1, L + .2, yaw, 0xc8bca8);
+      for (const s of [-1, 1]) { const ox = Math.sin(yaw) * s * (sz.hz - .5), oz = Math.cos(yaw) * s * (sz.hz - .5); gBox('conc', x + ox, top - 2.1, z + oz, .9, 3, .9, yaw, 0xdcd4c4, .5); }
+      col(addBox(x, cy, z, .55, th / 2, sz.hz, yaw)); break; }
+    case 'ice': { gCyl('glow', x, top - th / 2, z, sz.r, th, 6, 0xa8dcff, .5, sz.r * .92); const g = new THREE.ConeGeometry(sz.r * .9, 2.4, 6); g.rotateX(Math.PI); gGeo('glow', g, M4(x, top - th - 1.2, z), 0x7ab8e8, top);
+      gCyl('paint', x, top - .02, z, sz.r * .8, .05, 6, 0xf4fbff); col(addCyl(x, top - th / 2, z, sz.r * .92, th / 2)); break; }
+    case 'snow': { const g = new THREE.IcosahedronGeometry(1, 2), p = g.attributes.position, v = V3(), sd = R() * 100; for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); if (v.y > .15) v.y = .15; else v.y *= 1.5 + .4 * Math.sin(v.x * 3 + sd); p.setXYZ(i, v.x, v.y, v.z); } g.computeVertexNormals();
+      gGeo('rock', g, M4(x, top - .15 * sz.r, z, yaw, sz.r, sz.r * 1.1, sz.r), 0x8a92a0, top); gCyl('paint', x, top - .05, z, sz.r * .97, .14, 18, 0xf6faff, .5); col(addCyl(x, top - .5, z, sz.r * .93, .5)); break; }
+    case 'icicle': { gCyl('glow', x, top - .25, z, sz.r, .5, 8, 0xd0f0ff, .5); const g = new THREE.ConeGeometry(sz.r * .9, 3.2, 8); g.rotateX(Math.PI); gGeo('glow', g, M4(x, top - 2.1, z), 0x9ad0f0, top); col(addCyl(x, top - .25, z, sz.r, .25)); break; }
+    case 'sat': { const L = sz.hz * 2; for (const s of [-1, 1]) { const ox = Math.sin(yaw) * s * (sz.hz / 2 + .55), oz = Math.cos(yaw) * s * (sz.hz / 2 + .55); gBox('paint', x + ox, cy, z + oz, 1.6, .1, sz.hz - 1.1, yaw, 0x1a2a6a); for (let i = -1; i <= 1; i++) gBox('glow', x + ox + Math.sin(yaw) * i * (sz.hz - 1.1) / 3.3, top + .005, z + oz + Math.cos(yaw) * i * (sz.hz - 1.1) / 3.3, 1.45, .01, (sz.hz - 1.1) / 3.6, yaw, 0x3a5ae8); }
+      gBox('metal', x, top - .8, z, 1.4, 1.1, 1.4, yaw, 0xe0b850); gBox('paint', x, top - .01, z, 1.5, .04, 1.5, yaw, 0x8a8e98); gCyl('metal', x, top - 1.6, z, .5, .5, 14, 0xe8e8f0); gCyl('paint', x, top - 2.1, z, .05, 1.2, 6, 0xcccccc);
+      col(addBox(x, cy, z, .8, th / 2, sz.hz, yaw)); void L; break; }   // 本体は通り道より下（ふみ切りのじゃまにならない）
+    case 'module': { const L = sz.hz * 2, g = new THREE.CylinderGeometry(1.2, 1.2, L, 18); g.rotateX(Math.PI / 2); gGeo('metal', g, M4(x, top - 1.2, z, yaw), 0xe8eaf0, top);
+      for (let i = -L / 2 + .8; i < L / 2; i += 1.6) { const gr = new THREE.TorusGeometry(1.22, .06, 6, 18); gGeo('glow', gr, M4(x + Math.sin(yaw) * i, top - 1.2, z + Math.cos(yaw) * i, yaw), 0x6ac8ff, top); }
+      gBox('paint', x, top - .04, z, 1.5, .08, L * .96, yaw, 0x8a8e98, .5); for (const s of [-1, 1]) gCyl('paint', x + Math.sin(yaw) * s * L / 2, top - 1.2, z + Math.cos(yaw) * s * L / 2, .9, .3, 14, 0x6a6e78);
+      col(addBox(x, cy, z, 1.1, th / 2, sz.hz, yaw)); break; }
+    case 'moon': { const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, v = V3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); v.multiplyScalar(.82 + R() * .3); if (v.y > .3) v.y = .3; p.setXYZ(i, v.x, v.y, v.z); } g.computeVertexNormals();
+      gGeo('rock', g, M4(x, top - .3 * sz.r, z, yaw, sz.r, sz.r, sz.r), 0xc4c4cc, top); for (let k = 0; k < 2; k++) gCyl('paint', x + (R() - .5) * sz.r * .8, top + .01, z + (R() - .5) * sz.r * .8, .25 + R() * .3, .02, 12, 0x8a8a92); col(addCyl(x, top - .5, z, sz.r * .85, .5)); break; }
+    case 'crater': { gCyl('rock', x, top - th / 2, z, sz.r, th, 22, 0xb0b0b8, .5, sz.r * .7); const tr = new THREE.TorusGeometry(sz.r * .78, .16, 6, 24); tr.rotateX(Math.PI / 2); gGeo('rock', tr, M4(x, top + .04, z), 0x9a9aa4, top);
+      gCyl('paint', x, top + .005, z, sz.r * .6, .02, 20, 0x8a8a94); col(addCyl(x, top - th / 2, z, sz.r * .95, th / 2)); break; }
+    case 'nebula': { const c = pk([0xb07aff, 0xff7ad8, 0x7ab8ff, 0x9affe8]); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, rr2 = sz.r * (.55 + R() * .3), g = new THREE.IcosahedronGeometry(1, 2); gGeo('glow', g, M4(x + Math.cos(a) * sz.r * .5, top - .45 + R() * .15, z + Math.sin(a) * sz.r * .5, 0, rr2, rr2 * .5, rr2), new THREE.Color(c).lerp(new THREE.Color(0xffffff), R() * .4).getHex(), top); }
+      col(addCyl(x, top - .4, z, sz.r * .92, .4)); break; }
     case 'pier': gBox('wood', x, cy, z, 8, 1.0, 12, yaw, 0xffffff, .5); for (let i = 0; i < 6; i++) gCyl('wood', x + (i % 2 ? 3.6 : -3.6), -1.2, z - 5 + Math.floor(i / 2) * 5, .25, 3, 8, 0x8a6a4a); col(addBox(x, cy, z, 4, .5, 6, yaw)); break;
   }
   return P;
@@ -779,7 +833,7 @@ function placeAt(A, B0, ux, uz, gap) {
 }
 // 置く場所が、ほかの物とぶつからないか
 // あとから物を置かない空間（動く足場の通り道・上昇気流・はねる床の上・はしごの前）
-const RESV = [];
+const RESV = [], PATHS = [];   // PATHS：1000m より上のジャンプのすき間（動く足場が、あとから横切らないように）
 const reserve = (x0, y0, z0, x1, y1, z1) => RESV.push([Math.min(x0, x1), Math.min(y0, y1), Math.min(z0, z1), Math.max(x0, x1), Math.max(y0, y1), Math.max(z0, z1)]);
 function spotFree(x, top, z, sz, yaw, ignore) {
   const rad = (sz.s === 'c' ? sz.r : Math.hypot(sz.hx, sz.hz)) + .5, y0 = top - sz.th - 2.7, y1 = top + 2.6;
@@ -795,8 +849,8 @@ function genLevel(say) {
   let A = buildPlat('pier', 0, .6, 26, 0, kindSize('pier', R), R, 0); A.cp = 1; LV.plats.push(A);
   LV.cps.push({ x: 0, y: .6, z: 26, i: 0, zone: 0 });
   let lastCP = 0, guard = 0;
-  const targetR = y => 15 + 7 * Math.sin(y / 41) + 3 * Math.sin(y / 13);
-  while (A.y < LV.top - 14 && guard++ < 3000) {
+  const targetR = y => { const t = 15 + 7 * Math.sin(y / 41) + 3 * Math.sin(y / 13); return y >= 1000 ? Math.max(t, 12) : t; };   // 1000m より上は、らせんを小さくしすぎない（ひとつ上の周の足場が近すぎないように）
+  while (A.y < LV.top - 14 && guard++ < 20000) {
     const Z = zoneAt(A.y), zi = ZONES.indexOf(Z);
     let type = A.y - lastCP > 44 ? 'checkpoint' : W(Z.steps);
     if (A.lift || A.mover || A.pad || A.draft) type = 'jump';
@@ -815,14 +869,16 @@ function genLevel(say) {
         if (rise > .7) gap *= .85;
         const d = placeAt(A, B0, ux, uz, gap), x = A.x + ux * d, z = A.z + uz * d, top = A.y + rise;
         if (top < 1 || !spotFree(x, top, z, sz, yaw, A.cols)) continue;
-        const B = buildPlat(kind, x, top, z, yaw, sz, R, zi); LV.plats.push(B); LV.steps.push({ type: 'jump', A, B }); A = B; ok = true;
+        const B = buildPlat(kind, x, top, z, yaw, sz, R, zi); LV.plats.push(B); LV.steps.push({ type: 'jump', A, B });
+        if (A.y >= 1000) { const eA2 = rayExt(A, ux, uz), eB2 = rayExt(B, -ux, -uz), ax = A.x + ux * eA2, az = A.z + uz * eA2, bx2 = B.x - ux * eB2, bz2 = B.z - uz * eB2; PATHS.push([Math.min(ax, bx2) - .5, Math.min(A.y, B.y) + .2, Math.min(az, bz2) - .5, Math.max(ax, bx2) + .5, Math.max(A.y, B.y) + 2.4, Math.max(az, bz2) + .5]); }
+        A = B; ok = true;
         if (type === 'checkpoint') { lastCP = B.y; B.cp = LV.cps.length; LV.cps.push({ x: B.x, y: B.y, z: B.z, i: LV.cps.length, zone: zi }); makeLantern(B); }
       } else if (type === 'ladder') {
         // はしご：足場のとなりに高い柱、上に次の足場
         const h = r(5, 8.5), px = A.x + ux * (eA + .7), pz = A.z + uz * (eA + .7), yaw = Math.atan2(ux, uz);
         const sz = { s: 'b', hx: .9, hz: .6, th: h };
         if (!spotFree(px, A.y + h, pz, { s: 'b', hx: 1.3, hz: 1.3, th: h }, yaw, A.cols)) continue;
-        const mat = zi === 0 ? 'metal' : zi === 2 ? 'steel' : 'conc', col = zi === 0 ? 0xc8412c : zi === 2 ? 0xd0d0d0 : 0xe0d8d0;
+        const mat = zi === 0 || zi >= 12 ? 'metal' : zi === 2 ? 'steel' : 'conc', col = zi === 0 ? 0xc8412c : zi === 2 || zi >= 12 ? 0xd0d0d0 : 0xe0d8d0;
         gBox(mat, px, A.y + h / 2 - .4, pz, 1.8, h + .8, 1.2, yaw, col, .4); const pc = addBox(px, A.y + h / 2 - .4, pz, .9, (h + .8) / 2, .6, yaw);
         const top = A.y + h + .4, B = buildPlat('roof', px + ux * .4, top, pz + uz * .4, yaw, { s: 'b', hx: 1.4, hz: 1.4, th: .5 }, R, zi); B.cols.push(pc); LV.plats.push(B);
         // はしごの見た目と判定（柱の手前の面）
@@ -836,7 +892,7 @@ function genLevel(say) {
         const px = A.x + ux * (eA + .9), pz = A.z + uz * (eA + .9), up = r(4.5, 6.2);
         if (!spotFree(px, A.y + up + 1.5, pz, { s: 'c', r: 1.1, th: up + 2 }, 0, A.cols)) continue;
         const kind = Z.kinds[(R() * Z.kinds.length) | 0], sz = kindSize(kind, R); if (sz.s === 'c' && sz.r < .6 || sz.s === 'b' && Math.min(sz.hx, sz.hz) < .5) continue;
-        const yaw = r(0, TAU), eB = rayExt(Object.assign({ yaw }, sz), ux, uz), d = .9 + r(1.0, 1.8) + eB, bx = px + ux * d, bz = pz + uz * d, top = A.y + up;
+        const yaw = A.y >= 1000 && sz.long ? Math.atan2(ux, uz) + r(-.3, .3) : r(0, TAU), eB = rayExt(Object.assign({ yaw }, sz), ux, uz), d = .9 + r(1.0, 1.8) + eB, bx = px + ux * d, bz = pz + uz * d, top = A.y + up;
         if (!spotFree(bx, top, bz, sz, yaw, A.cols)) continue;
         gCyl('paint', px, A.y - .05, pz, .85, .3, 18, 0x2a2a2a); gCyl('glow', px, A.y + .12, pz, .78, .08, 18, 0x3aff8a);
         const pad = addCyl(px, A.y - .05, pz, .85, .15, { bounce: Math.sqrt(2 * PH.g * (up + 1.8)) }); reserve(px - 1.3, A.y, pz - 1.3, px + 1.3, A.y + up + 2.5, pz + 1.3);
@@ -847,7 +903,7 @@ function genLevel(say) {
         const cx = A.x + ux * (eA + 1.9), cz = A.z + uz * (eA + 1.9), up = r(11, 17);
         if (!spotFree(cx, A.y + up + 1, cz, { s: 'c', r: 2.0, th: up + 1.6 }, 0, A.cols)) continue;
         const kind = Z.kinds[(R() * Z.kinds.length) | 0], sz = kindSize(kind, R); if (sz.s === 'c' && sz.r < .7 || sz.s === 'b' && Math.min(sz.hx, sz.hz) < .5) continue;
-        const yaw = r(0, TAU), eB = rayExt(Object.assign({ yaw }, sz), ux, uz), d = 1.7 + r(.6, 1.2) + eB, bx = cx + ux * d, bz = cz + uz * d, top = A.y + up - r(1.5, 3);
+        const yaw = A.y >= 1000 && sz.long ? Math.atan2(ux, uz) + r(-.3, .3) : r(0, TAU), eB = rayExt(Object.assign({ yaw }, sz), ux, uz), d = 1.7 + r(.6, 1.2) + eB, bx = cx + ux * d, bz = cz + uz * d, top = A.y + up - r(1.5, 3);
         if (!spotFree(bx, top, bz, sz, yaw, A.cols)) continue;
         reserve(cx - 2, A.y - 1, cz - 2, cx + 2, A.y + up + 2.5, cz + 2);
         const D = { x: cx, z: cz, r: 1.6, y0: A.y - 1, y1: A.y + up + 1, lift: 14 }; COL.drafts.push(D); LV.drafts.push(D); draftMesh(D);
@@ -859,8 +915,10 @@ function genLevel(say) {
         const sx = A.x + ux * (eA + 1.25), sz0 = A.z + uz * (eA + 1.25), y0 = A.y - .1;
         const ex = lift ? sx : sx + ux * span, ez = lift ? sz0 : sz0 + uz * span, ey = lift ? y0 + span : y0 + r(0, .6);
         if (!spotFree((sx + ex) / 2, Math.max(y0, ey) + 1, (sz0 + ez) / 2, { s: 'c', r: lift ? 1.6 : span / 2 + 1.2, th: (lift ? span : .4) + 1.6 }, 0, A.cols)) continue;
+        if (A.y >= 1000) { const bx0 = Math.min(sx, ex) - 1.7, by0 = Math.min(y0, ey) - .6, bz0 = Math.min(sz0, ez) - 1.7, bx1 = Math.max(sx, ex) + 1.7, by1 = Math.max(y0, ey) + .6, bz1 = Math.max(sz0, ez) + 1.7;
+          if (PATHS.slice(0, -2).some(P => bx1 > P[0] && bx0 < P[3] && bz1 > P[2] && bz0 < P[5] && by1 > P[1] && by0 < P[4])) continue; }
         const kind = Z.kinds[(R() * Z.kinds.length) | 0], sz = kindSize(kind, R); if (sz.s === 'c' && sz.r < .6 || sz.s === 'b' && Math.min(sz.hx, sz.hz) < .5) continue;
-        const yaw = r(0, TAU), eB = rayExt(Object.assign({ yaw }, sz), ux, uz), d = 1.0 + r(.9, 1.6) + eB, bx = ex + ux * d, bz = ez + uz * d, top = ey + r(0, .6);
+        const yaw = A.y >= 1000 && sz.long ? Math.atan2(ux, uz) + r(-.3, .3) : r(0, TAU), eB = rayExt(Object.assign({ yaw }, sz), ux, uz), d = 1.0 + r(.9, 1.6) + eB, bx = ex + ux * d, bz = ez + uz * d, top = ey + r(0, .6);
         if (!spotFree(bx, top, bz, sz, yaw, A.cols)) continue;
         const Mv = makeMover(zi, sx, y0, sz0, ex, ey, ez, lift ? r(7, 9) : r(6, 8), R() * TAU); reserve(Math.min(sx, ex) - 1.7, Math.min(y0, ey) - .6, Math.min(sz0, ez) - 1.7, Math.max(sx, ex) + 1.7, Math.max(y0, ey) + 2.6, Math.max(sz0, ez) + 1.7);
         const B = buildPlat(kind, bx, top, bz, yaw, sz, R, zi); LV.plats.push(B);
@@ -869,11 +927,22 @@ function genLevel(say) {
     }
     if (!ok) { // うまく置けないときは、まわりをぐるっと探して大きな島
       const sz = kindSize('big', R); let placed = false;
-      for (let k = 0; k < 24 && !placed; k++) { const a = Math.atan2(A.z, A.x) + Math.PI / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * .26, ux = Math.cos(a), uz = Math.sin(a), B0 = Object.assign({ yaw: 0 }, sz), d = placeAt(A, B0, ux, uz, 1.4), x = A.x + ux * d, z = A.z + uz * d, top = A.y + .5;
+      const combos = A.y >= 1000 ? [[1.4, .5], [2.0, .5], [1.4, 1.0], [2.4, .2], [1.6, -.4], [2.6, .9]] : [[1.4, .5]];
+      for (let k = 0; k < 24 * combos.length && !placed; k++) { const kk = k % 24, [cg, cr] = combos[(k / 24) | 0], a = Math.atan2(A.z, A.x) + Math.PI / 2 + (kk % 2 ? 1 : -1) * Math.ceil(kk / 2) * .26, ux = Math.cos(a), uz = Math.sin(a), B0 = Object.assign({ yaw: 0 }, sz), d = placeAt(A, B0, ux, uz, cg), x = A.x + ux * d, z = A.z + uz * d, top = A.y + cr;
         if (!spotFree(x, top, z, sz, 0, A.cols)) continue; const B = buildPlat('big', x, top, z, 0, sz, R, ZONES.indexOf(zoneAt(A.y))); LV.plats.push(B); LV.steps.push({ type: 'jump', A, B, forced: 1 }); A = B; placed = true; }
-      if (!placed) { const B = buildPlat('big', A.x * 1.3, A.y + 6, A.z * 1.3, 0, sz, R, ZONES.indexOf(zoneAt(A.y))); LV.plats.push(B); LV.steps.push({ type: 'jump', A, B, forced: 2 }); A = B; }
+      if (!placed) {   // それでも置けないとき：1000m より上は、足場の上に上昇気流を立てて、となりの高い島へ
+        if (A.y >= 1000) {
+          const a = Math.atan2(A.z, A.x), ux = Math.cos(a), uz = Math.sin(a), B = buildPlat('big', A.x + ux * 7.4, A.y + 6, A.z + uz * 7.4, 0, sz, R, ZONES.indexOf(zoneAt(A.y))); LV.plats.push(B);
+          const D = { x: A.x, z: A.z, r: 1.6, y0: A.y - 1, y1: A.y + 9, lift: 14 }; COL.drafts.push(D); LV.drafts.push(D); draftMesh(D); reserve(A.x - 2, A.y - 1, A.z - 2, A.x + 2, A.y + 9.5, A.z + 2);
+          LV.steps.push({ type: 'draft', A, B, D, forced: 3 }); A = B;
+        } else { const B = buildPlat('big', A.x * 1.3, A.y + 6, A.z * 1.3, 0, sz, R, ZONES.indexOf(zoneAt(A.y))); LV.plats.push(B); LV.steps.push({ type: 'jump', A, B, forced: 2 }); A = B; }
+      }
     }
   }
+  // 飛行船の港（2000〜2500m）：まわりに浮かぶ飛行船と気球（飾り。当たりなし）
+  { const R2 = rng(2077); for (let k = 0; k < 12; k++) { const a = R2() * TAU, d = 34 + R2() * 34, x = Math.cos(a) * d, z = Math.sin(a) * d, y = 2015 + k * 40 + R2() * 18, yaw = R2() * TAU, c = [0xd8dce8, 0xe8c8a0, 0xc8d8f0, 0xf0d0d8][k % 4];
+    if (k % 3 === 2) { const env = new THREE.SphereGeometry(3.6, 18, 14); gGeo('paint', env, M4(x, y + 7, z, 0, 1, 1.15, 1), [0xd8402a, 0x2a8ad8, 0xf2c21a, 0x8a3ad8][k % 4], y); gBox('wood', x, y + 1.6, z, 1.6, 1.1, 1.6, yaw, 0xd8b080, .8); }
+    else { const g = new THREE.SphereGeometry(1, 20, 12); gGeo('paint', g, M4(x, y + 4, z, yaw, 3.4, 3.1, 9.5), c, y); gBox('paint', x, y, z, 2.4, 1.2, 7.5, yaw, 0x3a4a6a); for (const sg of [-1, 1]) gBox('paint', x + Math.sin(yaw) * sg * 4.6, y + 4, z + Math.cos(yaw) * sg * 4.6, .1, 3.2, 1.6, yaw, 0x8a2a2a); } } }
   // てっぺん：大きな島と鐘
   const th = Math.atan2(A.z, A.x) + .25, eA = rayExt(A, -Math.sin(th), Math.cos(th));
   const sx = A.x - Math.sin(th) * (eA + 1.6 + 5), sz2 = A.z + Math.cos(th) * (eA + 1.6 + 5);
@@ -885,7 +954,7 @@ function genLevel(say) {
   const g = new THREE.CylinderGeometry(5, 3, 2, 24); gGeo('rock', g, M4(sx, LV.top - 1.04, sz2), 0xb8b0c8, LV.top); gCyl('grass', sx, LV.top - .03, sz2, 5, .08, 28, 0xd8f0ff, .4);
   S.cols.push(addCyl(sx, LV.top - 1, sz2, 5, 1)); LV.plats.push(S); LV.summit = S;
   makeBell(sx, LV.top, sz2);
-  LV.cps.push({ x: sx, y: LV.top, z: sz2, i: LV.cps.length, zone: 7, goal: 1 });
+  LV.cps.push({ x: sx, y: LV.top, z: sz2, i: LV.cps.length, zone: ZONES.length - 1, goal: 1 });
   finishBatches();
 }
 // ---------- 上昇気流の見た目（うずをまいて上がる風の線） ----------
@@ -937,12 +1006,23 @@ function makeBell(x, y, z) {
 const SKY = { u: null, mesh: null, sun: null, hemi: null, clouds: [], sea: null, town: null, seaU: null };
 // 高さごとの空の色（y: 高さ）
 const SKY_K = [
-  { y: 0, top: 0x3a7ad0, hor: 0xcfe4f6, fog: 0xc4dcf0, sun: 0xfff2dc, si: 2.6, hemi: 1.0, exp: 1.0 },
-  { y: 300, top: 0x2a6ad8, hor: 0xe4f0fa, fog: 0xdceaf6, sun: 0xfff6e8, si: 2.9, hemi: 1.05, exp: 1.0 },
-  { y: 620, top: 0x3a5ab0, hor: 0xf2d8c0, fog: 0xe8d8c8, sun: 0xffe2c0, si: 2.7, hemi: .95, exp: 1.02 },
-  { y: 760, top: 0x3a3a5a, hor: 0x8a8aa0, fog: 0x7a7a90, sun: 0xd8d8ff, si: 1.6, hemi: .8, exp: 1.12 },
-  { y: 880, top: 0x0a0a2a, hor: 0x3a3a7a, fog: 0x2a2a5a, sun: 0xe8e8ff, si: 2.2, hemi: .7, exp: 1.1 },
-  { y: 1000, top: 0x02020c, hor: 0x2a1a5a, fog: 0x1a1240, sun: 0xffffff, si: 2.4, hemi: .65, exp: 1.08 },
+  { y: 0, top: 0x3a7ad0, hor: 0xcfe4f6, fog: 0xc4dcf0, sun: 0xfff2dc, si: 2.6, hemi: 1.0, exp: 1.0, st: 0, au: 0 },
+  { y: 300, top: 0x2a6ad8, hor: 0xe4f0fa, fog: 0xdceaf6, sun: 0xfff6e8, si: 2.9, hemi: 1.05, exp: 1.0, st: 0, au: 0 },
+  { y: 620, top: 0x3a5ab0, hor: 0xf2d8c0, fog: 0xe8d8c8, sun: 0xffe2c0, si: 2.7, hemi: .95, exp: 1.02, st: 0, au: 0 },
+  { y: 760, top: 0x3a3a5a, hor: 0x8a8aa0, fog: 0x7a7a90, sun: 0xd8d8ff, si: 1.6, hemi: .8, exp: 1.12, st: 0, au: 0 },
+  { y: 880, top: 0x0a0a2a, hor: 0x3a3a7a, fog: 0x2a2a5a, sun: 0xe8e8ff, si: 2.2, hemi: .7, exp: 1.1, st: .65, au: 0 },
+  { y: 1000, top: 0x02020c, hor: 0x2a1a5a, fog: 0x1a1240, sun: 0xffffff, si: 2.4, hemi: .65, exp: 1.08, st: 1, au: 1 },
+  // 5000m までの続き：雲海の夜明け → 高い空の朝 → 氷の峰の青空 → 金色の夕方 → オーロラの夜 → 宇宙の入口 → 月 → ステーション → 星雲 → 銀河
+  { y: 1180, top: 0x1a2a6a, hor: 0xffa868, fog: 0xe8a888, sun: 0xffd0a0, si: 2.6, hemi: .85, exp: 1.05, st: .25, au: 0 },
+  { y: 1500, top: 0x0a3ab8, hor: 0xbfe0ff, fog: 0xc8e4ff, sun: 0xffffff, si: 3.0, hemi: 1.0, exp: 1.0, st: 0, au: 0 },
+  { y: 2000, top: 0x082a9a, hor: 0xd8f0ff, fog: 0xd0e8ff, sun: 0xffffff, si: 3.1, hemi: 1.05, exp: 1.0, st: 0, au: 0 },
+  { y: 2420, top: 0x1a3a8a, hor: 0xffd8a0, fog: 0xf0d0a8, sun: 0xffe0b0, si: 2.8, hemi: .95, exp: 1.02, st: .1, au: 0 },
+  { y: 2700, top: 0x020612, hor: 0x0a2a3a, fog: 0x0a1a2a, sun: 0xc8e0ff, si: 2.0, hemi: .7, exp: 1.12, st: 1, au: 1 },
+  { y: 3100, top: 0x000004, hor: 0x0a2a6a, fog: 0x05101e, sun: 0xffffff, si: 3.0, hemi: .55, exp: 1.1, st: 1, au: 0 },
+  { y: 3650, top: 0x000000, hor: 0x1a1a22, fog: 0x0a0a10, sun: 0xffffff, si: 3.2, hemi: .5, exp: 1.1, st: 1, au: 0 },
+  { y: 4200, top: 0x000006, hor: 0x0a1030, fog: 0x060818, sun: 0xffffff, si: 3.0, hemi: .55, exp: 1.1, st: 1, au: 0 },
+  { y: 4700, top: 0x0a0218, hor: 0x5a1a7a, fog: 0x2a0a40, sun: 0xffe0ff, si: 2.6, hemi: .7, exp: 1.1, st: 1, au: .35 },
+  { y: 5000, top: 0x12041e, hor: 0xa04ac8, fog: 0x3a1050, sun: 0xfff0d0, si: 2.8, hemi: .8, exp: 1.12, st: 1, au: .3 },
 ];
 function makeSky() {
   const u = SKY.u = { uTop: { value: new THREE.Color() }, uHor: { value: new THREE.Color() }, uSun: { value: V3(.4, .6, .3).normalize() }, uStar: { value: 0 }, uT: { value: 0 }, uAur: { value: 0 } };
@@ -995,7 +1075,7 @@ void main(){
   // 雲の層（平らな雲の絵をたくさん）
   const [c, x] = cvs(128, 128), gr = x.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(.5, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
   const ct = ctex(c, { rep: false });
-  const layers = [[200, 0xffffff, .7, 60], [470, 0xffffff, .8, 70], [700, 0xf2e8e0, .9, 80], [800, 0x8a8aa0, 1, 90], [870, 0x6a6a8a, .8, 70]];
+  const layers = [[200, 0xffffff, .7, 60], [470, 0xffffff, .8, 70], [700, 0xf2e8e0, .9, 80], [800, 0x8a8aa0, 1, 90], [870, 0x6a6a8a, .8, 70], [1080, 0xffe8d8, .9, 120], [1960, 0xf0f6ff, .6, 70], [2560, 0x5a8a9a, .45, 60]];   // 1080m：夜明けの雲海
   for (const [ly, col, op, n] of layers) {
     const pos = [], R3 = rng(ly);
     for (let i = 0; i < n; i++) { const a = R3() * TAU, d = 40 + R3() * 380; pos.push(Math.cos(a) * d, ly + R3() * 30 - 15, Math.sin(a) * d); }
@@ -1011,7 +1091,7 @@ function updateSky(dt, t, P) {
   scene.fog.color.set(a.fog).lerp(_skc[0].set(b.fog), k); scene.fog.near = 90 + y * .1; scene.fog.far = 700 + y * .5;
   SKY.sun.color.set(a.sun).lerp(_skc[0].set(b.sun), k); SKY.sun.intensity = lerp(a.si, b.si, k); SKY.hemi.intensity = lerp(a.hemi, b.hemi, k);
   renderer.toneMappingExposure = lerp(a.exp, b.exp, k);
-  SKY.u.uStar.value = smooth(820, 920, y); SKY.u.uAur.value = smooth(900, 980, y); SKY.u.uT.value = t; SKY.seaU.uT.value = t;
+  SKY.u.uStar.value = lerp(a.st, b.st, k); SKY.u.uAur.value = lerp(a.au, b.au, k); SKY.u.uT.value = t; SKY.seaU.uT.value = t;
   SKY.mesh.position.copy(camera.position);
   // 太陽の光：自分のまわりだけ影
   const sd = SKY.u.uSun.value; SKY.sun.position.set(P.p.x + sd.x * 60, P.p.y + sd.y * 60, P.p.z + sd.z * 60); SKY.sun.target.position.set(P.p.x, P.p.y, P.p.z);
@@ -1047,10 +1127,10 @@ const AU = {
   zone() { [392, 494, 587].forEach((f, i) => this.tone(f, 1.4, .08, 'sine', i * .05)); },
   bell() { [262, 524, 786, 1310, 2093].forEach((f, i) => this.tone(f, 4 - i * .5, .25 / (i + 1), 'sine')); },
   update(dt, P) {
-    if (!this.ok) return; const t = this.ctx.currentTime, alt = clamp(P.p.y / 1000, 0, 1), fall = clamp(-P.v.y / 30, 0, 1);
+    if (!this.ok) return; const t = this.ctx.currentTime, alt = clamp(P.p.y / LV.top, 0, 1), fall = clamp(-P.v.y / 30, 0, 1);
     this.wind.gain.setTargetAtTime((.05 + alt * .18 + fall * .5) * (SET.bgm ? 1 : .6), t, .2); this.windF.frequency.setTargetAtTime(300 + alt * 300 + fall * 900, t, .2);
     // しずかな音楽（ペンタトニック）
-    if (SET.bgm) { this.musT -= dt; if (this.musT <= 0) { const sc = [0, 2, 4, 7, 9, 12, 14], z = ZONES.indexOf(zoneAt(P.p.y)), base = [196, 220, 247, 262, 233, 277, 208, 294][z]; this.musT = .55 + (this.musI % 4 === 3 ? .55 : 0); const n = sc[(this.musI * 3 + (this.musI >> 2)) % sc.length]; this.tone(base * Math.pow(2, n / 12), 1.6, .045, 'triangle'); if (this.musI % 8 === 0) this.tone(base / 2, 3, .04, 'sine'); this.musI++; } }
+    if (SET.bgm) { this.musT -= dt; if (this.musT <= 0) { const sc = [0, 2, 4, 7, 9, 12, 14], z = ZONES.indexOf(zoneAt(P.p.y)), base = [196, 220, 247, 262, 233, 277, 208, 294, 247, 262, 220, 196, 233, 208, 277, 294][z] || 262; this.musT = .55 + (this.musI % 4 === 3 ? .55 : 0); const n = sc[(this.musI * 3 + (this.musI >> 2)) % sc.length]; this.tone(base * Math.pow(2, n / 12), 1.6, .045, 'triangle'); if (this.musI % 8 === 0) this.tone(base / 2, 3, .04, 'sine'); this.musI++; } }
   },
 };
 // ---------- キャラクター ----------
@@ -1130,7 +1210,7 @@ function toCP(silent) {
 }
 function finish() {
   G.done = true; AU.bell(); LV.bell.swing = 1; if (!G.bestTime || G.time < G.bestTime) G.bestTime = G.time; writeSave();
-  msg('てっぺん 1000m！', '時間 ' + timeStr(G.time) + '　落ちた回数 ' + G.falls, 6); fireworks();
+  msg(`てっぺん ${LV.top}m！`, '時間 ' + timeStr(G.time) + '　落ちた回数 ' + G.falls, 6); fireworks();
 }
 const timeStr = s => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, ss = s % 60; return (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (ss < 10 ? '0' : '') + ss; };
 // 花火（てっぺん）
@@ -1149,10 +1229,10 @@ function banner(Z) { const b = $('banner'); b.innerHTML = `<small>${Math.round(Z
 function updateHud() {
   const P = G.P, y = Math.max(0, P.p.y);
   $('hH').textContent = Math.floor(y); $('hBest').textContent = Math.floor(G.best); $('hTime').textContent = timeStr(G.time); $('hFall').textContent = G.falls;
-  $('hBarF').style.height = clamp(y / 1000, 0, 1) * 100 + '%'; $('hBarB').style.bottom = clamp(G.best / 1000, 0, 1) * 100 + '%';
+  $('hBarF').style.height = clamp(y / LV.top, 0, 1) * 100 + '%'; $('hBarB').style.bottom = clamp(G.best / LV.top, 0, 1) * 100 + '%';
   $('bBack').style.display = G.mode === 0 ? '' : 'none';
 }
-function cpMarks() { $('hBar').querySelectorAll('i.cp').forEach(e => e.remove()); for (const c of LV.cps) { const e = document.createElement('i'); e.className = 'cp'; e.style.bottom = clamp(c.y / 1000, 0, 1) * 100 + '%'; $('hBar').appendChild(e); } }
+function cpMarks() { $('hBar').querySelectorAll('i.cp').forEach(e => e.remove()); for (const c of LV.cps) { const e = document.createElement('i'); e.className = 'cp'; e.style.bottom = clamp(c.y / LV.top, 0, 1) * 100 + '%'; $('hBar').appendChild(e); } }
 // ---------- 画面 ----------
 function show(id) { document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id === id)); G.scr = id; document.body.classList.toggle('playing', id === 'play'); }
 function drawTitle() {
@@ -1318,7 +1398,7 @@ async function boot() {
   try {
     onResize(); applyBtn(); say('空を作っています…'); await nextFrame();
     loadChars(); makeTex(); makeMats(); makeSky();
-    say('1000m の道を組み立てています…'); await nextFrame();
+    say(`${LV.top}m の道を組み立てています…`); await nextFrame();
     genLevel(say); cpMarks();
     wireUI(); drawTitle();
     titleCam(0); updateSky(0, 0, { p: camera.position, v: V3() }); renderer.compile(scene, camera); renderer.render(scene, camera);
