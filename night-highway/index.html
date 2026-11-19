@@ -189,7 +189,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
   <div class="lab">車（すきな車とチューンで走れる。お金はいらない）</div><div id="fsCars"></div><div id="fsTune" hidden></div>
   <div class="lab">いっしょに走る bot</div><div class="seg" id="fsBots"><button data-v="0">なし</button><button data-v="1">1台</button><button data-v="3">3台</button><button data-v="5">5台</button><button data-v="7">7台</button></div>
   <div id="fsLvRow"><div class="lab">bot の強さ</div><div class="seg" id="fsLv"><button data-v="0">弱い</button><button data-v="1">普通</button><button data-v="2">強い</button><button data-v="3">とても強い</button></div></div>
-  <div class="lab">一般車の数</div><div class="seg" id="fsTraf"><button data-v="0">少ない</button><button data-v="1">ふつう</button><button data-v="2">多い</button></div>
+  <div class="lab">一般車の数</div><div class="seg" id="fsTraf"><button data-v="3">なし</button><button data-v="0">少ない</button><button data-v="1">ふつう</button><button data-v="2">多い</button></div>
   <div class="lab">天気</div><div class="seg" id="fsWx"><button data-v="0">晴れ</button><button data-v="1">雨</button><button data-v="2">ランダム</button></div>
   <p id="fsNote"></p>
   <button class="mb go" id="fsGo" type="button">スタート</button><button class="mb" id="fsBack" type="button">もどる</button>
@@ -2002,7 +2002,7 @@ function spawnTraffic(t, s, near) {
   t.on = false; return false;
 }
 // 一般車の数：frac＝最大のうち何割を走らせるか（ふつう＝1/1.7）
-const TRAF_D = [.42, 1 / TRAF_MAX, 1];
+const TRAF_D = [.42, 1 / TRAF_MAX, 1, 0];   // 少ない・ふつう・多い・なし（フリーランで一般車をぜんぶなくす）
 function setDensity(frac) { const cnt = {}; for (const t of TRAFFIC) { const k = t.type + (t.opp ? 'o' : 's'), i = cnt[k] = (cnt[k] || 0) + 1, tot = TRAF_T[t.type].n[t.opp ? 1 : 0]; t.off = i > Math.min(tot, Math.round(tot * frac * (STG.traf.mix[t.type] || 1))); if (t.off) t.on = false; } }
 // フォーカス（自分の車）のまわりに、一般車をばらまく
 function resetTraffic(s0, clear = []) {
@@ -2709,7 +2709,8 @@ function drawFreeCar() {
   for (const b of T.querySelectorAll('[data-c]')) b.onclick = () => { AUDIO.click(); t.col = +b.dataset.c; saveFree(); PL.hero.paint.color.set(PAL[t.col][1]); PL.color = PAL[t.col][1]; drawFreeCar(); };
 }
 // スタートの並び（自分は s0 のまん中の車線）：[前後, 車線]
-const BOT_SLOT = [[13, -3.5], [13, 3.5], [-13, -3.5], [-13, 3.5], [26, 0], [-26, 0], [39, -3.5], [39, 3.5]];
+// 1台ずつ別の列にして、車線を左右にずらす（横にならばない・前後は 15m あける）
+const BOT_SLOT = [[15, -3.5], [-15, 3.5], [30, 3.5], [-30, -3.5], [45, 0], [-45, 0], [60, -3.5], [-60, 3.5]];
 function addBots(n, lv, s0) {
   const L = BOT_LV[lv], pool = RIVALS.map((r, i) => i).sort(() => Math.random() - .5);
   for (let i = 0; i < n; i++) {
