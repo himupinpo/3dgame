@@ -428,6 +428,7 @@ const lin = v => (v > 1 ? v : Math.pow(v, 2.2));   // 見た目の色 → 計算
 //  コース（ステージ）：制御点 [x, z, 高さ, 区間]・区間の名前・海・街灯の色・標識・電光掲示板・トンネルの名前・一般車
 //  区間：bay 湾岸 / bridge つり橋 / harbor 港 / city 都心高架 / jct ジャンクション / tunnel トンネル（オレンジの灯）/ tunnelW トンネル（白い灯）
 //        isle 埋立地の高架 / sea 海の上の高架 / street・neon・ave 地面の一般道（歩道・ガードレール・信号） / cut 高いかべにはさまれた掘割
+//        mtn 山あいの高架（森・山の家。ステージに mtns があると、まわりの山なみとトンネルを包む山）
 // =========================================================================================
 const SODIUM = [1, .5, .16], LEDW = [.76, .86, 1];   // 街灯の色：ナトリウム灯（オレンジ）と LED（白）
 const isTun = s => s === 'tunnel' || s === 'tunnelW';
@@ -487,6 +488,58 @@ const STAGES = [
     tun: [['夜光トンネル', 'YAKO TUNNEL  L=1,450m'], ['白光トンネル', 'HAKKO TUNNEL  L=1,280m'], ['地底トンネル', 'CHITEI TUNNEL  L=1,320m'], ['星見トンネル', 'HOSHIMI TUNNEL  L=760m']],
     signOf: sec => [sec === 'tunnel' ? 0 : sec === 'tunnelW' ? 2 : sec === 'jct' ? 1 : sec === 'cut' ? 3 : 7, isTun(sec) ? 0 : sec === 'jct' ? 2 : 3], filler: [6, 4, 5],
     traf: { vmul: .95, mix: { bus: .5 } } },
+  // ---- 夜光峠ハイウェイ：山あいの高い高架。森と山なみ、山をぬけるトンネル、谷川をこえる橋。登って下る ----
+  { id: 'touge', name: '夜光峠ハイウェイ', sub: '山の中の高架・森・山をぬけるトンネル・谷川の橋', seed: 5150, sea: 'plane', mtns: 1,
+    cp: [[0, 0, 14, 'mtn'], [420, 40, 18, 'mtn'], [820, -40, 26, 'mtn'], [1120, -280, 34, 'mtn'], [1260, -620, 40, 'tunnel'], [1240, -980, 40, 'tunnel'], [1080, -1280, 36, 'mtn'],
+      [800, -1480, 30, 'bridge'], [440, -1560, 30, 'bridge'], [80, -1500, 28, 'mtn'], [-220, -1300, 24, 'mtn'], [-420, -1000, 22, 'tunnelW'], [-480, -650, 20, 'tunnelW'], [-400, -320, 16, 'mtn'], [-220, -80, 14, 'mtn']],
+    secn: { mtn: '夜光峠', tunnel: '峠トンネル', tunnelW: '白樺トンネル', bridge: '谷川大橋' },
+    water: (x, z) => x > 380 && x < 560 && z < -1050,
+    lamp: () => SODIUM,
+    gs: [{ r: '18', ja: '夜光峠', en: 'Yako Pass', km: '2km' }, { r: '18', ja: '峠トンネル', en: 'Toge Tunnel', km: '1km' }, { r: '18', ja: '谷川大橋', en: 'Tanigawa Bridge', km: '500m' }, { r: '18', ja: '白樺トンネル', en: 'Shirakaba Tunnel', km: '1km' },
+      { r: 'B', ja: '山の駅', en: 'Yama no Eki', km: '500m', exit: 1 }, { warn: 1, ja: '急カーブ', en: 'Sharp Curve', km: '' }, { warn: 1, ja: '動物注意', en: 'Watch for Deer', km: '' }, { r: '18', ja: '峠ハイウェイ', en: 'Pass Highway', km: '5km' }],
+    led: [['この先 峠', '速度注意'], ['トンネル内', '凍結注意'], ['谷川大橋', '横風注意'], ['峠トンネル 2分', '白樺 5分']],
+    tun: [['峠トンネル', 'TOGE TUNNEL  L=720m'], ['白樺トンネル', 'SHIRAKABA TUNNEL  L=680m']],
+    signOf: sec => [sec === 'tunnel' ? 1 : sec === 'bridge' ? 2 : sec === 'tunnelW' ? 3 : 0, sec === 'mtn' ? 0 : isTun(sec) ? 1 : sec === 'bridge' ? 2 : 3], filler: [5, 6, 4],
+    traf: { vmul: .9, mix: { truck: 1.4, bus: .4, taxi: .3 } } },
+  // ---- 天空ジャンクション：ビルの間を高く高く登っていく高架。くねくねのジャンクションと、川をこえる橋 ----
+  { id: 'sora', name: '天空ジャンクション', sub: '高さ70mの高架・ビルの谷間・くねくねのJCT', seed: 3321, sea: 'plane',
+    cp: [[0, 0, 24, 'jct'], [380, -60, 34, 'city'], [700, -300, 46, 'city'], [820, -650, 58, 'jct'], [700, -980, 68, 'jct'], [380, -1120, 70, 'city'], [40, -1060, 62, 'bridge'], [-260, -880, 54, 'bridge'],
+      [-420, -580, 44, 'city'], [-380, -300, 36, 'jct'], [-200, -80, 28, 'jct']],
+    secn: { jct: '天空ジャンクション', city: '摩天楼高架', bridge: '星川橋' },
+    water: (x, z) => x > -240 && x < 40 && z < -880 && z > -1700 || (z < -1500 && x > -900 && x < 600),
+    lamp: sec => (sec === 'bridge' ? SODIUM : LEDW),
+    gs: [{ r: 'C3', ja: '天空JCT', en: 'Tenku JCT', km: '1km', arrow: 1 }, { r: 'C3', ja: '摩天楼', en: 'Skyscrapers', km: '2km' }, { r: 'C3', ja: '星川橋', en: 'Hoshikawa Bridge', km: '500m' }, { r: 'C3', ja: '都心', en: 'City Center', km: '1km' },
+      { r: 'B', ja: '展望台前', en: 'Observatory', km: '500m', exit: 1 }, { warn: 1, ja: '急な下り', en: 'Steep Slope', km: '' }, { r: 'C3', ja: '天空ループ', en: 'Sky Loop', km: '4km' }, { r: 'B', ja: '高層ビル街', en: 'Tower Area', km: '1km', exit: 1 }],
+    led: [['高さ 70m', '横風注意'], ['天空JCT', '合流注意'], ['この先 下り坂', '速度注意'], ['星川橋 1分', 'JCT 3分']],
+    tun: [['天空トンネル', 'TENKU TUNNEL']],
+    signOf: sec => [sec === 'jct' ? 0 : sec === 'bridge' ? 2 : 1, sec === 'jct' ? 1 : sec === 'bridge' ? 3 : 0], filler: [5, 4, 7],
+    traf: { vmul: 1, mix: { taxi: 1.4, bus: .6 } } },
+  // ---- 海上ハイウェイ：人工島から海の上の長い高架へ。大きなつり橋、港、海の下のトンネルで島にもどる ----
+  { id: 'kaigan', name: '海上ハイウェイ', sub: '海の上の長い高架・大つり橋・海の下のトンネル', seed: 6604, sea: 'plane', wheel: [250, -330], rainbow: 1,
+    cp: [[-60, -60, 8, 'isle'], [140, 20, 8, 'isle'], [420, -50, 8, 'isle'], [800, -60, 10, 'sea'], [1300, 40, 12, 'sea'], [1800, 100, 14, 'sea'], [2200, -40, 30, 'bridge'], [2500, -300, 50, 'bridge'], [2600, -700, 30, 'bridge'],
+      [2450, -1050, 14, 'harbor'], [2050, -1250, 12, 'harbor'], [1500, -1300, 4, 'tunnelW'], [900, -1250, 1.2, 'tunnelW'], [400, -1050, 1.2, 'tunnelW'], [80, -700, 4, 'tunnelW'], [-120, -350, 8, 'isle']],
+    secn: { isle: '夜光人工島', sea: '海上ルート', bridge: '夜光大橋', harbor: '東埠頭', tunnelW: '海底トンネル' },
+    water: (x, z) => !((x > -360 && x < 660 && z > -580 && z < 260) || z < -1380 || (x > 1900 && z < -880)),
+    lamp: sec => (sec === 'isle' ? LEDW : SODIUM),
+    gs: [{ r: '14', ja: '夜光大橋', en: 'Yako Ohashi', km: '2km' }, { r: '14', ja: '海上ルート', en: 'Sea Route', km: '3km' }, { r: 'B', ja: '東埠頭', en: 'East Pier', km: '500m', exit: 1 }, { r: '14', ja: '海底トンネル', en: 'Undersea Tunnel', km: '1km' },
+      { r: 'B', ja: '人工島', en: 'Artificial Isle', km: '500m', exit: 1 }, { warn: 1, ja: '横風注意', en: 'Side Wind', km: '' }, { r: '14', ja: '海上ハイウェイ', en: 'Ocean Highway', km: '8km' }, { r: 'B', ja: '観覧車前', en: 'Ferris Wheel', km: '300m', exit: 1 }],
+    led: [['海上 横風注意', '速度注意'], ['海底トンネル', '車線変更禁止'], ['夜光大橋 2分', '人工島 6分'], ['この先 埠頭', '大型車多し']],
+    tun: [['海底トンネル', 'KAITEI TUNNEL  L=1,900m']],
+    signOf: sec => [sec === 'bridge' ? 0 : sec === 'sea' ? 1 : sec === 'harbor' ? 2 : isTun(sec) ? 3 : 4, sec === 'sea' ? 0 : isTun(sec) ? 1 : sec === 'bridge' ? 2 : 3], filler: [5, 6, 7],
+    traf: { vmul: 1.05, mix: { truck: 1.2 } } },
+  // ---- 下町の一般道：古い商店街と川ぞいの道。信号・横断歩道・電柱、ちょうちんのような明かり。軽自動車が多い ----
+  { id: 'shita', name: '下町の一般道', sub: '商店街と川ぞいの道・信号・電柱・軽自動車', seed: 8812, sea: 'none',
+    cp: [[0, 0, .4, 'ave'], [500, 0, .4, 'ave'], [900, 40, .4, 'street'], [1100, 200, .4, 'street'], [1120, 500, .4, 'street'], [1000, 760, .4, 'neon'], [700, 860, .4, 'neon'], [380, 820, .4, 'street'],
+      [200, 960, .4, 'street'], [-100, 1000, .4, 'ave'], [-360, 860, .4, 'ave'], [-420, 560, .4, 'street'], [-300, 300, .4, 'street'], [-260, 120, .4, 'ave'], [-180, 20, .4, 'ave']],
+    secn: { ave: '下町大通り', street: '路地', neon: '夜光商店街' },
+    water: () => false,
+    lamp: sec => (sec === 'street' ? SODIUM : LEDW),
+    gs: [{ blue: 1, r: '6', ja: '夜光商店街', en: 'Shotengai', km: '300m' }, { blue: 1, r: '6', ja: '駅前', en: 'Station', km: '500m', arrow: 1 }, { blue: 1, r: '14', ja: '下町大通り', en: 'Shitamachi Ave', km: '1km' }, { blue: 1, r: '14', ja: '川ぞい', en: 'Riverside', km: '200m' },
+      { blue: 1, r: '6', ja: '銭湯前', en: 'Bathhouse', km: '400m' }, { warn: 1, ja: '飛び出し注意', en: 'Watch Out', km: '' }, { blue: 1, r: '14', ja: '神社前', en: 'Shrine', km: '600m', exit: 1 }, { blue: 1, r: '6', ja: '下町', en: 'Shitamachi', km: '1km' }],
+    led: [['この先 商店街', '歩行者注意'], ['路地 せまい', '徐行'], ['夜光商店街', 'ようこそ'], ['信号 多し', '安全運転']],
+    tun: [['ガード下', 'UNDERPASS']],
+    signOf: sec => [sec === 'neon' ? 0 : sec === 'street' ? 3 : 2, sec === 'neon' ? 2 : sec === 'street' ? 1 : -1], filler: [5, 4, 6],
+    traf: { vmul: .55, mix: { kei: 2.4, taxi: 1.2, truck: .3, bus: .5, van: 1.4 } } },
 ];
 let STG = STAGES[0], CP = STG.cp, SECN = STG.secn, water = STG.water;
 function useStage(i) { STG = STAGES[i] || STAGES[0]; STG.idx = STAGES.indexOf(STG); CP = STG.cp; SECN = STG.secn; water = STG.water; }
@@ -951,6 +1004,7 @@ function buildGlobal() {
   if (STG.wheel) wheelParts(F);
   for (const ch of T.chunks) buildingsAlong(F, ch.i0, ch.i1);
   if (STG.farShore) farShore(F);
+  if (STG.mtns) mtnParts(F);
   F.build(grp, { poolN: 2, poolF: 2, neon: 3 });
   for (const key of ['off', 'res', 'cor', 'ind', 'cont']) {
     const Lb = GLB.bld[key]; if (!Lb.length) continue; const m = new THREE.InstancedMesh(UNIT, key === 'cont' ? MAT.cont : MAT['b_' + key], Lb.length);
@@ -1025,6 +1079,21 @@ function roadSide(x, z) {
 function freeLot(x, z, hw, hd) { const q = roadSide(x, z), r = Math.hypot(hw, hd); if (q !== null && q > -7 - r - 4 && q < 21.8 + r + 4) return false; for (const [a, b] of [[-hw, -hd], [hw, -hd], [-hw, hd], [hw, hd], [0, 0]]) if (water(x + a, z + b)) return false;
   for (let a = Math.floor((x - hw) / 10); a <= Math.floor((x + hw) / 10); a++) for (let b = Math.floor((z - hd) / 10); b <= Math.floor((z + hd) / 10); b++) if (OCC.has(a + ':' + b)) return false; return true; }
 function takeLot(x, z, hw, hd) { for (let a = Math.floor((x - hw) / 10); a <= Math.floor((x + hw) / 10); a++) for (let b = Math.floor((z - hd) / 10); b <= Math.floor((z + hd) / 10); b++) OCC.add(a + ':' + b); }
+// 山あい：道の両側の森（針葉樹）・ときどき山の家・うしろの丘
+function mtnSide(F, k, side) {
+  for (let q = 0; q < 4; q++) { const dist = side < 0 ? Rr(13, 150) : Rr(28, 170), b = row(k + (Rr(-3, 3) | 0), side * dist, 0), x = b[0], z = b[2]; if (!freeLot(x, z, 2.5, 2.5)) continue;
+    const h = Rr(8, 18), r = h * Rr(.26, .36); F.geo('roof', new THREE.ConeGeometry(r, h, 6).translate(x, h / 2 + 1.6, z), tint(.06, .1, .07)); F.geo('roof', new THREE.CylinderGeometry(.3, .4, 2, 5).translate(x, 1, z), [.14, .1, .08]); }
+  if (R() < .05) { const dist = Rr(40, 120), b = row(k, side * dist, 0), w = Rr(8, 13), d = Rr(7, 10), h = Rr(5, 8); if (freeLot(b[0], b[2], w / 2 + 2, d / 2 + 2)) { takeLot(b[0], b[2], w / 2, d / 2); GLB.bld.res.push([b[0], h / 2, b[2], w, h, d, yawI(k), tint(1, .95, .86)]); } }
+  if (R() < .07) { const dist = Rr(230, 520), b = row(k, side * dist, 0), h = Rr(70, 190), r = h * Rr(1.3, 1.9); if (freeLot(b[0], b[2], r * .8, r * .8)) F.geo('farWall', new THREE.ConeGeometry(r, h, 8).translate(b[0], h / 2 - 2, b[2]), tint(.06, .08, .07)); }
+}
+// 山なみ（遠く）と、トンネルを包む山
+function mtnParts(F) {
+  const T = TRK; let cx = 0, cz = 0; for (let i = 0; i < T.n; i++) { cx += T.px[i]; cz += T.pz[i]; } cx /= T.n; cz /= T.n;
+  for (let a = 0; a < 44; a++) { const ang = a / 44 * TAU + Rr(-.05, .05), d = Rr(1500, 2300), h = Rr(260, 640), r = h * Rr(1.1, 1.7); F.geo('farWall', new THREE.ConeGeometry(r, h, 9).translate(cx + Math.cos(ang) * d, h / 2 - 5, cz + Math.sin(ang) * d), tint(.045, .055, .075)); }
+  const tun = i => isTun(T.sec[((i % T.n) + T.n) % T.n]);
+  for (let i = 0; i < T.n; i += 24) { if (!tun(i)) continue; let e = 0; while (e < 70 && tun(i + e) && tun(i - e)) e++; if (e < 50) continue;   // 出入口から 100m 以上内がわ
+    const h = T.py[i] + Rr(70, 110), r = Rr(120, 160); F.geo('farWall', new THREE.ConeGeometry(r, h, 10).translate(T.px[i] + Rr(-10, 10), h / 2 - 2, T.pz[i] + Rr(-10, 10)), tint(.06, .08, .07)); }
+}
 const _bm = new THREE.Matrix4(), _bq = new THREE.Quaternion(), _bp = V3(), _bs = V3(), _by = V3(0, 1, 0), _bc = new THREE.Color();
 const tint = (r, g, b) => { const k = Rr(.8, 1.15); return [r * k, g * k, b * k]; };
 function buildingsAlong(F, i0, i1) {
@@ -1032,6 +1101,7 @@ function buildingsAlong(F, i0, i1) {
   for (let i = i0; i < i1; i += 6) for (const side of [-1, 1]) {
     if (R() < .3) continue; const k = i % T.n, sec = T.sec[k], yw = yawI(k) + (R() < .25 ? Rr(-.25, .25) : 0);
     if (STREET[sec]) { streetBuilding(F, k, side, sec); continue; }
+    if (sec === 'mtn') { mtnSide(F, k, side); continue; }
     const indus = sec === 'bay' || (sec === 'harbor' && R() < .55), dist = side < 0 ? Rr(15, 150) : Rr(34, 170), base = row(k, side * dist, 0);
     let w, d, h, kind;
     if (indus) { w = Rr(24, 60); d = Rr(18, 36); h = Rr(8, 20); kind = 'ind'; }
@@ -1127,7 +1197,8 @@ function buildWorldStatic() {
   sky.renderOrder = -10; scene.add(sky); WORLD.sky = sky;
   const rm = new THREE.MeshBasicMaterial({ map: TEX.sky, transparent: true, side: THREE.BackSide, depthWrite: false, fog: false, color: 0x8a8a96 });
   rm.onBeforeCompile = sh => { sh.uniforms.uOn = WORLD.redOn; sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uOn;').replace('#include <map_fragment>', '#include <map_fragment>\nif (sampledDiffuseColor.r > .8 && sampledDiffuseColor.g < .3) diffuseColor.rgb *= (.15 + .85 * uOn) * 4.;'); };
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(1750, 1750, 300, 64, 1, true), rm); ring.position.y = 120; ring.renderOrder = -9; scene.add(ring); WORLD.ring = ring;
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(1750, 1750, 300, 64, 1, true), rm); ring.position.y = 120; ring.renderOrder = -9; scene.add(ring); WORLD.ring = ring; ring.visible = !STG.mtns;   // 山のステージは、遠くの街の明かりなし
+  MAT.ground.color.setHex(STG.mtns ? 0x6a7a5e : 0xffffff); MAT.ground.emissiveIntensity = STG.mtns ? .2 : 1;
   buildStreaks(); buildGroundTraffic();
 }
 WORLD.redOn = { value: 1 };
