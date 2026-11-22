@@ -124,6 +124,10 @@ body.cooking #cook { display: block; }
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) { body.playing #side { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, 48px); direction: rtl; gap: 5px; top: calc(52px + env(safe-area-inset-top, 0px)); } .sb { direction: ltr; } .sb { width: 48px; height: 48px; font-size: 18px; border-radius: 13px; } .sb small { font-size: 9px; margin-top: 1px; } .chip { font-size: 13px; padding: 4px 10px; } }
 body.touch #feed { bottom: auto; top: calc(56px + env(safe-area-inset-top, 0px)); width: min(300px, 46vw); }
 @media (max-aspect-ratio: 1/1) { #side { top: auto; bottom: calc(200px + env(safe-area-inset-bottom, 0px)); } .sb { width: 50px; height: 50px; font-size: 19px; } #feed { bottom: calc(240px + env(safe-area-inset-bottom, 0px)); } }
+#tko { left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(58px + env(safe-area-inset-top, 0px)); background: rgba(255,250,240,.94); border-radius: 12px; padding: 6px 10px; font-size: 13px; font-weight: 800; box-shadow: 0 2px 8px rgba(80,50,20,.2); line-height: 1.6; }
+body.touch #tko { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+body.building #tko, body.cooking #tko { display: none !important; }
+#toast { white-space: normal; max-width: min(92vw, 640px); }
 </style></head><body>
 <div id="rot">
   <canvas id="c"></canvas>
@@ -143,9 +147,12 @@ body.touch #feed { bottom: auto; top: calc(56px + env(safe-area-inset-top, 0px))
     <button class="sb" data-p="lab">🧪<small>研究</small></button>
     <button class="sb" data-p="goal">🏆<small>目標</small><span class="dot"></span></button>
     <button class="sb" data-p="shop">🏠<small>お店</small></button>
+    <button class="sb" data-p="reg">💛<small>常連</small></button>
+    <button class="sb" data-p="contest">🎖️<small>大会</small><span class="dot"></span></button>
     <button class="sb" data-p="sys">⚙️<small>セーブ</small></button>
   </div>
   <div id="feed" class="hud"></div>
+  <div id="tko" class="hud" style="display:none"></div>
   <div id="prompt" class="hud"></div>
   <div id="toast" class="hud"></div>
   <div id="joy"><div class="base"></div><div id="joyK"></div></div>
@@ -340,7 +347,7 @@ function styleTex(kind, i) { const k = kind + i; if (STYLE_TEX[k]) return STYLE_
 const WORLD = { grp: null, shell: null, walls: [] };
 function buildTown() {
   const g = new THREE.Group(); WORLD.grp = g; scene.add(g);
-  const grass = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), mat(0x8ab86a, { roughness: 1 })); grass.rotation.x = -Math.PI / 2; grass.position.y = -.05; grass.receiveShadow = true; g.add(grass);
+  const grass = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x8ab86a, roughness: 1 })); WORLD.grass = grass; grass.rotation.x = -Math.PI / 2; grass.position.y = -.05; grass.receiveShadow = true; g.add(grass);
   // 通り（店の前、z＝+）：歩道・車道・白線
   const [rc, rg] = cvs(64, 256); rg.fillStyle = '#4a4c50'; rg.fillRect(0, 0, 64, 256); grain(rg, 64, 256, 1500, .08); rg.fillStyle = '#f2f2ea'; rg.fillRect(30, 0, 4, 120); const road = new THREE.Mesh(new THREE.PlaneGeometry(300, 9), new THREE.MeshStandardMaterial({ map: ctex(rc), roughness: .95 })); road.material.map.repeat.set(1, 1); road.material.map.rotation = Math.PI / 2; road.material.map.repeat.set(1, 60);
   road.rotation.x = -Math.PI / 2; road.position.set(0, -.02, 30); road.receiveShadow = true; g.add(road);
@@ -353,7 +360,7 @@ function buildTown() {
     const r = new THREE.Mesh(new THREE.BoxGeometry(w + .4, .4, d + .4), mat(0x8a5a4a)); r.position.set(x, h + .2, 14); g.add(r);
     for (let fy = 1.2; fy < h - 1; fy += 2.6) for (let fx = -3; fx <= 3; fx += 2) { const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.3), mat(0x7aa8c8, { roughness: .1, metalness: .4 })); win.position.set(x + fx, fy + .8, 19.01); g.add(win); }
     const aw = new THREE.Mesh(new THREE.BoxGeometry(w - 1, .1, 1.3), mat([0xe8523a, 0x2aa89a, 0xf2b62a, 0x5a7ad8][(k + 8) % 4])); aw.position.set(x, 2.8, 19.6); aw.rotation.x = .25; g.add(aw); }
-  for (let x = -60; x <= 60; x += 7) { if (x > -3 && x < 23) continue; const t = new THREE.Group(); const tr = new THREE.Mesh(new THREE.CylinderGeometry(.15, .22, 2.2, 8), mat(0x7a5a3a)); tr.position.y = 1.1; t.add(tr); for (let q = 0; q < 3; q++) { const l = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1 - q * .2, 1), mat(0x5a9a4a)); l.position.y = 2.6 + q * .7; t.add(l); } t.position.set(x, 0, 25.6); t.traverse(o => { o.castShadow = true; }); g.add(t); }
+  for (let x = -60; x <= 60; x += 7) { if (x > -3 && x < 23) continue; const t = new THREE.Group(); const tr = new THREE.Mesh(new THREE.CylinderGeometry(.15, .22, 2.2, 8), mat(0x7a5a3a)); tr.position.y = 1.1; t.add(tr); for (let q = 0; q < 3; q++) { const l = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1 - q * .2, 1), WORLD.leafM || (WORLD.leafM = new THREE.MeshStandardMaterial({ color: 0x5a9a4a, roughness: .9 }))); l.position.y = 2.6 + q * .7; t.add(l); } t.position.set(x, 0, 25.6); t.traverse(o => { o.castShadow = true; }); g.add(t); }
   for (let x = -50; x <= 70; x += 14) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 4.2, 8), mat(0x3a3a40)); p.position.set(x, 2.1, 25.8); g.add(p); const h = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff2c8 })); h.position.set(x, 4.3, 25.8); g.add(h); }
   // 走る車
   WORLD.cars = []; for (let k = 0; k < 4; k++) { const c = carMesh([0xe8523a, 0x2a6ad8, 0xf2f2ee, 0x2aa86a][k]); c.position.set(-80 + k * 45, 0, k % 2 ? 28 : 32); c.rotation.y = k % 2 ? -Math.PI / 2 : Math.PI / 2; c.userData.v = (k % 2 ? -1 : 1) * rr(7, 10); g.add(c); WORLD.cars.push(c); }
@@ -703,11 +710,15 @@ const ACH = [
   ['lot2', '増築', 'お店を広げる', s => s.lot >= 1, 1000], ['lot4', '大きなお店', 'いちばん大きくする', s => s.lot >= 4, 50000], ['day7', '1週間', '7日営業する', s => s.day >= 8, 1500], ['day30', '1か月', '30日営業する', s => s.day >= 31, 10000], ['day100', '100日', '100日営業する', s => s.day >= 101, 50000],
   ['piano', '生演奏', 'ピアノを置く', s => s.items.some(i => i.id === 'piano'), 2000], ['fountain', '噴水のある店', '噴水を置く', s => s.items.some(i => i.id === 'fountain'), 3000], ['vipseat', '特別な席', 'VIP席を置く', s => s.items.some(i => i.id === 'vip'), 3000],
   ['allapp', '最強のキッチン', '12種類の調理機器をそろえる', s => Object.keys(APP_ITEM).every(a => s.items.some(i => i.id === APP_ITEM[a])), 30000], ['lv10', 'レベル10', 'レベル10になる', s => s.lv >= 10, 5000], ['lv20', 'レベル20', 'レベル20になる', s => s.lv >= 20, 30000], ['rich', '大金持ち', '所持金 100万円', s => s.money >= 1e6, 20000],
+  ['reg3', 'なじみのお客さん', '常連さんと ♥3 になる', s => Object.values(s.regs || {}).some(r => r.h >= 3), 3000], ['regall', 'みんな知り合い', '常連さん8人 全員が来店', s => REGS.every(r => ((s.regs || {})[r.id] || {}).v > 0), 8000], ['regmax', '一生の常連さん', '常連さんと ♥5 になる', s => Object.values(s.regs || {}).some(r => r.h >= 5), 15000],
+  ['cat', '看板猫', 'ねこベッドを置いて 猫をむかえる', s => s.items.some(i => i.id === 'catbed'), 2000], ['pet50', 'ねこ好き', '看板猫を50回なでる', s => (s.st.pets || 0) >= 50, 5000], ['to10', 'テイクアウトはじめました', 'テイクアウトを10回', s => (s.st.takeout || 0) >= 10, 3000], ['to100', '出前の名店', 'テイクアウトを100回', s => (s.st.takeout || 0) >= 100, 20000],
+  ['cont1', 'コンテスト優勝', '料理コンテストで優勝', s => ((s.contest || {}).wins || 0) >= 1, 10000], ['cont5', '料理界のスター', '料理コンテストで5回優勝', s => ((s.contest || {}).wins || 0) >= 5, 50000], ['year', '四季をひとめぐり', '28日営業する', s => s.day >= 29, 20000], ['spec50', '看板メニュー', 'おすすめ料理を50皿', s => (s.st.special || 0) >= 50, 6000], ['mop20', 'ピカピカの床', 'こぼれた飲み物を20回ふく', s => (s.st.mop || 0) >= 20, 3000],
 ];
 // 毎日の目標（3つ）
 const MISSION_T = [
   { k: 'serve', n: n => `${n}人に料理を出す`, v: lv => 6 + lv * 2 }, { k: 'earn', n: n => `売上 ${fmt(n)}円`, v: lv => 3000 + lv * 1500 }, { k: 'perfect', n: n => `パーフェクト調理 ${n}回`, v: lv => 2 + (lv >> 2) },
   { k: 'dish', n: (n, d) => `${DISH[d].n} を${n}皿`, v: lv => 3 + (lv >> 1) }, { k: 'stars', n: n => `★5の評価を${n}回もらう`, v: lv => 2 + (lv >> 2) }, { k: 'clean', n: n => `テーブルを${n}回かたづける`, v: lv => 4 + lv },
+  { k: 'takeout', n: n => `テイクアウトを${n}回`, v: lv => 2 + (lv >> 3) }, { k: 'special', n: n => `おすすめ料理を${n}皿`, v: lv => 3 + (lv >> 1) },
 ];
 const REVIEW = { 5: ['最高！また来ます！', 'ほっぺが落ちそうなおいしさ', 'お店の雰囲気も料理も満点', '感動しました。友だちにすすめます'], 4: ['おいしかったです', 'いいお店。また来たい', 'お店がきれいで気持ちいい', '料理が早くて助かる'], 3: ['ふつうかな', 'まあまあでした', 'もう少し早いとうれしい', '値段なりかな'], 2: ['待ち時間が長すぎる…', 'ちょっと高いかも', '料理がいまいち', 'お店がちらかっていた'], 1: ['二度と来ない！', 'ずっと待たされた', 'がっかりです'] };
 const xpNeed = lv => Math.round(120 * Math.pow(lv, 1.55));
@@ -763,22 +774,22 @@ const known = id => SHOP.lv >= DISH[id].lv || SHOP.known.includes(id);
 const hasApp = app => SHOP.items.some(I => (IT[I.id].tags || []).includes(app));
 const menuOn = () => Object.keys(DISH).filter(id => SHOP.menu[id] && SHOP.menu[id].on && known(id) && hasApp(DISH[id].app));
 const menuSlots = () => 3 + Math.floor(SHOP.lv / 2);
-function dishPrice(id) { const m = SHOP.menu[id] || {}; return Math.round(DISH[id].price * (m.p || 1) * (1 + ((m.lv || 1) - 1) * .15) / 10) * 10; }
-function dishCost(id) { return Math.round(DISH[id].cost * (1 - (SHOP.res.ingred || 0) * .08)); }
+function dishPrice(id) { const m = SHOP.menu[id] || {}; return Math.round(DISH[id].price * (m.p || 1) * (1 + ((m.lv || 1) - 1) * .15) * (SHOP.special === id ? 1.1 : 1) / 10) * 10; }
+function dishCost(id) { return Math.round(DISH[id].cost * (1 - (SHOP.res.ingred || 0) * .08) * evCost()); }
 // ---------- お客さん ----------
 function pickType() { const ok = CTYPE.filter(c => !c.minRep || SHOP.rep >= c.minRep), tot = ok.reduce((a, c) => a + c.w, 0); let r = Math.random() * tot; for (const c of ok) { r -= c.w; if (r <= 0) return c; } return ok[0]; }
 function spawnGroup(forceType) {
-  const C = forceType || pickType(); let n = ri(C.grp[0], C.grp[1]); const maxSeats = Math.max(0, ...[...TBL.values()].map(t => t.seats.length)); if (!maxSeats) return; n = Math.min(n, maxSeats);
+  const C = forceType || (SHOP.open ? maybeRegular() : null) || pickType(); let n = ri(C.grp[0], C.grp[1]); const maxSeats = Math.max(0, ...[...TBL.values()].map(t => t.seats.length)); if (!maxSeats) return; n = Math.min(n, maxSeats);
   const side = Math.random() < .5 ? -1 : 1, x0 = WORLD.door.x + side * rr(18, 30), z0 = WORLD.sidewalkZ + rr(-.8, .8);
   const Gp = { id: uid(), type: C, mem: [], state: 'arrive', pat: 1, waitT: 0, table: null, orders: [], mood: .78, eatT: 0, menuT: 0, stars: 0 };
-  for (let k = 0; k < n; k++) { const L = randLook(C.vip ? { shirt: 0x1a1a1e, glasses: true, bag: 0xd8b06a } : C.critic ? { shirt: 0x5a3a5a, glasses: true } : C.id === 'student' ? { shirt: pick([0x2a2a6a, 0x3a3a3e]) } : C.id === 'elder' ? { hair: 0xc8c8c8 } : {});
+  for (let k = 0; k < n; k++) { const L = C.reg && k === 0 ? randLook(Object.assign({ glasses: false }, C.reg.look)) : randLook(C.vip ? { shirt: 0x1a1a1e, glasses: true, bag: 0xd8b06a } : C.critic ? { shirt: 0x5a3a5a, glasses: true } : C.id === 'student' ? { shirt: pick([0x2a2a6a, 0x3a3a3e]) } : C.id === 'elder' ? { hair: 0xc8c8c8 } : {});
     const P = { kind: 'cust', g: personMesh(L), L, p: V3(x0 - side * k * .7, 0, z0 + (k % 2) * .5), face: -side * Math.PI / 2, speed: 1.4, grp: Gp, mood: .7, a: 'walk' }; scene.add(P.g); PEOPLE.push(P); Gp.mem.push(P); }
   G.groups.push(Gp); goGroup(Gp, WORLD.door.x, SHOP.D + .6);
-  if (C.vip) feed('✨ <b>VIP</b>のお客さんが来た！'); if (C.critic) feed('📝 <b>グルメ評論家</b>が来たかも…');
+  if (C.vip) feed('✨ <b>VIP</b>のお客さんが来た！'); if (C.reg) feed(`${C.reg.e} 常連の<b>${C.reg.n}</b>が来た！`); if (C.tv) feed('📺 <b>テレビの取材班</b>が来た！ 最高のおもてなしを'); if (C.critic) feed('📝 <b>グルメ評論家</b>が来たかも…');
 }
 function goGroup(Gp, x, z) { Gp.mem.forEach((P, k) => goTo(P, x + (k % 2 ? .5 : -.5) * (k > 0), z + Math.floor(k / 2) * .55)); }
 function waitSpot(k) { const host = SHOP.items.find(I => IT[I.id].kind === 'host'), sofa = SHOP.items.filter(I => IT[I.id].kind === 'wait'); if (host) { const w = workOf(host); return V3(w.p.x + (k % 2) * .6 - .3, 0, w.p.z + Math.floor(k / 2) * .7 + .3); } return V3(WORLD.door.x + (k % 3 - 1) * .6, 0, SHOP.D - .8 - Math.floor(k / 3) * .6); }
-function patK() { return (1 + (SHOP.res.patience || 0) * .12) * (hasMusic() ? 1.1 : 1) * (SHOP.items.some(I => IT[I.id].kind === 'wait') ? 1.15 : 1); }
+function patK() { return (1 + (SHOP.res.patience || 0) * .12) * (hasMusic() ? 1.1 : 1) * (SHOP.items.some(I => IT[I.id].kind === 'wait') ? 1.15 : 1) * evPat(); }
 function seatGroup(Gp, T) { Gp.table = T; T.state = 'busy'; T.group = Gp; Gp.state = 'toSeat'; Gp.mem.forEach((P, k) => { const s = T.seats[k]; P.seat = s; goTo(P, s.p.x, s.p.z); }); AU.click(); }
 function groupMood(Gp, d) { Gp.mood = clamp(Gp.mood + d, 0, 1); for (const P of Gp.mem) P.mood = Gp.mood; }
 function updGroups(dt) {
@@ -793,17 +804,17 @@ function updGroups(dt) {
     else if (Gp.state === 'ordered') { Gp.waitT += dt; if (Gp.waitT > 40 * pk) groupMood(Gp, -dt * .02); if (Gp.waitT > 150 * pk) { leaveAngry(Gp, '料理が来なくて帰った'); continue; }
       if (Gp.orders.every(o => o.state === 'served')) { Gp.state = 'eat'; Gp.eatT = rr(9, 15); setBubble(Gp.mem[0], ''); for (const P of Gp.mem) P.a = 'eat'; } }
     else if (Gp.state === 'eat') { if ((Gp.eatT -= dt) <= 0) payAndLeave(Gp); }
-    else if (Gp.state === 'leave') { if (arrived) { if (Gp.mem[0].p.z > WORLD.sidewalkZ - 1 && Gp.toStreet) { for (const P of Gp.mem) { scene.remove(P.g); if (P.bubble) scene.remove(P.bubble); PEOPLE.splice(PEOPLE.indexOf(P), 1); } G.groups.splice(i, 1); continue; } Gp.toStreet = 1; const side = Math.random() < .5 ? -1 : 1; goGroup(Gp, WORLD.door.x + side * 32, WORLD.sidewalkZ); } }
+    else if (Gp.state === 'leave') { if (arrived) { if (Gp.mem[0].p.z > WORLD.sidewalkZ - 1 && Gp.toStreet) { for (const P of Gp.mem) { scene.remove(P.g); if (P.bubble) scene.remove(P.bubble); if (P.tag) scene.remove(P.tag); PEOPLE.splice(PEOPLE.indexOf(P), 1); } G.groups.splice(i, 1); continue; } Gp.toStreet = 1; const side = Math.random() < .5 ? -1 : 1; goGroup(Gp, WORLD.door.x + side * 32, WORLD.sidewalkZ); } }
     if (Gp.state === 'wait' || Gp.state === 'call' || Gp.state === 'ordered') { const lv = Gp.mood; setBubble(Gp.mem[0], Gp.state === 'wait' ? (lv < .4 ? '😠' : '🙋') : Gp.state === 'call' ? (lv < .4 ? '😠' : '📋') : (lv < .4 ? '😤' : DISH[Gp.orders.find(o => o.state !== 'served')?.dish || Gp.orders[0].dish].e)); }
   }
 }
-function leaveAngry(Gp, why) { feed(`😠 お客さんが${why}`); G.dayLog.angry++; SHOP.rep = clamp(SHOP.rep - .06, 1, 5); freeGroupTable(Gp); for (const t of G.tickets) if (t.grp === Gp) { t.cancel = true; if (t.state === 'ready') { if (t.m) scene.remove(t.m); if (t.at && t.at.slots) t.at.slots[t.slot] = null; } } G.tickets = G.tickets.filter(t => !t.cancel || t.state === 'cooking'); Gp.state = 'leave'; for (const P of Gp.mem) { P.a = 'walk'; P.carry = null; } setBubble(Gp.mem[0], '💢'); goGroup(Gp, WORLD.door.x, SHOP.D + 1.2); AU.bad(); addReview(Gp, 1); }
+function leaveAngry(Gp, why) { if (Gp.type.reg) { const st = regSt(Gp.type.reg); st.pts = Math.max(0, st.pts - 2); } feed(`😠 お客さんが${why}`); G.dayLog.angry++; SHOP.rep = clamp(SHOP.rep - .06, 1, 5); freeGroupTable(Gp); for (const t of G.tickets) if (t.grp === Gp) { t.cancel = true; if (t.state === 'ready') { if (t.m) scene.remove(t.m); if (t.at && t.at.slots) t.at.slots[t.slot] = null; } } G.tickets = G.tickets.filter(t => !t.cancel || t.state === 'cooking'); Gp.state = 'leave'; for (const P of Gp.mem) { P.a = 'walk'; P.carry = null; } setBubble(Gp.mem[0], '💢'); goGroup(Gp, WORLD.door.x, SHOP.D + 1.2); AU.bad(); addReview(Gp, 1); }
 function freeGroupTable(Gp) { const T = Gp.table; if (!T) return; T.state = T.plates.length ? 'dirty' : 'free'; T.group = null; }
 function payAndLeave(Gp) {
   const C = Gp.type, T = Gp.table; let pay = 0, q = 0; for (const o of Gp.orders) { pay += dishPrice(o.dish); q += o.q; } q /= Math.max(1, Gp.orders.length);
   // 満足度：料理・かざり・待ち時間・値段・きれいさ・音楽・VIP席
   const deco = clamp(decoNear(T.I.x, T.I.z) / 40, 0, .18), priceK = Gp.orders.reduce((a, o) => a + ((SHOP.menu[o.dish] || {}).p || 1), 0) / Gp.orders.length, dirty = [...TBL.values()].filter(t => t.state === 'dirty').length;
-  let m = Gp.mood * .55 + q * .35 + deco + (hasMusic() ? .03 : 0) + (C.vip && IT[T.I.id].vip ? .08 : 0) - Math.max(0, priceK - 1.1) * .5 - dirty * .015 - (C.picky ? .08 : 0);
+  let m = Gp.mood * .55 + q * .35 + deco + (hasMusic() ? .03 : 0) + (C.vip && IT[T.I.id].vip ? .08 : 0) - Math.max(0, priceK - 1.1) * .5 - dirty * .015 - (C.picky ? .08 : 0) - spillNear(T.I.x, T.I.z) * .03 + (Gp.cat ? .04 : 0) + (Gp.orders.some(o => o.dish === SHOP.special) ? .03 : 0);
   m = clamp(m, 0, 1); const stars = clamp(Math.round(1 + m * 4.3), 1, 5);
   const tip = Math.round(pay * Math.max(0, m - .55) * .6 * (1 + (SHOP.res.tips || 0) * .15) * C.pay * (SHOP.items.some(I => IT[I.id].lucky) ? 1.1 : 1));
   pay = Math.round(pay * Math.min(1.6, C.pay)); earn(pay + tip, T.I); G.dayLog.sales += pay; G.dayLog.tips += tip; G.dayLog.served += Gp.mem.length; SHOP.st.served += Gp.mem.length; SHOP.st.tips += tip; G.dayLog.starsSum += stars; G.dayLog.starsN++;
@@ -813,14 +824,16 @@ function payAndLeave(Gp) {
   addReview(Gp, stars); floatText(T.I, `+${fmt(pay + tip)}円 ${'★'.repeat(stars)}`, stars >= 4 ? '#1e7a3a' : '#a04a3a');
   freeGroupTable(Gp); Gp.state = 'leave'; for (const P of Gp.mem) { P.a = 'walk'; P.mood = m; } setBubble(Gp.mem[0], stars >= 4 ? '😋' : stars >= 3 ? '🙂' : '😞'); goGroup(Gp, WORLD.door.x, SHOP.D + 1.2); AU.coin();
   if (C.critic) { toast(stars >= 4 ? '📝 評論家が絶賛！' : '📝 評論家の評価はきびしい…', `★${stars}　評判に大きくひびく`, 3); }
+  if (C.reg) regPaid(Gp, stars, Gp.orders[0] && Gp.orders[0].dish === C.reg.fav);
+  if (C.tv) { if (stars >= 4) { SHOP.adsDays = Math.max(SHOP.adsDays || 0, 3); SHOP.rep = clamp(SHOP.rep + .15, 1, 5); toast('📺 テレビで大きく紹介された！', '3日間 お客さんが+50%・評判アップ', 4); } else toast('📺 放送はちょっと地味だった…', '★4以上で満足させよう', 3); }
 }
 function addReview(Gp, stars) { const C = Gp.type; const t = pick(REVIEW[stars]); SHOP.reviews.unshift({ s: stars, t, who: C.n, d: SHOP.day }); SHOP.reviews.length = Math.min(SHOP.reviews.length, 30); }
 function earn(n, I) { SHOP.money += n; SHOP.st.earned += n; }
 // ---------- 注文と料理 ----------
 function takeOrder(Gp) {
   const on = menuOn(); if (!on.length) { toast('メニューがない！', '「メニュー」で料理をえらぼう（調理機器も必要）'); return false; }
-  Gp.orders = Gp.mem.map(P => { const like = Gp.type.like || []; let opts = on.map(id => [id, 1 + (like.includes(DISH[id].g) ? 1.5 : 0) + (DISH[id].cat === 'main' ? .6 : 0) - Math.max(0, ((SHOP.menu[id].p || 1) - 1)) * 2]); let tot = opts.reduce((a, o) => a + Math.max(.1, o[1]), 0), r = Math.random() * tot, id = opts[0][0];
-    for (const o of opts) { r -= Math.max(.1, o[1]); if (r <= 0) { id = o[0]; break; } } const t = { id: uid(), dish: id, grp: Gp, P, state: 'queued', q: .7, cookT: 0 }; G.tickets.push(t); return t; });
+  Gp.orders = Gp.mem.map(P => { const like = Gp.type.like || []; let opts = on.map(id => [id, 1 + (like.includes(DISH[id].g) ? 1.5 : 0) + (DISH[id].cat === 'main' ? .6 : 0) - Math.max(0, ((SHOP.menu[id].p || 1) - 1)) * 2 + orderBonus(id)]); let tot = opts.reduce((a, o) => a + Math.max(.1, o[1]), 0), r = Math.random() * tot, id = opts[0][0];
+    for (const o of opts) { r -= Math.max(.1, o[1]); if (r <= 0) { id = o[0]; break; } } if (Gp.type.reg && P === Gp.mem[0] && on.includes(Gp.type.reg.fav) && Math.random() < .85) id = Gp.type.reg.fav; const t = { id: uid(), dish: id, grp: Gp, P, state: 'queued', q: .7, cookT: 0 }; G.tickets.push(t); return t; });
   Gp.state = 'ordered'; Gp.waitT = 0; AU.click(); feed(`📋 ${tableNo(Gp.table)}番テーブル：${Gp.orders.map(o => DISH[o.dish].e).join(' ')}`); return true;
 }
 function appFree(app) { return SHOP.items.filter(I => (IT[I.id].tags || []).includes(app) && !I.busy); }
@@ -830,7 +843,7 @@ function dishReady(t, I, q) {
   t.q = q; t.state = 'ready'; const ps = passSlot(); const m = dishMini(t.dish); m.scale.setScalar(.75);
   if (ps) { const [PI, k] = ps; PI.slots[k] = t; t.at = PI; t.slot = k; const p = toW(PI, -.6 + k * .4, 0); m.position.set(p.x, 1.02, p.z); }
   else { t.at = I; const p = toW(I, 0, 0); m.position.set(p.x, (IT[I.id].id === 'oven' ? 1.32 : .98), p.z); }
-  scene.add(m); t.m = m; SHOP.money -= dishCost(t.dish); G.dayLog.cost += dishCost(t.dish); SHOP.st.dishes[t.dish] = (SHOP.st.dishes[t.dish] || 0) + 1; mission('dish', 1, t.dish); if (q >= .98) { SHOP.st.perfect++; mission('perfect', 1); }
+  scene.add(m); t.m = m; SHOP.money -= dishCost(t.dish); G.dayLog.cost += dishCost(t.dish); SHOP.st.dishes[t.dish] = (SHOP.st.dishes[t.dish] || 0) + 1; mission('dish', 1, t.dish); if (t.dish === SHOP.special) { mission('special', 1); SHOP.st.special = (SHOP.st.special || 0) + 1; } if (q >= .98) { SHOP.st.perfect++; mission('perfect', 1); }
   feed(`🍽️ ${DISH[t.dish].e} ${DISH[t.dish].n} ができた`); AU.bell();
 }
 function pickDish(t) { if (t.at && t.at.slots) t.at.slots[t.slot] = null; if (t.m) scene.remove(t.m); t.state = 'carried'; }
@@ -844,12 +857,12 @@ function claim(o, P) { if (o.by && o.by !== P) return false; o.by = P; return tr
 function findTask(P) {
   const r = P.S.role, near = (a, b) => Math.hypot(a.x - P.p.x, a.z - P.p.z) - Math.hypot(b.x - P.p.x, b.z - P.p.z);
   if (r === 'chef') { const qs = G.tickets.filter(t => t.state === 'queued' && !t.by && appFree(DISH[t.dish].app).length); qs.sort((a, b) => a.id - b.id); if (qs[0]) { const t = qs[0], I = appFree(DISH[t.dish].app).sort((a, b) => near(workOf(a).p, workOf(b).p))[0]; return { k: 'cook', t, I }; } return null; }
-  if (r === 'cleaner') { const T = [...TBL.values()].filter(t => t.state === 'dirty' && !t.by).sort((a, b) => near(a.I, b.I))[0]; return T ? { k: 'clean', T } : null; }
+  if (r === 'cleaner') { const T = [...TBL.values()].filter(t => t.state === 'dirty' && !t.by).sort((a, b) => near(a.I, b.I))[0]; if (T) return { k: 'clean', T }; const sp = SPILLS.find(s => !s.by); return sp ? { k: 'mop', T: sp } : null; }
   // ウェイター・受付
   const order = [];
   if (r === 'host' || r === 'waiter') { const g = G.groups.find(g => g.state === 'wait' && !g.by && freeTable(g.mem.length, g.type.vip)); if (g) order.push({ k: 'seat', g }); }
-  if (r === 'waiter') { const t = G.tickets.find(t => t.state === 'ready' && !t.by); if (t) order.push({ k: 'serve', t }); const g = G.groups.filter(g => g.state === 'call' && !g.by).sort((a, b) => b.waitT - a.waitT)[0]; if (g) order.push({ k: 'order', g });
-    if (!SHOP.staff.some(s => s.role === 'cleaner')) { const T = [...TBL.values()].find(t => t.state === 'dirty' && !t.by); if (T) order.push({ k: 'clean', T }); } }
+  if (r === 'waiter') { const t = G.tickets.find(t => t.state === 'ready' && !t.by && !t.takeout); if (t) order.push({ k: 'serve', t }); const g = G.groups.filter(g => g.state === 'call' && !g.by).sort((a, b) => b.waitT - a.waitT)[0]; if (g) order.push({ k: 'order', g });
+    if (!SHOP.staff.some(s => s.role === 'cleaner')) { const T = [...TBL.values()].find(t => t.state === 'dirty' && !t.by); if (T) order.push({ k: 'clean', T }); const sp = SPILLS.find(s => !s.by); if (sp) order.push({ k: 'mop', T: sp }); } }
   return order[0] || null;
 }
 function updStaff(dt) {
@@ -865,6 +878,7 @@ function updStaff(dt) {
       else if (T.ph === 'walk' && walkP(P, dt)) { pickDish(t); P.carry = t; const s = t.P.seat.p; goTo(P, lerp(s.x, t.grp.table.I.x, -.2) + .35, lerp(s.z, t.grp.table.I.z, -.2)); T.ph = 'carry'; }
       else if (T.ph === 'carry' && walkP(P, dt)) { serveDish(t, S); P.carry = null; xpStaff(S, 2); done = true; } }
     else if (T.k === 'clean') { const Tb = T.T; if (Tb.state !== 'dirty') done = true; else if (T.ph === 'go') { goTo(P, Tb.I.x + 1, Tb.I.z + 1.2); T.ph = 'walk'; } else if (T.ph === 'walk' && walkP(P, dt)) { T.ph = 'act'; T.w = 1.6 / (1 + S.spd * .05); P.a = 'clean'; } else if (T.ph === 'act' && (T.w -= dt) <= 0) { cleanTable(Tb); xpStaff(S, 1); done = true; P.a = 'idle'; } }
+    else if (T.k === 'mop') { const sp = T.T; if (sp.state !== 'dirty') done = true; else if (T.ph === 'go') { goTo(P, sp.x + .35, sp.z + .35); T.ph = 'walk'; } else if (T.ph === 'walk' && walkP(P, dt)) { T.ph = 'act'; T.w = 1.3 / (1 + S.spd * .05); P.a = 'clean'; } else if (T.ph === 'act' && (T.w -= dt) <= 0) { wipeSpill(sp); xpStaff(S, 1); done = true; P.a = 'idle'; } }
     if (done) { const o = T.t || T.g || T.T; if (o && o.by === P) o.by = null; P.task = null; P.carry = null; if (P.a !== 'idle') P.a = 'idle'; }
   }
 }
@@ -889,7 +903,7 @@ function updFloats(dt) { for (let i = FLOATS.length - 1; i >= 0; i--) { const f 
 // ---------- レベル・目標・実績 ----------
 function addXP(n) { SHOP.xp += n; while (SHOP.xp >= xpNeed(SHOP.lv)) { SHOP.xp -= xpNeed(SHOP.lv); SHOP.lv++; AU.lvup(); const nd = Object.keys(DISH).filter(id => DISH[id].lv === SHOP.lv), ni = Object.keys(IT).filter(id => IT[id].lv === SHOP.lv);
   toast(`レベル ${SHOP.lv}！`, [nd.length ? '新しい料理：' + nd.map(id => DISH[id].n).join('・') : '', ni.length ? '新しい家具：' + ni.map(id => IT[id].n).join('・') : '', SHOP.lv % 2 === 0 ? 'メニューのわくが1つふえた' : '', SHOP.lv % 3 === 0 ? 'スタッフをもう1人やとえる' : ''].filter(Boolean).join('／'), 4); } }
-function newMissions() { const out = [], used = new Set(); while (out.length < 3) { const T = pick(MISSION_T); if (used.has(T.k)) continue; used.add(T.k); const v = T.v(SHOP.lv); let d = null; if (T.k === 'dish') { const on = menuOn(); if (!on.length) continue; d = pick(on); } out.push({ k: T.k, v, d, n: 0, done: false, rw: 300 + SHOP.lv * 150 }); } SHOP.missions = out; }
+function newMissions() { const out = [], used = new Set(); while (out.length < 3) { const T = pick(MISSION_T); if (used.has(T.k)) continue; if (T.k === 'takeout' && SHOP.lv < 3) continue; if (T.k === 'special' && !(SHOP.special && SHOP.menu[SHOP.special] && SHOP.menu[SHOP.special].on)) continue; used.add(T.k); const v = T.v(SHOP.lv); let d = null; if (T.k === 'dish') { const on = menuOn(); if (!on.length) continue; d = pick(on); } out.push({ k: T.k, v, d, n: 0, done: false, rw: 300 + SHOP.lv * 150 }); } SHOP.missions = out; }
 function mission(k, n, d) { for (const m of SHOP.missions || []) if (m.k === k && !m.done && (!m.d || m.d === d)) { m.n += n; if (m.n >= m.v) { m.done = true; SHOP.money += m.rw; addXP(20 + SHOP.lv * 4); toast('🎯 今日の目標 たっせい！', `+${fmt(m.rw)}円`, 2.6); AU.good(); } } }
 function checkAch() { for (const [id, n, d, f, rw] of ACH) if (!SHOP.ach[id] && f(SHOP)) { SHOP.ach[id] = SHOP.day; SHOP.money += rw; toast(`🏆 実績「${n}」`, `${d}　+${fmt(rw)}円`, 3.4); AU.good(); $('side').querySelector('[data-p="goal"]').classList.add('alert'); } }
 // ---------- 一日 ----------
@@ -897,19 +911,20 @@ const OPEN_MIN = 10 * 60, CLOSE_MIN = 22 * 60;
 function clockStr() { const m = OPEN_MIN + SHOP.time; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}`; }
 function openShop() { if (SHOP.open) return; if (!SHOP.items.some(I => IT[I.id].kind === 'table')) { toast('席がない！', '「建てる」で席を置こう'); return; } if (!menuOn().length) { toast('メニューがない！', '調理機器を置いて「メニュー」で料理をえらぼう'); return; }
   SHOP.open = true; SHOP.time = 0; G.spawnT = 2; G.dayLog = { sales: 0, tips: 0, cost: 0, served: 0, angry: 0, starsSum: 0, starsN: 0, five: 0 }; if (!SHOP.missions || SHOP.missionsDay !== SHOP.day) { newMissions(); SHOP.missionsDay = SHOP.day; }
-  const r = Math.random(); G.eventToday = SHOP.day > 2 && r < .12 ? 'fest' : SHOP.day > 2 && r < .22 ? 'rain' : SHOP.day > 4 && r < .3 ? 'tour' : null;
-  toast(`${SHOP.day}日目 開店！`, G.eventToday === 'fest' ? '🎉 今日は町のお祭り。お客さんがいっぱい！' : G.eventToday === 'rain' ? '☔ 今日は雨。お客さんは少なめ' : G.eventToday === 'tour' ? '🚌 団体のお客さんが来るかも' : 'いらっしゃいませ！', 3); AU.bell(); }
+  G.EV = pickEvent(); G.eventToday = G.EV && G.EV.id; G.tvDone = 0; dayMore();
+  toast(`${SHOP.day}日目 開店！ ${SEAS().e}${SEAS().n}`, G.EV ? `${G.EV.n}：${G.EV.d}` : 'いらっしゃいませ！', 3.5); if (G.EV) feed(`${G.EV.n}　${G.EV.d}`); if (SHOP.special && SHOP.menu[SHOP.special] && SHOP.menu[SHOP.special].on) feed(`⭐ 本日のおすすめ：${DISH[SHOP.special].e} ${DISH[SHOP.special].n}`); AU.bell(); }
 function updDay(dt) {
   if (!SHOP.open) return; SHOP.time += dt * 2; const S = SHOP;
   if (S.time < CLOSE_MIN - OPEN_MIN) {
-    const ev = G.eventToday === 'fest' ? 1.8 : G.eventToday === 'rain' ? .6 : 1, seats = [...TBL.values()].reduce((a, t) => a + t.seats.length, 0), waiting = G.groups.filter(g => g.state === 'wait' || g.state === 'arrive').length;
+    const ev = G.EV ? G.EV.k : 1, seats = [...TBL.values()].reduce((a, t) => a + t.seats.length, 0), waiting = G.groups.filter(g => g.state === 'wait' || g.state === 'arrive').length;
     const rate = (.035 + S.rep * .022 + (S.res.ads || 0) * .012 + decoTotal() * .0004) * ev * (seats > 0 ? 1 : 0) * (1 + (S.adsDays > 0 ? .5 : 0));
     G.spawnT -= dt * rate * 10; if (G.spawnT <= 0 && waiting < 4 && G.groups.length < seats / 1.4 + 3) { G.spawnT = rr(5, 13); spawnGroup(G.eventToday === 'tour' && Math.random() < .15 ? { id: 'tour', n: '団体客', w: 0, pat: 1.2, pay: 1.2, grp: [4, 6], like: ['和', '洋'] } : null); }
+    if (G.eventToday === 'tv' && !G.tvDone && S.time > 180) { G.tvDone = 1; spawnGroup({ id: 'tv', n: 'テレビ取材班', w: 0, pat: 1.1, pay: 1.3, grp: [2, 3], tv: 1, like: [] }); }
   } else { for (const g of G.groups) if (g.state === 'wait' || g.state === 'arrive' || g.state === 'queue') { g.state = 'leave'; g.toStreet = 1; for (const P of g.mem) P.a = 'walk'; setBubble(g.mem[0], '🌙'); const side = Math.random() < .5 ? -1 : 1; goGroup(g, WORLD.door.x + side * 32, WORLD.sidewalkZ); }
     if (!G.groups.length || G.groups.every(g => g.state === 'leave')) { closeDay(); } }
 }
 function closeDay() {
-  const S = SHOP, L = G.dayLog; S.open = false; const wages = S.staff.reduce((a, f) => a + f.wage, 0); S.money -= wages; L.wages = wages; S.st.days++;
+  const S = SHOP, L = G.dayLog; S.open = false; dayMore(); G.EV = null; G.eventToday = null; const wages = S.staff.reduce((a, f) => a + f.wage, 0); S.money -= wages; L.wages = wages; S.st.days++;
   const profit = L.sales + L.tips - L.cost - wages; S.st.bestDay = Math.max(S.st.bestDay || 0, profit); S.day++; S.time = 0; if (S.adsDays > 0) S.adsDays--; S.cands = null;
   for (const t of G.tickets) if (t.m) scene.remove(t.m); G.tickets = []; for (const I of S.items) { I.busy = null; I.slots = null; }
   checkAch(); saveShop(); showReport(L, profit);
@@ -921,7 +936,7 @@ function packShop() { const S = SHOP; return JSON.stringify(Object.assign({}, S,
 function saveShop(silent) { if (!SHOP) return; try { localStorage.setItem(SLOTK(SHOP.slot), packShop()); if (!silent) feed('💾 セーブしました'); } catch (e) { feed('⚠️ セーブできませんでした'); } }
 function newShop(slot, name, th) {
   const T = THEMES[th]; const S = { v: 1, slot, name: name || 'まんぷく食堂', theme: T.id, money: 5000, xp: 0, lv: 1, rep: 3, day: 1, time: 0, open: false, lot: 0, W: LOTS[0][0], D: LOTS[0][1], floor: T.floor, wall: T.wall, facade: T.facade, awning: T.awn, trim: 0x6a4428,
-    items: [], walls: [], menu: {}, known: T.menu.slice(), staff: [], st: { served: 0, earned: 0, tips: 0, perfect: 0, critic5: 0, vip: 0, days: 0, dishes: {} }, ach: {}, reviews: [], res: {}, missions: null, adsDays: 0, made: Date.now() };
+    items: [], walls: [], menu: {}, known: T.menu.slice(), staff: [], st: { served: 0, earned: 0, tips: 0, perfect: 0, critic5: 0, vip: 0, days: 0, dishes: {} }, ach: {}, reviews: [], res: {}, missions: null, adsDays: 0, made: Date.now(), regs: {}, gifts: {}, contest: { wins: 0, best: 0, last: 0 }, special: null };
   for (const id of Object.keys(DISH)) S.menu[id] = { on: T.menu.includes(id), p: 1, lv: 1 };
   SHOP = S; G.uid = 1;
   // さいしょの店：席・レジ・配膳台・テーマの調理機器・植物
@@ -934,6 +949,213 @@ function newShop(slot, name, th) {
   S.staff.push(Object.assign(newCandidate('waiter'), { name: 'ひなた', lvl: 1, spd: 3, skl: 2, chm: 3 })); S.staff[0].wage = wageOf(S.staff[0]);
   newMissions(); return S;
 }
+
+// =========================================================================================
+//  いろいろな要素：季節と天気・日替わりイベント・本日のおすすめ・常連さん・看板猫・テイクアウト・料理コンテスト・こぼれ
+// =========================================================================================
+// ---------- 季節（7日ごとに 春→夏→秋→冬） ----------
+const SEASONS = [
+  { n: '春', e: '🌸', fall: 'petal', leaf: 0xf4b6c8, grass: 0x8ab86a, dishes: ['crepe', 'cake', 'onigiri', 'pudding', 'pancake', 'sandwich', 'kaisendon'] },
+  { n: '夏', e: '🌻', fall: null, leaf: 0x3a9a34, grass: 0x78b858, dishes: ['shake', 'smoothie', 'icecream', 'parfait', 'salad', 'sushi', 'yakisoba'] },
+  { n: '秋', e: '🍁', fall: 'leaf', leaf: 0xd8702a, grass: 0xa8a860, dishes: ['yakizakana', 'tempura', 'hamburg', 'gratin', 'mapo', 'napolitan', 'karaage'] },
+  { n: '冬', e: '⛄', fall: 'snow', leaf: 0xe2eaee, grass: 0xe4eaee, dishes: ['ramen', 'udon', 'stew', 'curry', 'oyakodon', 'matcha', 'latte'] },
+];
+const seasonIdx = () => Math.floor(((SHOP ? SHOP.day : 1) - 1) / 7) % 4;
+const SEAS = () => SEASONS[seasonIdx()];
+const isShun = id => SEAS().dishes.includes(id);
+const HOT = ['ramen', 'udon', 'stew', 'curry', 'oyakodon', 'gratin', 'mapo', 'matcha', 'latte'];
+// ---------- 日替わりイベント ----------
+const EVENTS = [
+  { id: 'fest', n: '🎉 町のお祭り', d: 'お客さんがいっぱい！', w: 1, min: 3, k: 1.8 },
+  { id: 'rain', n: '☔ 雨の日', d: 'お客さんは少なめ。でも長く待ってくれる', w: 1.2, min: 3, k: .6, pat: 1.35, wx: 'rain', no: [3] },
+  { id: 'snow', n: '❄️ 雪の日', d: 'あたたかい料理が大人気', w: 1.6, min: 3, k: .8, wx: 'snow', only: [3], hot: 1 },
+  { id: 'heat', n: '☀️ 猛暑日', d: 'つめたい飲み物とデザートが大人気', w: 1.6, min: 3, k: 1, only: [1], cold: 1, pat: .85 },
+  { id: 'tour', n: '🚌 団体客の日', d: '大人数のお客さんが来るかも', w: .9, min: 5, k: 1 },
+  { id: 'tv', n: '📺 テレビ取材', d: '昼すぎに取材班が来る。満足させれば3日間お客さんが+50%', w: .6, min: 6, k: 1.1 },
+  { id: 'sale', n: '🏷️ 商店街の大売り出し', d: '今日は材料費が2割引き', w: .8, min: 2, k: 1.1, cheap: .8 },
+];
+function pickEvent() { if (SHOP.day < 3 || Math.random() > .45) return null; const si = seasonIdx(); const ok = EVENTS.filter(e => SHOP.day >= e.min && (!e.only || e.only.includes(si)) && (!e.no || !e.no.includes(si))); let r = Math.random() * ok.reduce((a, e) => a + e.w, 0); for (const e of ok) { r -= e.w; if (r <= 0) return e; } return null; }
+const evPat = () => (G.EV && G.EV.pat) || 1;
+const evCost = () => (G.EV && G.EV.cheap) || 1;
+// 注文の好みに足す重み（旬・おすすめ・天気）
+function orderBonus(id) { const D = DISH[id]; let b = 0; if (isShun(id)) b += 1.2; if (SHOP.special === id) b += 2.2; if (G.EV && G.EV.hot && HOT.includes(id)) b += 1.8; if (G.EV && G.EV.cold && (D.cat === 'drink' || D.cat === 'sweet' || id === 'salad' || id === 'sushi')) b += 1.8; return b; }
+// ---------- 天気と季節の見た目（外の木・地面・舞う花びら／落ち葉／雪・雨） ----------
+const WX = { inst: null, rainI: null, P: [], R: [], applied: -1, k: '' };
+function applySeason() { if (!WORLD.leafM || !SHOP) return; const S = SEAS(); WORLD.leafM.color.setHex(S.leaf); if (WORLD.grass) WORLD.grass.material.color.setHex(S.grass); WX.applied = seasonIdx(); }
+function initWeather() {
+  if (WX.inst) return; const N = 260, geo = new THREE.PlaneGeometry(.12, .09); WX.inst = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: .7 }), N); WX.inst.frustumCulled = false; WX.inst.count = 0; scene.add(WX.inst);
+  for (let i = 0; i < N; i++) WX.P.push({ p: V3(), r: new THREE.Euler(rr(0, TAU), rr(0, TAU), 0), v: rr(.4, .9), ph: rr(0, TAU), s: rr(.7, 1.3) });
+  const NR = 700; WX.rainI = new THREE.InstancedMesh(new THREE.BoxGeometry(.012, .45, .012), new THREE.MeshBasicMaterial({ color: 0xa8c0d8, transparent: true, opacity: .45 }), NR); WX.rainI.frustumCulled = false; WX.rainI.count = 0; scene.add(WX.rainI);
+  for (let i = 0; i < NR; i++) WX.R.push({ p: V3() });
+}
+function spawnFall(o, top) { const S = SHOP; o.p.set(rr(-12, S.W + 12), top ? rr(4, 8) : rr(0, 8), rr(-4, S.D + 12)); if (o.p.x > -.2 && o.p.x < S.W + .2 && o.p.z > -.2 && o.p.z < S.D + .2) o.p.z = S.D + rr(.6, 12); }
+function updWeather(dt) {
+  if (!SHOP) return; initWeather(); if (WX.applied !== seasonIdx()) applySeason();
+  const S = SEAS(), wx = SHOP.open && G.EV ? G.EV.wx : null, fall = wx === 'snow' ? 'snow' : S.fall, M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = V3();
+  // 舞うもの
+  const n = fall ? (fall === 'snow' ? (wx === 'snow' ? 260 : 120) : 90) : 0;
+  if (WX.k !== fall) { WX.k = fall; WX.inst.material.emissive.setHex(fall === 'snow' ? 0xb8c0c8 : fall === 'petal' ? 0x7a4a5a : 0x4a2a10); const pal = fall === 'petal' ? [0xf8c8d8, 0xfad8e4, 0xf2b0c8] : fall === 'leaf' ? [0xd8782a, 0xc8401e, 0xe8a83a, 0xa85a1e] : [0xffffff]; const c = new THREE.Color(); WX.P.forEach((o, i) => { spawnFall(o, false); WX.inst.setColorAt(i, c.setHex(pick(pal))); }); if (WX.inst.instanceColor) WX.inst.instanceColor.needsUpdate = true; }
+  for (let i = 0; i < n; i++) { const o = WX.P[i]; o.ph += dt; const sp = fall === 'snow' ? .6 : .45; o.p.y -= o.v * sp * dt; o.p.x += Math.sin(o.ph * 1.3) * dt * .35 + (fall === 'snow' ? 0 : dt * .2); o.p.z += Math.cos(o.ph) * dt * .2; o.r.x += dt * (fall === 'snow' ? .3 : 2.2); o.r.y += dt * 1.6; if (o.p.y < .02) spawnFall(o, true);
+    const s = (fall === 'snow' ? .55 : 1) * o.s; WX.inst.setMatrixAt(i, M.compose(o.p, q.setFromEuler(o.r), sc.set(s, s, s))); }
+  WX.inst.count = n; WX.inst.instanceMatrix.needsUpdate = true;
+  // 雨
+  const nr = wx === 'rain' ? 700 : 0; for (let i = 0; i < nr; i++) { const o = WX.R[i]; if (o.p.y <= 0 || !o.init) { o.init = 1; spawnFall(o, o.p.y <= 0); } o.p.y -= dt * 9; o.p.x -= dt * .8; WX.rainI.setMatrixAt(i, M.compose(o.p, q.set(0, 0, .08, 1).normalize(), sc.set(1, 1, 1))); }
+  WX.rainI.count = nr; WX.rainI.instanceMatrix.needsUpdate = true; AU.lvl && AU.loop && (wx === 'rain' ? (AU.loop('rain', 1600, .4, 'lowpass'), AU.lvl('rain', .14, .5)) : AU.loops && AU.loops.rain && AU.lvl('rain', 0, .5));
+  if (wx === 'rain' || wx === 'snow') { const k = wx === 'rain' ? .62 : .85; scene.background.multiplyScalar(k); scene.fog.color.multiplyScalar(k); LIGHT.sun.intensity *= wx === 'rain' ? .45 : .75; }
+}
+// ---------- 本日のおすすめ（店の前の黒板） ----------
+const SIGN = { m: null, key: '' };
+function signTex(id) { const [c, g] = cvs(256, 320); g.fillStyle = '#1e2a22'; g.fillRect(0, 0, 256, 320); g.strokeStyle = '#8a5a34'; g.lineWidth = 16; g.strokeRect(0, 0, 256, 320); g.fillStyle = '#f2f0ea'; g.textAlign = 'center'; g.font = '900 30px "M PLUS Rounded 1c", sans-serif'; g.fillText('本日のおすすめ', 128, 52);
+  if (id) { g.font = '96px sans-serif'; g.fillText(DISH[id].e, 128, 170); g.font = '900 ' + (DISH[id].n.length > 8 ? 22 : 28) + 'px "M PLUS Rounded 1c", sans-serif'; g.fillStyle = '#f2d86a'; g.fillText(DISH[id].n, 128, 226); g.fillStyle = '#f6c0b0'; g.font = '800 24px sans-serif'; g.fillText(fmt(dishPrice(id)) + '円', 128, 268); if (isShun(id)) { g.fillStyle = '#e8523a'; g.font = '900 22px sans-serif'; g.fillText(SEAS().e + ' 旬', 128, 302); } }
+  else { g.font = '800 22px sans-serif'; g.fillStyle = '#c8d0c8'; g.fillText('メニューで', 128, 150); g.fillText('⭐を つけてね', 128, 186); } return ctex(c, { rep: false }); }
+function updSign() {
+  if (!SHOP) return; const id = SHOP.special && SHOP.menu[SHOP.special] && SHOP.menu[SHOP.special].on ? SHOP.special : null, key = (id || '') + '|' + SHOP.day + '|' + (id ? dishPrice(id) : 0);
+  if (!SIGN.m) { const g = new THREE.Group(); const leg = mat(0x8a5a34); for (const s of [-1, 1]) { const side = new THREE.Group(); side.position.set(0, 1.0, 0); side.rotation.x = -s * .22; g.add(side); const b = new THREE.Mesh(new THREE.BoxGeometry(.66, 1.02, .04), leg); b.position.set(0, -.51, s * .02); b.castShadow = true; side.add(b); const f = new THREE.Mesh(new THREE.PlaneGeometry(.56, .74), new THREE.MeshStandardMaterial({ roughness: .9 })); f.position.set(0, -.47, s * .042); f.rotation.y = s > 0 ? 0 : Math.PI; side.add(f); g.userData['f' + s] = f; } scene.add(g); SIGN.m = g; }
+  SIGN.m.visible = true; SIGN.m.position.set(WORLD.door.x + 1.7, 0, SHOP.D + 1.1); SIGN.m.rotation.y = -.25;
+  if (SIGN.key !== key) { SIGN.key = key; const t = signTex(id); for (const s of [-1, 1]) { const f = SIGN.m.userData['f' + s]; if (f.material.map) f.material.map.dispose(); f.material.map = t; f.material.needsUpdate = true; } }
+}
+// ---------- 常連さん ----------
+const REGS = [
+  { id: 'yamada', n: '山田さん', e: '👴', d: '毎日さんぽの帰りに寄る、元大工のおじいさん。だしの香りにうるさい', fav: 'udon', day: 2, col: 0x8a5a34, look: { hair: 0xd0d0d0, shirt: 0x6a7a5a, pants: 0x5a4a3a, glasses: true, hairStyle: 1, scale: .95 },
+    lines: ['…うむ。だしが、ちゃんとしとる', '若いのに、いい仕事をするのう', 'わしが建てた家も、こんなふうに人が集まったもんじゃ', 'この色紙、わしの字じゃが かざってくれ', 'この店は、もう町の宝じゃよ'] },
+  { id: 'mina', n: 'ミナ', e: '🎓', d: '近くの大学に通う学生。甘いものには目がない', fav: 'parfait', day: 3, col: 0xf28aa8, look: { hair: 0x8a5a2a, shirt: 0xf28aa8, pants: 0x2a3a5a, hairStyle: 3 },
+    lines: ['え、かわいい…写真とっていいですか？', 'レポートの前は、ここで糖分ほきゅう！', 'ゼミのみんなにも宣伝しときました！', '色紙かきました！ へたですけど…', '卒業しても、ずっと来ます！'] },
+  { id: 'goro', n: 'ゴロウさん', e: '👷', d: '近くの工事現場で働く大食い。とにかく量とスピードが大事', fav: 'karaage', day: 4, col: 0xf2b62a, look: { hair: 0x1a1a1a, shirt: 0xf2b62a, pants: 0x3a3a3e, hairStyle: 5, capCol: 0xf2f0ea, scale: 1.08 },
+    lines: ['うめぇ！ おかわりあるか？', 'ここの唐揚げで 午後もがんばれるぜ', '現場のやつら、みんな連れてくるからな！', 'オレのサイン？ しょうがねぇな、ほらよ', 'あんたの店、オレが一生守ってやるよ'] },
+  { id: 'emily', n: 'エミリー', e: '🧳', d: '日本の料理を研究しに来た留学生。メモ帳がいつもいっぱい', fav: 'sushi', day: 6, col: 0x2a6ad8, look: { hair: 0xd8b06a, shirt: 0x2a6ad8, pants: 0xd8c8a8, hairStyle: 2 },
+    lines: ['ワオ…これがホンモノの和食ですね！', 'メモ、メモ… ネタの切り方、きれいです', '国の家族に、このお店のことを手紙で書きました', 'サイン、カタカナで書いてみました！', 'わたしの国にも、この店があったらいいのに'] },
+  { id: 'sakura', n: 'さくら先生', e: '📚', d: '近所の小学校の先生。仕事帰りにほっとひと息つきに来る', fav: 'latte', day: 8, col: 0x2aa86a, look: { hair: 0x3a2a1e, shirt: 0xf2f0ea, pants: 0x6a5a4a, glasses: true, hairStyle: 4 },
+    lines: ['ふぅ… この一杯のために一日がんばれます', 'クラスの子たちが、ここの話をしてましたよ', '保護者会のあとは、ここに集合なんです', '花丸の色紙です。たいへんよくできました！', 'あなたは、町のみんなの先生みたいですね'] },
+  { id: 'takeshi', n: 'タケシ', e: '💼', d: 'いそがしい会社員。昼休みは15分勝負', fav: 'curry', day: 10, col: 0x3a3a3e, look: { hair: 0x1a1a1a, shirt: 0xf2f0ea, pants: 0x2a2a3a, hairStyle: 0 },
+    lines: ['はやい、うまい、助かる！', '会議がのびても ここなら間に合う', '取引先の人も、ここに連れてきました', '名刺じゃなくて、色紙にサインです', '昇進しました！ お祝いはここでって決めてたんです'] },
+  { id: 'rose', n: 'マダム・ローズ', e: '👒', d: 'おしゃれな老婦人。きれいで品のいいお店が好き', fav: 'cake', day: 13, col: 0x8a4ac8, look: { hair: 0xe8e8e8, shirt: 0x8a4ac8, pants: 0x3a2a3a, hairStyle: 3, glasses: true },
+    lines: ['あら、かわいらしいお店ね', 'このお皿の盛りつけ、とても上品だわ', 'お茶会のお友だちにも ご紹介したわ', 'わたくしのサインよ。大事になさって', 'ここは、わたくしの いちばんのお気に入りよ'] },
+  { id: 'kenta', n: 'ケンタ', e: '🎒', d: '近所の小学生。おこづかいをにぎりしめてやって来る', fav: 'omurice', day: 16, col: 0xe8523a, look: { hair: 0x2a1a10, shirt: 0xe8523a, pants: 0x2a3a5a, hairStyle: 1, scale: .72 },
+    lines: ['オムライス！ ケチャップで顔かいて！', 'おこづかい、ためてきたんだ！', '友だちと来たよ！ ぼくのおすすめの店！', 'サインってこうやって書くの？', '大きくなったら、ここで働きたい！'] },
+];
+const regOf = id => REGS.find(r => r.id === id);
+const regSt = r => (SHOP.regs[r.id] = SHOP.regs[r.id] || { pts: 0, h: 0, v: 0, last: 0 });
+function maybeRegular() { const can = REGS.filter(r => SHOP.day >= r.day && regSt(r).last !== SHOP.day); if (!can.length || Math.random() > .16) return null; const r = pick(can); regSt(r).last = SHOP.day; return { id: 'reg', n: r.n, w: 0, pat: 1.35, pay: 1.15, grp: [1, regSt(r).h >= 3 ? 3 : 1], like: [DISH[r.fav].g], reg: r }; }
+function tagTex(t) { const [c, g] = cvs(256, 64); g.font = '900 30px "M PLUS Rounded 1c", sans-serif'; const w = Math.min(250, g.measureText(t).width + 26); g.fillStyle = 'rgba(255,248,236,.92)'; g.strokeStyle = '#e8523a'; g.lineWidth = 4; g.beginPath(); g.roundRect((256 - w) / 2, 6, w, 50, 22); g.fill(); g.stroke(); g.fillStyle = '#3a2a1e'; g.textAlign = 'center'; g.fillText(t, 128, 42); return ctex(c, { rep: false }); }
+function regTag(P, r) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex(`${r.e} ${r.n} ${'♥'.repeat(regSt(r).h)}`), depthTest: false, transparent: true })); s.scale.set(1, .25, 1); s.renderOrder = 11; scene.add(s); P.tag = s; }
+function regPaid(Gp, stars, favOk) {
+  const r = Gp.type.reg; if (!r) return; const st = regSt(r); st.v++; G.dayLog.regs = (G.dayLog.regs || []).concat(r.n); const d = stars >= 4 ? (favOk ? 2 : 1) : stars <= 2 ? -1 : 0; st.pts = Math.max(0, st.pts + d);
+  const nh = Math.min(5, Math.floor(st.pts / 4)); if (nh > st.h) { st.h = nh; regGift(r, nh); } else if (d > 0 && Math.random() < .5) feed(`${r.e} ${r.n}「${pick(r.lines.slice(0, Math.max(1, st.h)))}」`);
+}
+function regGift(r, h) {
+  const line = r.lines[h - 1]; let what = '';
+  if (h === 1) { const v = 1000 + SHOP.lv * 200; SHOP.money += v; what = `お礼の気持ち +${fmt(v)}円`; }
+  else if (h === 2) { const m = SHOP.menu[r.fav]; if (m && m.lv < 5 && known(r.fav)) { m.lv++; what = `${DISH[r.fav].n} のコツを教えてくれた（レシピLv${m.lv}）`; } else { SHOP.money += 2000; what = 'お礼の気持ち +2,000円'; } }
+  else if (h === 3) { addGift('shikishi', REGS.indexOf(r)); what = '🎁 サイン色紙（「建てる」→かべ で かざれる）'; }
+  else if (h === 4) { SHOP.adsDays = Math.max(SHOP.adsDays || 0, 2); SHOP.rep = clamp(SHOP.rep + .1, 1, 5); what = '口コミで広めてくれた（2日間 お客さん+50%・評判アップ）'; }
+  else { addGift('photo', REGS.indexOf(r)); SHOP.money += 10000; what = '🎁 記念写真 と お祝い +10,000円'; }
+  toast(`${r.e} ${r.n} と なかよし ${'♥'.repeat(h)}`, `「${line}」　${what}`, 5); feed(`💛 ${r.n}「${line}」`); AU.lvup(); checkAch();
+}
+// プレゼント（建築モードで 0円で置ける）
+function addGift(id, c = 0) { SHOP.gifts[id] = SHOP.gifts[id] || []; SHOP.gifts[id].push(c); }
+const giftN = id => (SHOP.gifts[id] || []).length;
+const REGCOL = REGS.map(r => r.col);
+function shikiTex(k, photo) { const r = REGS[k] || REGS[0], [c, g] = cvs(192, 224); if (photo) { const gr = g.createLinearGradient(0, 0, 0, 224); gr.addColorStop(0, '#f8e0c0'); gr.addColorStop(1, '#e8b890'); g.fillStyle = gr; g.fillRect(0, 0, 192, 224); g.font = '80px sans-serif'; g.textAlign = 'center'; g.fillText(r.e, 62, 130); g.fillText('🧑‍🍳', 132, 130); g.font = '40px sans-serif'; g.fillText('💛', 96, 70); g.fillStyle = '#5a3a22'; g.font = '900 22px "M PLUS Rounded 1c", sans-serif'; g.fillText(`${r.n}と`, 96, 186); g.fillText('いつもありがとう', 96, 212); }
+  else { g.fillStyle = '#fbf6ea'; g.fillRect(0, 0, 192, 224); g.strokeStyle = '#d8b06a'; g.lineWidth = 10; g.strokeRect(5, 5, 182, 214); g.fillStyle = '#1e1a18'; g.textAlign = 'center'; g.font = '900 30px serif'; g.save(); g.translate(96, 112); g.rotate(-.12); g.fillText(r.n, 0, -26); g.font = '900 24px serif'; g.fillText('おいしかった！', 0, 16); g.restore(); g.font = '46px sans-serif'; g.fillText(r.e, 96, 196); g.fillStyle = '#c81e1e'; g.fillRect(140, 150, 30, 30); } return ctex(c, { rep: false }); }
+it('shikishi', { n: 'サイン色紙', cat: 'wall', price: 0, layer: 'wall', deco: 3, gift: 1, cols: REGCOL, mk(c) { const B = MB(); B.box(.46, .54, .03, 0xd8b06a, 0, -.27, 0); const k = Math.max(0, REGCOL.indexOf(c)); const p = new THREE.Mesh(new THREE.PlaneGeometry(.4, .47), new THREE.MeshStandardMaterial({ map: shikiTex(k), roughness: .9 })); p.position.z = .02; B.g.add(p); return B.g; } });
+it('photo', { n: '常連さんの記念写真', cat: 'wall', price: 0, layer: 'wall', deco: 5, gift: 1, cols: REGCOL, mk(c) { const B = MB(); B.box(.62, .72, .05, 0x5a3a22, 0, -.36, 0, { mo: { roughness: .4 } }); const k = Math.max(0, REGCOL.indexOf(c)); const p = new THREE.Mesh(new THREE.PlaneGeometry(.52, .6), new THREE.MeshStandardMaterial({ map: shikiTex(k, 1), roughness: .5 })); p.position.z = .03; B.g.add(p); return B.g; } });
+it('trophy', { n: 'コンテストのトロフィー', cat: 'deco', price: 0, deco: 6, gift: 1, cols: [0xe8c040, 0xd8dce0, 0xc8783a], mk(c) { const B = MB(); B.box(.42, .7, .42, 0x3a2a22, 0, 0, 0, { r: .03 }); const mt = { metalness: .9, roughness: .2 }; B.cyl(.1, .14, .06, c, 0, .7, 0, { mo: mt }); B.cyl(.03, .05, .16, c, 0, .76, 0, { mo: mt }); const pts = []; for (let i = 0; i <= 10; i++) { const t = i / 10; pts.push(new THREE.Vector2(.04 + Math.sin(t * 1.4) * .14, t * .24)); } const cup = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), mat(c, mt)); cup.position.y = .92; cup.material.side = THREE.DoubleSide; B.g.add(cup);
+  for (const s of [-1, 1]) { const h = new THREE.Mesh(new THREE.TorusGeometry(.06, .014, 8, 16, Math.PI), mat(c, mt)); h.position.set(s * .17, 1.05, 0); h.rotation.z = s > 0 ? -Math.PI / 2 : Math.PI / 2; B.g.add(h); } const st = B.sph(.05, c, 0, 1.26, 0, { mo: mt }); B.g.userData.anim = t => { cup.rotation.y = t * .3; }; return B.g; } });
+// ---------- 看板猫 ----------
+it('catbed', { n: 'ねこベッド（看板猫が来る）', cat: 'deco', price: 1600, lv: 3, deco: 3, kind: 'catbed', cols: [0xc83a3a, 0x2a5aa8, 0xf2b62a, 0x8ad0c0, 0xf28aa8], mk(c) { const B = MB(); const r = new THREE.Mesh(new THREE.TorusGeometry(.28, .09, 10, 24), mat(c, { roughness: .9 })); r.rotation.x = Math.PI / 2; r.position.y = .09; B.g.add(r); B.cyl(.27, .27, .06, 0xf2ead8, 0, .0, 0, { seg: 24, mo: { roughness: 1 } }); return B.g; } });
+let CAT = null;
+function catMesh() { const g = new THREE.Group(), fur = mat(0xe8963a, { roughness: .9 }), wht = mat(0xfaf2e6, { roughness: .9 }), dk = mat(0x1a1a1a, { roughness: .3 }), pk = mat(0xe89aa8);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(.085, .2, 6, 12), fur); body.rotation.x = Math.PI / 2; body.position.y = .17; g.add(body); const ch = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), wht); ch.position.set(0, .17, .13); ch.scale.set(1, 1, .6); g.add(ch);
+  for (let i = 0; i < 3; i++) { const st = new THREE.Mesh(new THREE.TorusGeometry(.087, .012, 4, 16, Math.PI), mat(0xb8642a)); st.position.set(0, .17, -.06 + i * .06); st.rotation.y = Math.PI / 2; g.add(st); }
+  const head = new THREE.Group(); head.position.set(0, .29, .17); g.add(head); head.add(new THREE.Mesh(new THREE.SphereGeometry(.075, 14, 10), fur)); for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.ConeGeometry(.03, .06, 4), fur); e.position.set(s * .045, .07, -.005); e.rotation.z = -s * .25; head.add(e); const ey = new THREE.Mesh(new THREE.SphereGeometry(.012, 8, 6), dk); ey.position.set(s * .028, .012, .063); head.add(ey); }
+  const mz = new THREE.Mesh(new THREE.SphereGeometry(.035, 10, 8), wht); mz.position.set(0, -.025, .055); mz.scale.set(1.2, .8, .8); head.add(mz); const ns = new THREE.Mesh(new THREE.SphereGeometry(.009, 6, 4), pk); ns.position.set(0, -.008, .078); head.add(ns);
+  const legs = []; for (const [x, z] of [[-.05, .1], [.05, .1], [-.05, -.1], [.05, -.1]]) { const l = new THREE.Group(); l.position.set(x, .12, z); g.add(l); const m = new THREE.Mesh(new THREE.CylinderGeometry(.022, .02, .12, 8), z > 0 ? wht : fur); m.position.y = -.06; l.add(m); legs.push(l); }
+  const tail = new THREE.Group(); tail.position.set(0, .2, -.17); g.add(tail); const tc = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0, .06, -.06), V3(0, .16, -.08), V3(0, .22, -.04)]); tail.add(new THREE.Mesh(new THREE.TubeGeometry(tc, 12, .018, 6), fur));
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; }); g.userData = { body, head, legs, tail }; return g; }
+function catBed() { return SHOP.items.find(I => IT[I.id].kind === 'catbed'); }
+function updCat(dt) {
+  const bed = catBed(); if (!bed) { if (CAT) { scene.remove(CAT.g); CAT = null; } return; }
+  if (!CAT) { CAT = { g: catMesh(), p: V3(bed.x, 0, bed.z), face: 0, speed: 1.1, st: 'sleep', t: rr(6, 12), path: null, pet: 0 }; scene.add(CAT.g); if (!SHOP.st.catMet) { SHOP.st.catMet = 1; toast('🐈 看板猫がやってきた！', '近づいて なでてあげよう（お客さんもよろこぶ）', 4); } }
+  const C = CAT, u = C.g.userData; C.t -= dt; C.pet = Math.max(0, C.pet - dt);
+  if (C.st === 'sleep') { if (Math.hypot(C.p.x - bed.x, C.p.z - bed.z) > .3) { C.p.x = bed.x; C.p.z = bed.z; } if (C.t <= 0) { C.st = 'walk'; const g = G.groups.filter(g => g.table && (g.state === 'eat' || g.state === 'ordered' || g.state === 'menu'))[0]; let tx, tz; if (g && Math.random() < .55) { tx = g.table.I.x + rr(-1, 1); tz = g.table.I.z + rr(.9, 1.3); C.visit = g; } else { for (let k = 0; k < 12; k++) { tx = rr(.6, SHOP.W - .6); tz = rr(2, SHOP.D - .6); if (walkable(tx, tz)) break; } C.visit = null; } goTo(C, tx, tz); } }
+  else if (C.st === 'walk') { if (walkP(C, dt)) { C.st = 'sit'; C.t = rr(6, 11); if (C.visit && C.visit.table && !C.visit.cat) { C.visit.cat = 1; groupMood(C.visit, .06); setBubble(C.visit.mem[0], '😻'); feed('🐈 看板猫が お客さんの足もとに… お客さんがにっこり'); } } }
+  else if (C.st === 'sit') { if (C.t <= 0) { C.st = 'home'; goTo(C, bed.x, bed.z); } }
+  else if (C.st === 'home') { if (walkP(C, dt)) { C.st = 'sleep'; C.t = rr(14, 26); } }
+  // 体の動き
+  const mv = C.moving, t = clock.elapsedTime, sl = C.st === 'sleep', sit = C.st === 'sit' || C.pet > 0;
+  u.legs.forEach((l, i) => { l.rotation.x = mv ? Math.sin(t * 12 + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * .6 : 0; l.visible = !sl; });
+  u.body.position.y = sl ? .09 : sit ? .15 : .17; u.body.rotation.x = Math.PI / 2 + (sit && !sl ? -.5 : 0); u.head.position.set(0, sl ? .13 : sit ? .33 : .29, sl ? .14 : .17); u.head.rotation.x = sl ? .5 : 0; u.head.rotation.y = sl ? 0 : Math.sin(t * .7) * .4; u.tail.rotation.x = sl ? 1.2 : Math.sin(t * 3) * .3; u.tail.rotation.z = Math.sin(t * (C.pet > 0 ? 9 : 2)) * .4;
+  C.g.position.set(C.p.x, 0, C.p.z); C.g.rotation.y = sl ? .6 : C.face; C.g.scale.setScalar(1 + (C.pet > 0 ? Math.sin(t * 20) * .02 : 0));
+}
+function petCat() { const C = CAT; if (!C || C.pet > 0) return; C.pet = 1.6; if (C.st === 'walk') { C.path = null; C.st = 'sit'; C.t = 3; } SHOP.st.pets = (SHOP.st.pets || 0) + 1; AU.tone(720, .22, .05, 'sine', 0, 980); AU.tone(980, .25, .045, 'sine', .2, 620); floatText({ x: C.p.x, z: C.p.z }, '♥ ゴロゴロ…', '#e8527a'); for (const g of G.groups) if (g.table && Math.hypot(g.table.I.x - C.p.x, g.table.I.z - C.p.z) < 3 && !g.catPet) { g.catPet = 1; groupMood(g, .03); } addXP(1); checkAch(); }
+// ---------- テイクアウト（電話の注文 → バイクの配達員が取りに来る） ----------
+const TKO = [];
+function updTakeout(dt) {
+  const S = SHOP; if (!S.open) return; G.toT = (G.toT ?? rr(40, 70)) - dt;
+  if (G.toT <= 0) { G.toT = rr(55, 110) / (G.EV && G.EV.id === 'rain' ? 1.6 : 1); const on = menuOn(); if (S.lv >= 3 && on.length && TKO.length < 2 && S.time < CLOSE_MIN - OPEN_MIN - 90) { const dish = pick(on.filter(id => DISH[id].cat !== 'drink').length ? on.filter(id => DISH[id].cat !== 'drink') : on);
+      const TO = { takeout: true, state: 'ordered', mem: [], orders: [], due: S.time + 170, dish }; const t = { id: uid(), dish, grp: TO, P: null, state: 'queued', q: .7, cookT: 0, takeout: true }; TO.orders.push(t); TO.t = t; G.tickets.push(t); TKO.push(TO); AU.tone(1320, .12, .05, 'square'); AU.tone(1320, .12, .05, 'square', .2); feed(`📞 テイクアウトの注文：${DISH[dish].e} ${DISH[dish].n}（2時間50分以内）`); } }
+  for (let i = TKO.length - 1; i >= 0; i--) { const TO = TKO[i], t = TO.t;
+    if (t.state === 'ready' && !TO.rider) spawnRider(TO);
+    if (!TO.rider && t.state !== 'ready' && S.time > TO.due) { t.cancel = true; if (t.state !== 'cooking') G.tickets.splice(G.tickets.indexOf(t), 1); TKO.splice(i, 1); S.rep = clamp(S.rep - .03, 1, 5); feed(`📞 テイクアウトがまにあわず キャンセルされた… ${DISH[t.dish].e}`); AU.bad(); continue; }
+    const R = TO.rider; if (!R) continue;
+    if (R.st === 'in' && walkP(R, dt)) { if (t.state === 'ready') { pickDish(t); t.state = 'served'; const pay = Math.round(dishPrice(t.dish) * 1.15 + 150); earn(pay); G.dayLog.sales += pay; G.dayLog.takeout = (G.dayLog.takeout || 0) + 1; S.st.takeout = (S.st.takeout || 0) + 1; mission('takeout', 1); addXP(6); floatText(R.p, `🛵 +${fmt(pay)}円`, '#1e7a3a'); AU.coin(); setBubble(R, '🙇'); }
+      R.st = 'out'; goTo(R, WORLD.door.x - 26, WORLD.sidewalkZ); R.carry = null; }
+    else if (R.st === 'out' && walkP(R, dt)) { scene.remove(R.g); if (R.bubble) scene.remove(R.bubble); PEOPLE.splice(PEOPLE.indexOf(R), 1); TKO.splice(i, 1); } }
+}
+function spawnRider(TO) { const L = randLook({ shirt: 0x2aa86a, pants: 0x2a2a2e, hairStyle: 5, capCol: 0xe8523a }); const R = { kind: 'rider', g: personMesh(L), L, p: V3(WORLD.door.x + 24, 0, WORLD.sidewalkZ), face: -Math.PI / 2, speed: 2.2, a: 'walk', mood: .8, st: 'in', run: true };
+  const box = new THREE.Mesh(new RoundedBoxGeometry(.42, .38, .3, 2, .04), mat(0xe8523a, { roughness: .5 })); box.position.set(0, 1.05, -.3); R.g.add(box); scene.add(R.g); PEOPLE.push(R); TO.rider = R; const t = TO.t, at = t.at, w = workOf(at, IT[at.id].work2 ? 1 : 0); goTo(R, w.p.x, w.p.z); setBubble(R, '🛵'); feed(`🛵 配達員さんが ${DISH[t.dish].e} を取りに来た`); }
+function takeoutHUD() { const e = $('tko'); if (!e) return; if (!TKO.length || !SHOP.open) { e.style.display = 'none'; return; } e.style.display = ''; e.innerHTML = TKO.map(TO => { const t = TO.t, left = Math.max(0, Math.round(TO.due - SHOP.time)); return `<div>🛵 ${DISH[t.dish].e} ${DISH[t.dish].n} <b style="color:${t.state === 'ready' || TO.rider ? '#1e7a3a' : left < 50 ? '#c83a1e' : '#3a2a1e'}">${TO.rider ? '受け取り中' : t.state === 'ready' ? 'できた！' : t.state === 'cooking' ? '調理中' : 'あと' + left + '分'}</b></div>`; }).join(''); }
+// ---------- こぼれ（床をふく） ----------
+const SPILLS = [];
+function maybeSpill(Gp, dt) { if (!Gp.table || Gp.spilled || Math.random() > dt * .006) return; Gp.spilled = 1; const P = pick(Gp.mem); const s = P.seat; if (!s) return; const x = lerp(s.p.x, Gp.table.I.x, .1) + rr(-.25, .25), z = lerp(s.p.z, Gp.table.I.z, .1) + rr(-.25, .25);
+  const col = pick([[0xc8e4f0, .55], [0xf2a830, .8], [0x6a3a1a, .85], [0xf2f0ea, .9]]); const m = new THREE.Mesh(poolGeo(rr(.16, .26), .006, .3), new THREE.MeshPhysicalMaterial({ color: col[0], roughness: .05, clearcoat: 1, transparent: true, opacity: col[1] })); m.position.set(x, .004, z); m.scale.set(1, 1, 1); scene.add(m);
+  SPILLS.push({ x, z, m, by: null, state: 'dirty' }); setBubble(P, '💦'); feed('💦 お客さんが飲み物をこぼした！ ふいてあげよう'); AU.noise(.25, 900, .12, 'lowpass'); }
+function wipeSpill(s) { const k = SPILLS.indexOf(s); if (k < 0) return; SPILLS.splice(k, 1); scene.remove(s.m); s.state = 'clean'; SHOP.st.mop = (SHOP.st.mop || 0) + 1; mission('clean', 1); AU.noise(.3, 2500, .1, 'bandpass', 0, 2); checkAch(); }
+function spillNear(x, z, r = 2.6) { let n = 0; for (const s of SPILLS) if (Math.hypot(s.x - x, s.z - z) < r) n++; return n; }
+function updSpills(dt) { if (!SPILLS.length) return; for (const g of G.groups) if (g.table && (g.state === 'menu' || g.state === 'call' || g.state === 'ordered' || g.state === 'eat')) { const n = spillNear(g.table.I.x, g.table.I.z); if (n) groupMood(g, -dt * .004 * n); } }
+// ---------- 料理コンテスト（7日ごと・開店前） ----------
+const RIVALS = [{ n: '剛田シェフ', s: '洋食亭グリル王', e: '🧔' }, { n: 'リン', s: '中華 龍門', e: '🐉' }, { n: 'ソフィ', s: 'パティスリー・ミエル', e: '🧁' }, { n: '源さん', s: '割烹 源', e: '🍶' }, { n: 'マルコ', s: 'トラットリア・ソーレ', e: '🍅' }];
+const isContestDay = () => SHOP && SHOP.day % 7 === 0;
+const contestTheme = () => [null, '和', '洋', '中', 'カ', '伊'][Math.floor(SHOP.day / 7) % 6];
+const THEME_N = { null: 'なんでも', '和': '和食', '洋': '洋食', '中': '中華', 'カ': 'カフェ・スイーツ', '伊': 'イタリアン' };
+function contestOk(id) { const th = contestTheme(); return known(id) && hasApp(DISH[id].app) && (!th || DISH[id].g === th); }
+function contestRivals() { const wk = Math.floor(SHOP.day / 7), sd = SHOP.day * 7.13; const rs = (k) => ((Math.sin(sd + k * 3.7) + 1) / 2); return [0, 1, 2].map(k => { const R = RIVALS[(Math.floor(SHOP.day / 7) + k) % RIVALS.length]; return Object.assign({ sc: Math.round(clamp(62 + wk * 3.2 + rs(k) * 16 - 4, 55, 97)) }, R); }); }
+function startContest(id) {
+  if (!isContestDay() || SHOP.open || (SHOP.contest.last === SHOP.day)) return; const I = SHOP.items.find(I => (IT[I.id].tags || []).includes(DISH[id].app)); if (!I) return; closePanel(); SHOP.contest.last = SHOP.day;
+  toast('🎖️ 料理コンテスト 開始！', `${DISH[id].e} ${DISH[id].n} で勝負！ タイミングがだいじ`, 3);
+  setTimeout(() => startCook({ id: -1, dish: id, state: 'cooking' }, I, (q, all) => contestDone(id, q, all)), 600);
+}
+function contestDone(id, q, all) {
+  const lvB = ((SHOP.menu[id] || {}).lv - 1) * 2, my = Math.round(clamp(q * 92 + lvB + (isShun(id) ? 3 : 0) + (all ? 4 : 0) + Math.min(4, decoTotal() / 60), 0, 100)); const rv = contestRivals(); const all4 = rv.map(r => ({ n: r.n, s: r.s, e: r.e, sc: r.sc })).concat([{ n: SHOP.name, s: 'あなたのお店', e: '🧑‍🍳', sc: my, me: 1 }]).sort((a, b) => b.sc - a.sc); const rank = all4.findIndex(a => a.me) + 1, wk = Math.floor(SHOP.day / 7);
+  const prize = rank === 1 ? 6000 + wk * 3000 : rank === 2 ? 3000 + wk * 1000 : rank === 3 ? 1200 + wk * 300 : 400; SHOP.money += prize; if (rank <= 3) addGift('trophy', rank - 1); if (rank === 1) { SHOP.contest.wins++; SHOP.rep = clamp(SHOP.rep + .12, 1, 5); SHOP.adsDays = Math.max(SHOP.adsDays || 0, 2); } SHOP.contest.best = Math.max(SHOP.contest.best || 0, my); addXP(40 + (4 - rank) * 20); checkAch(); saveShop(true);
+  const medal = ['🥇', '🥈', '🥉', '🎗️'][rank - 1];
+  $('rBox').innerHTML = `<h2>🎖️ 料理コンテスト 結果</h2><p>テーマ：<b>${THEME_N[contestTheme()]}</b>　あなたの料理：${DISH[id].e} <b>${DISH[id].n}</b></p><div>${all4.map((a, i) => `<div class="row" style="${a.me ? 'background:#fff4d8' : ''}"><div class="ic">${a.e}</div><div class="tx"><b>${i + 1}位　${a.n}</b><small>${a.s}</small>${bar(a.sc, 100, a.me ? '#e8523a' : '#8a7a6a')}</div><div class="r"><b>${a.sc}点</b></div></div>`).join('')}</div>
+    <p style="font-size:18px;text-align:center">${medal} <b>${rank}位！</b>　賞金 ${fmt(prize)}円${rank <= 3 ? '　＋ トロフィー（「建てる」→かざり）' : ''}${rank === 1 ? '<br>優勝で評判アップ・2日間お客さん+50%！' : ''}</p><p style="font-size:12px;opacity:.75">点数＝調理のできばえ＋レシピLv＋旬＋パーフェクト＋お店のかざり</p><button class="btn big g" data-next>OK</button>`;
+  $('report').classList.add('on'); rank === 1 ? AU.lvup() : AU.good();
+}
+// ---------- 常連さん・コンテストのパネル ----------
+function renderMorePanel(k) {
+  const S = SHOP, X = '<button class="x" data-close>✕</button>'; let h = '';
+  if (k === 'reg') { h = `<h2>💛 常連さん ${X}</h2><p>おなじみのお客さんが、ときどき来てくれる。好きな料理をメニューにのせて、★4以上で満足させると なかよし度が上がり、お礼やプレゼントがもらえる。</p>`;
+    for (const r of REGS) { const st = S.regs[r.id]; if (S.day < r.day && !(st && st.v)) { h += `<div class="row" style="opacity:.55"><div class="ic">❔</div><div class="tx"><b>？？？</b><small>${r.day}日目ごろから 来るかも</small></div></div>`; continue; } const s = st || { pts: 0, h: 0, v: 0 }, on = S.menu[r.fav] && S.menu[r.fav].on && known(r.fav);
+      h += `<div class="row"><div class="ic">${r.e}</div><div class="tx"><b>${r.n}</b> <span style="color:#e8527a">${'♥'.repeat(s.h)}${'♡'.repeat(5 - s.h)}</span> <small style="display:inline">来店${s.v}回</small><small>${r.d}</small><small>好きな料理：${DISH[r.fav].e} ${DISH[r.fav].n} ${on ? '<b style="color:#1e7a3a">✓メニューにある</b>' : '<b style="color:#c83a1e">メニューにない</b>'}</small>${s.h < 5 ? bar(s.pts % 4, 4, '#e8527a') : ''}${s.h ? `<small style="color:#7a5a4a">「${r.lines[s.h - 1]}」</small>` : ''}</div></div>`; } }
+  else if (k === 'contest') { const th = contestTheme(); h = `<h2>🎖️ 料理コンテスト ${X}</h2>`;
+    if (!isContestDay()) { const nd = (Math.floor(S.day / 7) + 1) * 7; h += `<p>7日ごとに町の料理コンテストがひらかれる。次は <b>${nd}日目</b>（あと${nd - S.day}日）。開店する前に出場できる。</p><p>🏅 優勝 ${S.contest.wins}回　最高点 ${S.contest.best || '-'}点</p>`; }
+    else if (S.contest.last === S.day) h += `<p>今日のコンテストは もう終わった。また7日後！</p><p>🏅 優勝 ${S.contest.wins}回　最高点 ${S.contest.best || '-'}点</p>`;
+    else if (S.open) h += '<p>営業中は出場できない（開店前に出場しよう）</p>';
+    else { const rv = contestRivals(); h += `<p>今日はコンテストの日！ テーマ：<b>${THEME_N[th]}</b>　えらんだ料理を、調理シーンで自分でつくる。タイミングが点数を決める！</p><h3 style="margin:8px 0 4px">ライバル</h3>${rv.map(r => `<div class="row"><div class="ic">${r.e}</div><div class="tx"><b>${r.n}</b><small>${r.s}　うわさの実力：${'★'.repeat(Math.round(r.sc / 20))}</small></div></div>`).join('')}<h3 style="margin:8px 0 4px">出場する料理をえらぶ</h3>`;
+      const ids = Object.keys(DISH).filter(contestOk); h += ids.length ? ids.map(id => `<div class="row"><div class="ic">${DISH[id].e}</div><div class="tx"><b>${DISH[id].n}</b><small>レシピLv${S.menu[id].lv}${isShun(id) ? '　<b style="color:#e8523a">旬 +3点</b>' : ''}</small></div><button class="btn g" data-a="contest" data-i="${id}">この料理で<br>出場！</button></div>`).join('') : `<p style="color:#c83a1e">テーマに合う料理がつくれない…（料理を覚えて、調理機器を置こう）</p>`; } }
+  return h;
+}
+// ---------- まとめて毎フレーム ----------
+function updMore(dt) {
+  updTakeout(dt); updSpills(dt); updCat(dt);
+  for (const g of G.groups) { if (g.type.reg && g.mem[0]) { const P = g.mem[0]; if (!P.tag) regTag(P, g.type.reg); P.tag.position.set(P.p.x, (P.a === 'sit' || P.a === 'eat' ? 1.45 : 1.55) * (P.L.scale || 1) + .55, P.p.z); P.tag.visible = g.state !== 'leave' || !g.toStreet; }
+    if (g.state === 'eat') maybeSpill(g, dt);
+    if (g.type.tv && g.state === 'eat' && Math.random() < dt * .25) floatText(g.table.I, '📸 パシャ', '#2a6ad8'); }
+}
+function clearMore() { for (const s of SPILLS) scene.remove(s.m); SPILLS.length = 0; for (const TO of TKO) if (TO.rider) { scene.remove(TO.rider.g); if (TO.rider.bubble) scene.remove(TO.rider.bubble); } TKO.length = 0; if (CAT) { scene.remove(CAT.g); CAT = null; } for (const g of G.groups) for (const P of g.mem) if (P.tag) scene.remove(P.tag); }
+function dayMore() { for (const s of SPILLS) scene.remove(s.m); SPILLS.length = 0; for (const TO of TKO) { if (TO.rider) { scene.remove(TO.rider.g); if (TO.rider.bubble) scene.remove(TO.rider.bubble); const k = PEOPLE.indexOf(TO.rider); if (k >= 0) PEOPLE.splice(k, 1); } } TKO.length = 0; G.toT = null; }
 
 // =========================================================================================
 //  調理の場面：キッチンの台の上を近くから。料理ごとに手順（焼く・ゆでる・揚げる・のせる…）が動く
@@ -2251,9 +2473,10 @@ function acts(from, range) {
   const out = [], add = (pos, a, extra = 0) => { const d = dist2(from, pos) - extra; if (d < range) out.push(Object.assign(a, { d, pos })); };
   if (PL.carry) { const t = PL.carry; if (t.grp.table) { add(t.grp.table.I, { k: 'serve', t, txt: `${DISH[t.dish].e} ${tableNo(t.grp.table)}番テーブルに運ぶ` }, 1.1); } return out; }
   for (const g of G.groups) { if (g.state === 'wait') add(g.mem[0].p, { k: 'seat', g, txt: `お客さん（${g.mem.length}人）を席に案内する` }); if (g.state === 'call' && g.table) add(g.table.I, { k: 'order', g, txt: `${tableNo(g.table)}番テーブルの注文をとる` }, 1.1); }
-  for (const t of G.tickets) if (t.state === 'ready' && !t.by && t.m) add(t.m.position, { k: 'pick', t, txt: `できた ${DISH[t.dish].e} ${DISH[t.dish].n} を受け取る` }, .5);
+  for (const t of G.tickets) if (t.state === 'ready' && !t.by && t.m && !t.takeout) add(t.m.position, { k: 'pick', t, txt: `できた ${DISH[t.dish].e} ${DISH[t.dish].n} を受け取る` }, .5);
   for (const I of SHOP.items) { const D = IT[I.id]; if (D.kind !== 'app' || I.busy) continue; const t = G.tickets.find(t => t.state === 'queued' && !t.by && D.tags.includes(DISH[t.dish].app)); if (t) add(workOf(I).p, { k: 'cook', I, t, txt: `${D.n}で ${DISH[t.dish].e} ${DISH[t.dish].n} をつくる` }, .2); }
   for (const T of TBL.values()) if (T.state === 'dirty' && !T.by) add(T.I, { k: 'clean', T, txt: `${tableNo(T)}番テーブルを かたづける` }, 1.1);
+  for (const s of SPILLS) if (!s.by) add({ x: s.x, z: s.z }, { k: 'mop', s, txt: '💦 こぼれた飲み物を ふく' }, .3); if (CAT && CAT.pet <= 0) add(CAT.p, { k: 'pet', txt: '🐈 看板猫を なでる' }, .2);
   out.sort((a, b) => a.d - b.d); return out;
 }
 function doAct(a) {
@@ -2263,13 +2486,15 @@ function doAct(a) {
   else if (a.k === 'pick') { const t = a.t; if (t.state !== 'ready' || t.by) return; t.by = PL; pickDish(t); PL.carry = t; AU.click(); }
   else if (a.k === 'serve') { const t = a.t; if (t.grp.state === 'leave' || t.cancel) { PL.carry = null; t.by = null; return; } serveDish(t); PL.carry = null; t.by = null; }
   else if (a.k === 'clean') { PL.a = 'clean'; PL.cleanT = { T: a.T, w: 1.0 }; a.T.by = PL; }
+  else if (a.k === 'mop') { PL.a = 'clean'; PL.cleanT = { T: a.s, w: .8, spill: 1 }; a.s.by = PL; }
+  else if (a.k === 'pet') { petCat(); PL.a = 'wave'; PL.waveT = .5; }
   else if (a.k === 'cook') { const { I, t } = a; if (I.busy || t.state !== 'queued' || t.by) return; t.by = PL; I.busy = t; t.state = 'cooking'; const w = workOf(I); PL.p.set(w.p.x, 0, w.p.z); PL.face = w.face; PL.path = null; PL.a = 'cook';
     const done = (q, all) => { I.busy = null; I.cooking = 0; t.by = null; PL.a = 'idle'; if (t.cancel) { feed('お客さんが帰ってしまった…'); return; } dishReady(t, I, q); addXP(4 + (all ? 6 : 0)); if (all) feed('✨ <b>パーフェクト調理！</b>'); };
     if (SET.cookScene) startCook(t, I, done); else { PL.qc = { t, I, k: 0, T: DISH[t.dish].t * .45, done }; I.cooking = 1; } }
 }
 function updPlayer(dt) {
   if (PL.qc) { const q = PL.qc; q.k += dt; cookFX(q.I, dt); PL.a = 'cook'; const f = q.k / q.T; $('prompt').innerHTML = `🍳 ${DISH[q.t.dish].n} 調理中 <b>${'■'.repeat(Math.round(f * 10))}${'□'.repeat(10 - Math.round(f * 10))}</b>`; $('prompt').classList.add('on'); if (q.k >= q.T) { PL.qc = null; q.done(clamp(.7 + rr(0, .15) + ((SHOP.menu[q.t.dish] || {}).lv - 1) * .02, .3, .95), false); } return; }
-  if (PL.cleanT) { const c = PL.cleanT; c.w -= dt; if (c.w <= 0) { if (c.T.state === 'dirty') { cleanTable(c.T); addXP(1); } c.T.by = null; PL.cleanT = null; PL.a = 'idle'; } return; }
+  if (PL.cleanT) { const c = PL.cleanT; c.w -= dt; if (c.w <= 0) { if (c.T.state === 'dirty') { if (c.spill) wipeSpill(c.T); else cleanTable(c.T); addXP(1); } c.T.by = null; PL.cleanT = null; PL.a = 'idle'; } return; }
   if (PL.waveT > 0) { PL.waveT -= dt; if (PL.waveT <= 0) PL.a = 'idle'; }
   if (PL.carry && (PL.carry.grp.state === 'leave' || PL.carry.cancel)) { feed('お客さんが帰ってしまった… 料理はまかないに'); PL.carry.by = null; PL.carry = null; }
   const mx = IN.mx, my = IN.my; const sp = PL.speed;
@@ -2323,8 +2548,8 @@ function renderBItems() {
     <div class="card" style="width:200px;text-align:left">外かべの色<div id="bCols" style="flex-wrap:wrap;margin-top:4px">${cols('facade', [0xf6ead2, 0xf2f0ea, 0xe8dcc0, 0xf2d8b0, 0xd8e8f0, 0xf0c8c0, 0xe0e8c8, 0x5a4a3e, 0x3a3a40])}</div></div>
     <div class="card" style="width:200px;text-align:left">わくの色<div id="bCols" style="flex-wrap:wrap;margin-top:4px">${cols('trim', [0x6a4428, 0x3a2a1e, 0xf2f0ea, 0x2a2a2e, 0xb8905a, 0x2a5a4a, 0x8a2a1e])}</div></div>
     <div class="card ${nx ? '' : 'lock'}" style="width:170px" data-expand="1">${swatch('')}<b>🏗️ 増築する</b><br>${nx ? `${SHOP.W}×${SHOP.D}m → ${nx[0]}×${nx[1]}m<div class="pr">${fmt(nx[2])}円</div>` : 'これ以上は広げられない'}</div>`; return; }
-  const ids = Object.keys(IT).filter(id => IT[id].cat === c).sort((a, b) => IT[a].lv - IT[b].lv || IT[a].price - IT[b].price);
-  box.innerHTML = ids.map(id => { const D = IT[id], lock = D.lv > SHOP.lv; return `<div class="card ${BLD.sel === id && !BLD.moving ? 'on' : ''} ${lock ? 'lock' : ''}" data-item="${id}">${swatch(thumb(id))}${D.n}<div class="pr">${lock ? '🔒 Lv' + D.lv : fmt(D.price) + '円'}</div></div>`; }).join('');
+  const ids = Object.keys(IT).filter(id => IT[id].cat === c && (!IT[id].gift || giftN(id) > 0)).sort((a, b) => IT[a].lv - IT[b].lv || IT[a].price - IT[b].price);
+  box.innerHTML = ids.map(id => { const D = IT[id], lock = D.lv > SHOP.lv; return `<div class="card ${BLD.sel === id && !BLD.moving ? 'on' : ''} ${lock ? 'lock' : ''}" data-item="${id}">${swatch(thumb(id))}${D.n}<div class="pr">${lock ? '🔒 Lv' + D.lv : D.gift ? '🎁 ×' + giftN(id) : fmt(D.price) + '円'}</div></div>`; }).join('');
 }
 function clearGhost() { if (BLD.ghost) scene.remove(BLD.ghost); if (BLD.foot) scene.remove(BLD.foot); BLD.ghost = BLD.foot = null; }
 function setSel(id) { clearGhost(); BLD.sel = id; BLD.pos = null; if (!id) { renderCols(); return; } const D = IT[id]; BLD.c = Math.min(BLD.c, D.cols.length - 1); const g = itemModel(id, BLD.c); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); g.visible = false; scene.add(g); BLD.ghost = g;
@@ -2345,10 +2570,10 @@ function updBuild(dt) {
   const price = BLD.moving ? 0 : D.price, how = IN.lastDev === 'touch' ? 'ここでよければ もう一度タップ' : 'クリックで置く'; bmsg(BLD.why ? '✖ ' + BLD.why : price > SHOP.money ? `✖ お金が足りない（${fmt(price)}円）` : BLD.moving ? how : `${how}（${fmt(price)}円）`);
 }
 function placeHere() {
-  const D = IT[BLD.sel], P = BLD.pos; if (!P || BLD.why) { AU.bad(); return; } if (D.lv > SHOP.lv) { bmsg(`🔒 レベル${D.lv}で使えるようになる`); AU.bad(); return; } const price = BLD.moving ? 0 : D.price; if (price > SHOP.money) { AU.bad(); return; }
+  const D = IT[BLD.sel], P = BLD.pos; if (!P || BLD.why) { AU.bad(); return; } if (D.lv > SHOP.lv) { bmsg(`🔒 レベル${D.lv}で使えるようになる`); AU.bad(); return; } const price = BLD.moving ? 0 : D.price; if (price > SHOP.money) { AU.bad(); return; } let gc = null; if (D.gift && !BLD.moving) { const L = SHOP.gifts[BLD.sel] || []; if (!L.length) { bmsg('🎁 プレゼントでもらえる家具'); AU.bad(); return; } let k = L.indexOf(BLD.c); if (k < 0) k = 0; gc = L.splice(k, 1)[0]; BLD.c = gc; }
   if (D.layer === 'wall') { if (BLD.moving) { const I = BLD.moving; Object.assign(I, { side: P.side, t: P.t, y: P.y }); spawnWallMesh(I); I.m.visible = true; BLD.moving = null; setSel(null); } else { SHOP.money -= price; addWall(BLD.sel, P.side, P.t, P.y, BLD.c); } AU.place(); renderBItems(); return; }
   if (BLD.moving) { const I = BLD.moving, old = { x: I.x, z: I.z, r: I.r }; Object.assign(I, { x: P.x, z: P.z, r: BLD.r }); buildNav(); if (!reachableAll()) { Object.assign(I, old); buildNav(); bmsg('✖ 通り道がふさがってしまう'); AU.bad(); return; } spawnItemMesh(I); refreshTables(); BLD.moving = null; setSel(null); AU.place(); renderBItems(); return; }
-  const I = addItem(BLD.sel, P.x, P.z, BLD.r, BLD.c); if (!reachableAll()) { removeItem(I); bmsg('✖ 通り道や席に行けなくなってしまう'); AU.bad(); return; } SHOP.money -= price; AU.place(); floatText(I, `-${fmt(price)}円`, '#a04a3a'); checkAch();
+  const I = addItem(BLD.sel, P.x, P.z, BLD.r, BLD.c); if (!reachableAll()) { removeItem(I); if (gc !== null) addGift(BLD.sel, gc); bmsg('✖ 通り道や席に行けなくなってしまう'); AU.bad(); return; } SHOP.money -= price; AU.place(); if (gc === null) floatText(I, `-${fmt(price)}円`, '#a04a3a'); else { floatText(I, '🎁', '#e8527a'); renderBItems(); if (!giftN(BLD.sel)) setSel(null); } checkAch();
 }
 function cancelMove() { const I = BLD.moving; if (!I) return; if (I.m) I.m.visible = true; BLD.moving = null; setSel(null); }
 function tapBuild(x, y) {
@@ -2360,7 +2585,7 @@ function tapBuild(x, y) {
 const BA = {
   rot() { if (BLD.sel && !BLD.pick) { BLD.r = (BLD.r + 1) % 4; return; } const I = BLD.pick; if (!I || I.side !== undefined) return; const u = inUse(I); if (u) { bmsg('✖ ' + u); return; } const r = (I.r + 1) % 4, why = canPlace(I.id, I.x, I.z, r, I); if (why) { bmsg('✖ 回すと ' + why); AU.bad(); return; } const r0 = I.r; I.r = r; buildNav(); if (!reachableAll()) { I.r = r0; buildNav(); bmsg('✖ 通り道がふさがってしまう'); return; } spawnItemMesh(I); refreshTables(); pickItem(I); AU.place(); },
   move() { const I = BLD.pick; if (!I) return; const u = inUse(I); if (u) { bmsg('✖ ' + u); return; } pickItem(null); BLD.moving = I; if (I.m) I.m.visible = false; BLD.r = I.r || 0; BLD.c = I.c; setSel(I.id); },
-  sell() { const I = BLD.pick; if (!I) return; const u = inUse(I); if (u) { bmsg('✖ ' + u); return; } const v = Math.round(IT[I.id].price * .7); if (I.side !== undefined) { SHOP.walls.splice(SHOP.walls.indexOf(I), 1); scene.remove(I.m); } else { const T = TBL.get(I.uid); if (T) for (const m of T.plates) scene.remove(m); removeItem(I); } SHOP.money += v; AU.coin(); pickItem(null); bmsg(`${IT[I.id].n}を売った（+${fmt(v)}円）`); },
+  sell() { const I = BLD.pick; if (!I) return; const u = inUse(I); if (u) { bmsg('✖ ' + u); return; } const v = Math.round(IT[I.id].price * .7); if (IT[I.id].gift) addGift(I.id, I.c); if (I.side !== undefined) { SHOP.walls.splice(SHOP.walls.indexOf(I), 1); scene.remove(I.m); } else { const T = TBL.get(I.uid); if (T) for (const m of T.plates) scene.remove(m); removeItem(I); } SHOP.money += v; AU.coin(); pickItem(null); bmsg(`${IT[I.id].n}を売った（+${fmt(v)}円）`); },
 };
 function initBuildUI() {
   $('bTabs').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; BLD.cat = b.dataset.cat; if (BLD.moving) cancelMove(); setSel(null); renderTabs(); renderBItems(); AU.click(); });
@@ -2387,13 +2612,13 @@ const recipeCost = id => Math.round(DISH[id].price * 3 * Math.pow((SHOP.menu[id]
 const buyRecipeCost = id => Math.round(DISH[id].price * 12 / 10) * 10;
 const styleCost = p => p * 4;
 function renderPanel() {
-  const k = PN.cur, S = SHOP, X = '<button class="x" data-close>✕</button>'; let h = '';
-  if (k === 'menu') { const on = menuOn().length; h = `<h2>📋 メニュー ${X}</h2><p>のせられる料理：<b>${Object.values(S.menu).filter(m => m.on).length} / ${menuSlots()}</b>（レベル2ごとに1つふえる）　お客さんが注文できるのは調理機器がある料理だけ。値段を上げると もうかるけど、高すぎると満足度が下がる。</p>`;
+  const k = PN.cur, S = SHOP, X = '<button class="x" data-close>✕</button>'; let h = ''; if (k === 'reg' || k === 'contest') { $('pBox').innerHTML = renderMorePanel(k); return; }
+  if (k === 'menu') { const on = menuOn().length; h = `<h2>📋 メニュー ${X}</h2><p>のせられる料理：<b>${Object.values(S.menu).filter(m => m.on).length} / ${menuSlots()}</b>（レベル2ごとに1つふえる）　お客さんが注文できるのは調理機器がある料理だけ。値段を上げると もうかるけど、高すぎると満足度が下がる。<br>⭐<b>本日のおすすめ</b>：1品えらぶと 注文がふえて値段+10%（店の前の黒板にも出る）。${SEAS().e}<b>旬</b>の料理は今の季節によく売れる。</p>`;
     const rk = id => (S.menu[id].on && known(id) ? 0 : known(id) ? 1 : 2), ids = Object.keys(DISH).sort((a, b) => rk(a) - rk(b) || DISH[a].lv - DISH[b].lv);
     for (const id of ids) { const D = DISH[id], m = S.menu[id]; if (!known(id)) { const can = D.lv <= S.lv + 3; h += `<div class="row" style="opacity:.6"><div class="ic">${D.e}</div><div class="tx"><b>${D.n}</b><small>🔒 レベル${D.lv}で覚える　${APPN[D.app]}で調理</small></div>${can ? `<button class="btn w" data-a="learn" data-i="${id}">レシピを買う<br><small>${fmt(buyRecipeCost(id))}円</small></button>` : ''}</div>`; continue; }
-      const app = hasApp(D.app), pr = dishPrice(id), co = dishCost(id); h += `<div class="row"><div class="ic">${D.e}</div><div class="tx"><b>${D.n}</b> <small style="display:inline">レシピLv${m.lv}</small><small>${APPN[D.app]}　材料${co}円　${app ? '' : `<b style="color:#c83a1e">⚠ ${APPN[D.app]}を置こう</b>`}</small>
+      const app = hasApp(D.app), pr = dishPrice(id), co = dishCost(id); h += `<div class="row"><div class="ic">${D.e}</div><div class="tx"><b>${D.n}</b> ${isShun(id) ? `<b style="color:#e8523a;font-size:12px">${SEAS().e}旬</b> ` : ''}${S.special === id ? '<b style="color:#d89a1e;font-size:12px">⭐おすすめ</b> ' : ''}<small style="display:inline">レシピLv${m.lv}</small><small>${APPN[D.app]}　材料${co}円　${app ? '' : `<b style="color:#c83a1e">⚠ ${APPN[D.app]}を置こう</b>`}</small>
         <div style="display:flex;align-items:center;gap:6px;margin-top:3px"><input type="range" min="70" max="160" step="5" value="${Math.round((m.p || 1) * 100)}" data-a="price" data-i="${id}" style="flex:1"><b id="pr_${id}" style="min-width:62px;text-align:right">${fmt(pr)}円</b></div></div>
-        <div class="r" style="display:flex;flex-direction:column;gap:4px"><button class="btn ${m.on ? 'g' : 'w'}" data-a="tog" data-i="${id}">${m.on ? 'のせている' : 'のせる'}</button>${m.lv < 5 ? `<button class="btn w" data-a="rlv" data-i="${id}" style="font-size:11.5px">レシピ強化<br>${fmt(recipeCost(id))}円</button>` : '<small>レシピ最大</small>'}</div></div>`; }
+        <div class="r" style="display:flex;flex-direction:column;gap:4px"><button class="btn ${m.on ? 'g' : 'w'}" data-a="tog" data-i="${id}">${m.on ? 'のせている' : 'のせる'}</button>${m.on ? `<button class="btn ${S.special === id ? 'g' : 'w'}" data-a="special" data-i="${id}" style="font-size:11.5px">${S.special === id ? '⭐おすすめ中' : '⭐おすすめに'}</button>` : ''}${m.lv < 5 ? `<button class="btn w" data-a="rlv" data-i="${id}" style="font-size:11.5px">レシピ強化<br>${fmt(recipeCost(id))}円</button>` : '<small>レシピ最大</small>'}</div></div>`; }
     if (!on) h += `<p style="color:#c83a1e"><b>⚠ 今は注文できる料理がない！</b></p>`; }
   else if (k === 'staff') { if (!S.cands) S.cands = [newCandidate(), newCandidate('chef'), newCandidate()]; h = `<h2>👩‍🍳 スタッフ <small>${S.staff.length} / ${staffMax()}人</small>${X}</h2><p>スタッフは自分でしごとを見つけて動く。日給は一日の終わりにはらう。シェフは「うで」で味が、ウェイターは「愛想」でお客さんのきげんが変わる。</p>`;
     for (const f of S.staff) { const need = 30 + f.lvl * 25, tc = 900 * f.lvl; h += `<div class="row"><div class="ic">${ROLES[f.role].e}</div><div class="tx"><b>${f.name}</b> <small style="display:inline">Lv${f.lvl}・日給${fmt(f.wage)}円</small>${bar(f.xp, need, '#f2b62a')}
@@ -2417,13 +2642,15 @@ function renderPanel() {
       <div class="row"><div class="tx"><b>ボタンの大きさ</b></div>${[[.85, '小'], [1, '中'], [1.2, '大']].map(([v, n]) => `<button class="pill ${SET.bs === v ? 'on' : ''}" data-a="bs" data-i="${v}">${n}</button>`).join('')}</div>`}
       ${k === 'sys' ? `<h3 style="margin:12px 0 4px">データの引っこし</h3><p>下の文字をコピーしておけば、ほかの端末でも「読みこむ」で同じお店をつづけられる。</p><textarea id="exT" readonly>${btoa(unescape(encodeURIComponent(packShop())))}</textarea><div style="display:flex;gap:6px;margin-top:4px"><button class="btn w" data-a="copy">コピー</button><button class="btn w" data-a="import">貼りつけて 読みこむ</button></div>
       <button class="btn big r" data-a="title" style="margin-top:12px">タイトルにもどる（セーブする）</button>` : ''}`; }
-  else if (k === 'help') { h = `<h2>❓ 遊び方 ${X}</h2><p>🏪 <b>お店をひらく</b>：上の「開店する」を押すと一日がはじまる（10:00〜22:00）。</p><p>🙋 <b>お客さん</b>：入口で待つ→席に案内→メニューを見て注文→料理を待つ→食べる→お会計。待たせすぎると怒って帰ってしまう。</p><p>🧑‍🍳 <b>じぶんで働く</b>：近づくと調べる物の上に <b>E</b> の吹き出しが出る（タップでもいい）。案内・注文・調理・配膳・かたづけ、なんでもできる。調理すると料理ごとの調理シーン！「いま！」のタイミングで味が決まる。</p><p>👩‍🍳 <b>スタッフ</b>：やとうと自動で働いてくれる。研修でレベルアップ。</p><p>🔨 <b>建てる</b>：席・調理機器・かざり・照明・かべかざり・床とかべ紙・外観・増築。かざりが多いほど満足度と評判が上がる。</p><p>📋 <b>メニュー</b>：料理をえらんで、値段とレシピを強化。新しい料理はレベルが上がると覚える。</p><p>⭐ <b>評判</b>が上がると、VIPやグルメ評論家も来るように。毎日の目標と実績でボーナス。</p><p>💾 セーブは3つまで。自動でもセーブされる。</p><p>🎮 <b>操作</b>（「卵を盗む」と同じ）：PCは WASD で歩く・マウスをドラッグで視点・ホイールで近づく／はなれる（いちばん近いと一人称）・スペースでジャンプ・E で調べる物の上の吹き出しの「する」。スマホは左下のスティックで歩く・画面をドラッグで視点・2本指で近づく／はなれる・右下でジャンプ・吹き出しをタップで「する」。B：建てる　R：回す</p>`; }
+  else if (k === 'help') { h = `<h2>❓ 遊び方 ${X}</h2><p>🌸 <b>季節と天気</b>：7日ごとに春・夏・秋・冬。旬の料理が人気。雨・雪・猛暑・お祭り・テレビ取材などのイベントもある。</p><p>💛 <b>常連さん</b>：8人のおなじみさんが来る。好きな料理で満足させると なかよしになり、プレゼントがもらえる。</p><p>🛵 <b>テイクアウト</b>（Lv3〜）：電話の注文を時間内につくると、配達員さんが取りに来る。</p><p>🎖️ <b>料理コンテスト</b>：7日ごとに開店前に出場。調理シーンの点数でライバルと勝負、優勝でトロフィー。</p><p>🐈 <b>看板猫</b>：ねこベッドを置くと猫が住みつく。なでるとお客さんもにっこり。　💦 こぼれた飲み物は早くふこう。</p><p>🏪 <b>お店をひらく</b>：上の「開店する」を押すと一日がはじまる（10:00〜22:00）。</p><p>🙋 <b>お客さん</b>：入口で待つ→席に案内→メニューを見て注文→料理を待つ→食べる→お会計。待たせすぎると怒って帰ってしまう。</p><p>🧑‍🍳 <b>じぶんで働く</b>：近づくと調べる物の上に <b>E</b> の吹き出しが出る（タップでもいい）。案内・注文・調理・配膳・かたづけ、なんでもできる。調理すると料理ごとの調理シーン！「いま！」のタイミングで味が決まる。</p><p>👩‍🍳 <b>スタッフ</b>：やとうと自動で働いてくれる。研修でレベルアップ。</p><p>🔨 <b>建てる</b>：席・調理機器・かざり・照明・かべかざり・床とかべ紙・外観・増築。かざりが多いほど満足度と評判が上がる。</p><p>📋 <b>メニュー</b>：料理をえらんで、値段とレシピを強化。新しい料理はレベルが上がると覚える。</p><p>⭐ <b>評判</b>が上がると、VIPやグルメ評論家も来るように。毎日の目標と実績でボーナス。</p><p>💾 セーブは3つまで。自動でもセーブされる。</p><p>🎮 <b>操作</b>（「卵を盗む」と同じ）：PCは WASD で歩く・マウスをドラッグで視点・ホイールで近づく／はなれる（いちばん近いと一人称）・スペースでジャンプ・E で調べる物の上の吹き出しの「する」。スマホは左下のスティックで歩く・画面をドラッグで視点・2本指で近づく／はなれる・右下でジャンプ・吹き出しをタップで「する」。B：建てる　R：回す</p>`; }
   $('pBox').innerHTML = h;
 }
 const ADS = [['チラシをくばる', 1, 1500, 1], ['SNSキャンペーン', 3, 7000, 4], ['テレビCM', 7, 40000, 9]];
 const rankName = () => ['屋台', '町の食堂', '人気のお店', '行列のお店', '名店', '伝説のレストラン'][clamp(Math.floor(SHOP.rep - 1 + SHOP.lv / 8), 0, 5)];
 const PA = {
-  tog(id) { const m = SHOP.menu[id]; if (!m.on && Object.values(SHOP.menu).filter(x => x.on).length >= menuSlots()) { toast('メニューがいっぱい', 'ほかの料理をはずすか、レベルを上げよう'); return; } m.on = !m.on; },
+  special(id) { if (!SHOP.menu[id].on) return toast('メニューにのせてから えらんでね'); SHOP.special = SHOP.special === id ? null : id; if (SHOP.special) toast(`⭐ 本日のおすすめ：${DISH[id].e} ${DISH[id].n}`, '注文がふえて 値段+10%・満足度アップ'); },
+  contest(id) { startContest(id); },
+  tog(id) { const m = SHOP.menu[id]; if (m.on && SHOP.special === id) SHOP.special = null; if (!m.on && Object.values(SHOP.menu).filter(x => x.on).length >= menuSlots()) { toast('メニューがいっぱい', 'ほかの料理をはずすか、レベルを上げよう'); return; } m.on = !m.on; },
   rlv(id) { const c = recipeCost(id); if (SHOP.money < c) return toast('お金が足りない'); SHOP.money -= c; SHOP.menu[id].lv++; AU.good(); toast(`${DISH[id].n} のレシピが Lv${SHOP.menu[id].lv} に！`, '値段アップ・味アップ・タイミングがかんたんに'); },
   learn(id) { const c = buyRecipeCost(id); if (SHOP.money < c) return toast('お金が足りない'); SHOP.money -= c; SHOP.known.push(id); AU.good(); toast(`${DISH[id].e} ${DISH[id].n} を覚えた！`, `${APPN[DISH[id].app]}で つくれる`); },
   hire(i) { const f = SHOP.cands.find(c => c.id == i); if (!f) return; if (SHOP.staff.length >= staffMax()) return toast('これ以上やとえない', `レベル${(Math.floor(SHOP.lv / 3) + 1) * 3}で もう1人`); if (SHOP.money < f.wage * 2) return toast('お金が足りない'); SHOP.money -= f.wage * 2; SHOP.cands.splice(SHOP.cands.indexOf(f), 1); SHOP.staff.push(f); spawnStaffMesh(f); AU.good(); feed(`👋 ${f.name}さん（${ROLES[f.role].n}）がなかまに！`); checkAch(); },
@@ -2453,23 +2680,23 @@ function initPanels() {
 // ---------- 一日のおわりの報告 ----------
 function showReport(L, profit) {
   const S = SHOP, avg = L.starsN ? L.starsSum / L.starsN : 0; const ms = S.missions || []; const tips = [];
-  if (L.angry > 2) tips.push('😠 怒って帰ったお客さんが多かった。スタッフをふやすか、待合いソファ・受付を置こう'); if (avg && avg < 3.2) tips.push('🍽️ 満足度が低め。かざりを置く・値段を見直す・パーフェクト調理をめざそう'); if (!S.staff.some(f => f.role === 'chef')) tips.push('👨‍🍳 シェフをやとうと、自分で調理しなくても料理ができる'); if (S.money > 3000 && decoTotal() < 20) tips.push('🪴 お金がたまったら、かざりで店内をおしゃれに');
-  $('rBox').innerHTML = `<h2>🌙 ${S.day - 1}日目 おつかれさま！</h2><div class="stat2"><div>売上<b>${fmt(L.sales)}円</b></div><div>チップ<b>${fmt(L.tips)}円</b></div><div>材料費<b style="color:#a04a3a">-${fmt(L.cost)}円</b></div><div>スタッフの給料<b style="color:#a04a3a">-${fmt(L.wages)}円</b></div><div>来てくれたお客さん<b>${L.served}人</b></div><div>平均の満足度<b style="color:#f2b62a">${avg ? avg.toFixed(1) + '★' : '-'}</b></div><div>怒って帰った<b>${L.angry}組</b></div><div>今日の利益<b style="color:${profit >= 0 ? '#1e7a3a' : '#a04a3a'}">${profit >= 0 ? '+' : ''}${fmt(profit)}円</b></div></div>
+  if (S.day % 7 === 0) tips.unshift('🎖️ 今日は料理コンテストの日！ 開店する前に「大会」から出場しよう'); if ((S.day - 1) % 7 === 0) tips.unshift(`${SEAS().e} 季節が「${SEAS().n}」に変わった！ 旬の料理が人気になる`); if (L.angry > 2) tips.push('😠 怒って帰ったお客さんが多かった。スタッフをふやすか、待合いソファ・受付を置こう'); if (avg && avg < 3.2) tips.push('🍽️ 満足度が低め。かざりを置く・値段を見直す・パーフェクト調理をめざそう'); if (!S.staff.some(f => f.role === 'chef')) tips.push('👨‍🍳 シェフをやとうと、自分で調理しなくても料理ができる'); if (S.money > 3000 && decoTotal() < 20) tips.push('🪴 お金がたまったら、かざりで店内をおしゃれに');
+  $('rBox').innerHTML = `<h2>🌙 ${S.day - 1}日目 おつかれさま！</h2><div class="stat2"><div>売上<b>${fmt(L.sales)}円</b></div><div>チップ<b>${fmt(L.tips)}円</b></div><div>材料費<b style="color:#a04a3a">-${fmt(L.cost)}円</b></div><div>スタッフの給料<b style="color:#a04a3a">-${fmt(L.wages)}円</b></div><div>来てくれたお客さん<b>${L.served}人</b></div><div>平均の満足度<b style="color:#f2b62a">${avg ? avg.toFixed(1) + '★' : '-'}</b></div><div>怒って帰った<b>${L.angry}組</b></div><div>テイクアウト<b>${L.takeout || 0}件</b></div><div>来てくれた常連さん<b style="font-size:13px">${L.regs && L.regs.length ? [...new Set(L.regs)].join('・') : '-'}</b></div><div>今日の利益<b style="color:${profit >= 0 ? '#1e7a3a' : '#a04a3a'}">${profit >= 0 ? '+' : ''}${fmt(profit)}円</b></div></div>
     <p style="margin-top:8px">🎯 目標：${ms.map(m => (m.done ? '✅' : '⬜') + MISSION_T.find(t => t.k === m.k).n(m.v, m.d)).join('　')}</p>${tips.slice(0, 2).map(t => `<p>${t}</p>`).join('')}<p>💾 自動でセーブしました</p><button class="btn big g" data-next>☀️ ${S.day}日目へ</button>`;
   $('report').classList.add('on'); AU.good();
 }
 // =========================================================================================
 //  タイトル・お店に入る
 // =========================================================================================
-function clearShop() { if (!SHOP) return; for (const I of SHOP.items) if (I.m) scene.remove(I.m); for (const I of SHOP.walls) if (I.m) scene.remove(I.m); for (const P of PEOPLE) { scene.remove(P.g); if (P.bubble) scene.remove(P.bubble); } PEOPLE.length = 0; for (const t of G.tickets) if (t.m) scene.remove(t.m); for (const T of TBL.values()) for (const m of T.plates) scene.remove(m); TBL.clear(); for (const f of FLOATS) scene.remove(f.s); FLOATS.length = 0; FXP.length = 0; G.groups = []; G.tickets = []; if (PL && PL.g) scene.remove(PL.g); }
+function clearShop() { if (!SHOP) return; clearMore(); for (const I of SHOP.items) if (I.m) scene.remove(I.m); for (const I of SHOP.walls) if (I.m) scene.remove(I.m); for (const P of PEOPLE) { scene.remove(P.g); if (P.bubble) scene.remove(P.bubble); } PEOPLE.length = 0; for (const t of G.tickets) if (t.m) scene.remove(t.m); for (const T of TBL.values()) for (const m of T.plates) scene.remove(m); TBL.clear(); for (const f of FLOATS) scene.remove(f.s); FLOATS.length = 0; FXP.length = 0; G.groups = []; G.tickets = []; if (PL && PL.g) scene.remove(PL.g); }
 function enterShop(S) {
-  clearShop(); SHOP = S; S.owned = S.owned || { f: [S.floor], w: [S.wall] }; S.res = S.res || {}; S.ach = S.ach || {}; S.reviews = S.reviews || []; S.known = S.known || []; S.st = Object.assign({ served: 0, earned: 0, tips: 0, perfect: 0, critic5: 0, vip: 0, days: 0, dishes: {} }, S.st || {}); for (const id of Object.keys(DISH)) S.menu[id] = S.menu[id] || { on: false, p: 1, lv: 1 }; S.open = false; S.time = 0; S.cands = null;
+  clearShop(); SHOP = S; S.owned = S.owned || { f: [S.floor], w: [S.wall] }; S.res = S.res || {}; S.ach = S.ach || {}; S.reviews = S.reviews || []; S.known = S.known || []; S.st = Object.assign({ served: 0, earned: 0, tips: 0, perfect: 0, critic5: 0, vip: 0, days: 0, dishes: {} }, S.st || {}); S.regs = S.regs || {}; S.gifts = S.gifts || {}; S.contest = S.contest || { wins: 0, best: 0, last: 0 }; if (S.special === undefined) S.special = null; WX.applied = -1; SIGN.key = ''; for (const id of Object.keys(DISH)) S.menu[id] = S.menu[id] || { on: false, p: 1, lv: 1 }; S.open = false; S.time = 0; S.cands = null;
   G.uid = 1 + Math.max(0, ...S.items.map(I => I.uid || 0), ...S.walls.map(I => I.uid || 0), ...S.staff.map(f => f.id || 0)); for (const I of S.items) { if (!I.uid) I.uid = uid(); I.busy = null; I.slots = null; } for (const I of S.walls) if (!I.uid) I.uid = uid();
   buildShell(); for (const I of S.items) spawnItemMesh(I); for (const I of S.walls) spawnWallMesh(I); buildNav(); refreshTables(); for (const f of S.staff) { f.P = null; f.home = null; spawnStaffMesh(f); } spawnPlayer();
   G.mode = 'play'; G.speed = 1; $('spdB').textContent = '▶ ×1'; IN.camYaw = 0; IN.camDist = 13; IN.camPitch = .92; IN.look.pitch = -.22; IN.look.dist = 6; CAM.t.set(PL.p.x, 0, PL.p.z); document.body.classList.add('playing'); $('title').classList.remove('on'); $('newShop').classList.remove('on'); G.autoT = 0;
   if (!S.missions) newMissions(); feed(`🏪 <b>${S.name}</b>　${S.day}日目`); if (S.day === 1 && !S.st.days) setTimeout(() => toast('ようこそ！', '上の「開店する」でお店をあけよう　❓は「お店」→遊び方', 4), 400);
 }
-function toTitle() { clearShop(); SHOP = null; G.mode = 'title'; document.body.classList.remove('playing', 'building', 'cooking'); renderSlots(); $('title').classList.add('on'); }
+function toTitle() { clearShop(); if (SIGN.m) SIGN.m.visible = false; if (WX.inst) WX.inst.count = WX.rainI.count = 0; SHOP = null; G.mode = 'title'; document.body.classList.remove('playing', 'building', 'cooking'); renderSlots(); $('title').classList.add('on'); }
 function renderSlots() { let h = ''; for (let k = 1; k <= 3; k++) { const s = slotInfo(k); h += s ? `<div class="slot" data-k="${k}"><div class="n">${k}</div><div class="tx"><b>${s.name}</b><small>${THEMES.find(t => t.id === s.theme)?.e || '🍽️'} ${s.day}日目・Lv${s.lv}・💴${fmt(s.money)}円・★${(s.rep || 3).toFixed(1)}</small></div><button class="btn r" data-del="${k}" style="padding:6px 10px;font-size:12px">消す</button></div>` : `<div class="slot" data-k="${k}" data-new="1"><div class="n" style="background:#2aa89a">${k}</div><div class="tx"><b>＋ 新しいお店をつくる</b><small>空きスロット</small></div></div>`; } $('slots').innerHTML = h; }
 const NS = { slot: 1, th: 0 };
 function initTitle() {
@@ -2485,7 +2712,7 @@ function initTitle() {
 //  メインループ
 // =========================================================================================
 function updHUD() {
-  const S = SHOP; $('monT').textContent = fmt(S.money); $('lvT').textContent = S.lv; $('lvBar').firstChild.style.width = (S.xp / xpNeed(S.lv) * 100) + '%'; $('stars').innerHTML = `${stars(S.rep)}<small>${S.rep.toFixed(1)}</small>`; $('dayT').textContent = `${S.day}日目`; $('clkT').textContent = S.open ? clockStr() : '準備中';
+  const S = SHOP; $('monT').textContent = fmt(S.money); $('lvT').textContent = S.lv; $('lvBar').firstChild.style.width = (S.xp / xpNeed(S.lv) * 100) + '%'; $('stars').innerHTML = `${stars(S.rep)}<small>${S.rep.toFixed(1)}</small>`; $('dayT').textContent = `${S.day}日目 ${SEAS().e}`; const cb = $('side').querySelector('[data-p="contest"]'); if (cb) cb.classList.toggle('alert', isContestDay() && !S.open && S.contest.last !== S.day); $('clkT').textContent = S.open ? clockStr() : '準備中';
   const ob = $('openB'); ob.textContent = S.open ? (S.time >= CLOSE_MIN - OPEN_MIN ? '閉店準備中' : '営業中') : '開店する'; ob.className = 'chip ' + (S.open ? 'open' : 'closed');
   const st = $('side').querySelector('[data-p="staff"]'); if (S.staff.length < staffMax() && S.money > 1500 && !S.open) st.classList.add('alert'); else st.classList.remove('alert');
 }
@@ -2497,10 +2724,10 @@ function step(dt) {
   else for (const e of evs) if (e === 'esc') { if ($('panel').classList.contains('on')) closePanel(); }
   if (!panelOn) for (const t of taps) { if (G.mode === 'play') tapPlay(t.x, t.y); else if (G.mode === 'build') tapBuild(t.x, t.y); }
   const run = G.mode === 'play' && !panelOn, sdt = dt * (SHOP.open ? G.speed : 1);
-  if (run) { updPlayer(dt); for (let i = 0; i < G.speed; i++) { const d = SHOP.open ? dt : dt; updGroups(d); updStaff(d); updDay(d); for (const P of PEOPLE) poseP(P, d); } updFX(sdt); updFloats(dt); AU.chatter(Math.min(1, G.groups.filter(g => g.state !== 'arrive' && g.state !== 'leave').length / 6)); }
+  if (run) { updPlayer(dt); for (let i = 0; i < G.speed; i++) { const d = SHOP.open ? dt : dt; updGroups(d); updStaff(d); updDay(d); if (SHOP) updMore(d); for (const P of PEOPLE) poseP(P, d); } updFX(sdt); updFloats(dt); AU.chatter(Math.min(1, G.groups.filter(g => g.state !== 'arrive' && g.state !== 'leave').length / 6)); }
   else { AU.chatter(0); }
   if (G.mode === 'build') updBuild(dt);
-  poseP(PL, dt); updWalls(dt); updTown(dt); updCam(dt); placeAct(); updSky();
+  poseP(PL, dt); updWalls(dt); updTown(dt); updCam(dt); placeAct(); updSky(); updWeather(dt); updSign(); takeoutHUD();
   const t = clock.elapsedTime; for (const I of SHOP.items) if (I.m && I.m.userData.anim) I.m.userData.anim(t); for (const I of SHOP.walls) if (I.m && I.m.userData.anim) I.m.userData.anim(t);
   for (const I of SHOP.items) if (I.cooking && Math.random() < dt * 3) cookFX(I, dt);
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0; }
@@ -2526,7 +2753,7 @@ async function boot() {
   const step0 = step; step = function (dt) { if (G.mode === 'title') { titleCam(dt); updTown(dt); updWalls(dt); for (const I of demo.items) if (I.m && I.m.userData.anim) I.m.userData.anim(clock.elapsedTime); renderer.render(scene, camera); readInput(); IN.ev.length = 0; IN.taps.length = 0; return; } step0(dt); };
   const toT = toTitle; toTitle = function () { toT(); SHOP = demo; demoOn = true; buildShell(); for (const I of demo.items) spawnItemMesh(I); for (const I of demo.walls) spawnWallMesh(I); };
   let demoOn = true; const ent = enterShop; enterShop = function (S) { if (demoOn) { demoOn = false; for (const I of demo.items) if (I.m) scene.remove(I.m); for (const I of demo.walls) if (I.m) scene.remove(I.m); if (PL && PL.g) scene.remove(PL.g); SHOP = null; } ent(S); };
-  window.__RS = { tick: dt => tick(dt), renderer, scene, camera, PEOPLE, spawnStaffMesh, newCandidate, addItem, canPlace, reachableAll, buildNav, refreshTables, menuOn, dishMini, KT, $, G, CK, get SHOP() { return SHOP; }, get PL() { return PL; }, startCook, finishCook, ckTap, enterShop, newShop, openShop, closeDay, spawnGroup, acts, doAct, BLD, enterBuild, exitBuild, openPanel, IT, DISH, SCN, TBL, walkable, saveShop, slotInfo, updCook };
+  window.__RS = { tick: dt => tick(dt), renderer, scene, camera, PEOPLE, spawnStaffMesh, newCandidate, addItem, canPlace, reachableAll, buildNav, refreshTables, menuOn, dishMini, KT, $, G, CK, get SHOP() { return SHOP; }, get PL() { return PL; }, startCook, finishCook, ckTap, enterShop, newShop, openShop, closeDay, spawnGroup, acts, doAct, BLD, enterBuild, exitBuild, openPanel, IT, DISH, SCN, TBL, walkable, saveShop, slotInfo, updCook, get MORE() { return { CAT, SPILLS, TKO, REGS, EVENTS, SIGN, WX, startContest, petCat, maybeRegular, maybeSpill, wipeSpill, addGift, giftN, regSt, renderMorePanel, pickEvent, SEAS, BLD, placeHere, setSel, renderBItems, PL }; } };
   loop();
 }
 boot();
