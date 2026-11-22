@@ -23,7 +23,6 @@ body.playing #top { display: flex; }
 #mon { color: #1e7a3a; } #lvBar { width: 64px; height: 7px; border-radius: 4px; background: #eadcc4; overflow: hidden; } #lvBar i { display: block; height: 100%; background: linear-gradient(90deg, var(--org), var(--gold)); }
 #stars { color: var(--gold); letter-spacing: -1px; } #stars small { color: var(--ink); font-size: 12px; margin-left: 3px; letter-spacing: 0; }
 #openB { cursor: pointer; border: none; } #openB.open { background: #2aa86a; color: #fff; } #openB.closed { background: #6a5a4a; color: #fff; }
-#spdB { cursor: pointer; border: none; }
 /* 右のボタン */
 #side { position: absolute; right: calc(10px + env(safe-area-inset-right, 0px)); top: calc(60px + env(safe-area-inset-top, 0px)); display: none; flex-direction: column; gap: 7px; }
 body.playing #side { display: grid; grid-auto-flow: column; grid-template-rows: repeat(4, 58px); direction: rtl; } .sb { direction: ltr; }
@@ -121,18 +120,24 @@ body.cooking #cook { display: block; }
 #loading .pan { width: 64px; height: 64px; border-radius: 50%; border: 10px solid #3a2a1e; border-top-color: var(--org); animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 #loadmsg { font-weight: 800; }
-@media (max-height: 520px) and (min-aspect-ratio: 1/1) { body.playing #side { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, 48px); direction: rtl; gap: 5px; top: calc(52px + env(safe-area-inset-top, 0px)); } .sb { direction: ltr; } .sb { width: 48px; height: 48px; font-size: 18px; border-radius: 13px; } .sb small { font-size: 9px; margin-top: 1px; } .chip { font-size: 13px; padding: 4px 10px; } }
+/* 画面の形はゲームの中の向きで決める（スマホを回して遊ぶとき用） */
+body.short.playing #side { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 46px); direction: rtl; gap: 5px; top: calc(50px + env(safe-area-inset-top, 0px)); }
+body.short.playing.mapon #side { top: calc(118px + env(safe-area-inset-top, 0px)); }
+body.short .sb { width: 46px; height: 46px; font-size: 17px; border-radius: 12px; } body.short .sb small { font-size: 9px; margin-top: 1px; }
+body.short .chip { font-size: 12.5px; padding: 4px 9px; }
+body.short.mapon #top { padding-right: calc(120px + env(safe-area-inset-right, 0px)); }
+body.short #mmap { top: calc(6px + env(safe-area-inset-top, 0px)); width: 104px; height: 104px; }
 body.touch #feed { bottom: auto; top: calc(56px + env(safe-area-inset-top, 0px)); width: min(300px, 46vw); }
-@media (max-aspect-ratio: 1/1) { #side { top: auto; bottom: calc(200px + env(safe-area-inset-bottom, 0px)); } .sb { width: 50px; height: 50px; font-size: 19px; } #feed { bottom: calc(240px + env(safe-area-inset-bottom, 0px)); } }
+body.port #side { top: auto; bottom: calc(200px + env(safe-area-inset-bottom, 0px)); } body.port .sb { width: 50px; height: 50px; font-size: 19px; } body.port #feed { bottom: calc(240px + env(safe-area-inset-bottom, 0px)); } body.port #mmap { top: calc(118px + env(safe-area-inset-top, 0px)); width: 110px; height: 110px; }
 #lbox { left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(58px + env(safe-area-inset-top, 0px)); display: none; flex-direction: column; gap: 6px; max-width: min(340px, 62vw); }
 body.playing #lbox { display: flex; }
-body.touch #lbox { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+body.touch #lbox { top: auto; bottom: calc(178px + env(safe-area-inset-bottom, 0px)); }
 body.building #lbox, body.cooking #lbox, body.building #mmap, body.cooking #mmap { display: none !important; }
 #dlv { background: rgba(255,250,240,.95); border-radius: 12px; padding: 6px 10px; font-size: 13px; font-weight: 800; box-shadow: 0 2px 8px rgba(80,50,20,.2); line-height: 1.45; }
 #dlv > div + div { border-top: 1px dashed #d8c8b0; margin-top: 4px; padding-top: 4px; }
 #dlv small { font-weight: 700; }
-#mmap { right: calc(10px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 2px 10px rgba(40,30,20,.35); }
-body.touch #mmap { right: auto; left: 50%; transform: translateX(-50%); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: 112px; height: 112px; }
+#mmap { right: calc(10px + env(safe-area-inset-right, 0px)); top: calc(56px + env(safe-area-inset-top, 0px)); width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 2px 10px rgba(40,30,20,.35); }
+body.playing.mapon #side { top: calc(216px + env(safe-area-inset-top, 0px)); }
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; z-index: 60; } #fade.on { opacity: 1; }
 .jobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
 .job { background: #fff8ec; border-radius: 12px; padding: 8px 10px; box-shadow: 0 1px 4px rgba(80,50,20,.15); }
@@ -160,7 +165,6 @@ body.building #tko, body.cooking #tko { display: none !important; }
     <span class="chip" id="stars">★★★☆☆<small>3.0</small></span>
     <span class="chip"><em>📅</em><span id="dayT">1日目</span>　<span id="clkT">10:00</span></span>
     <button class="chip" id="openB">開店する</button>
-    <button class="chip" id="spdB">▶ ×1</button>
   </div>
   <div id="side" class="hud">
     <button class="sb" data-p="build">🔨<small>建てる</small></button>
@@ -248,7 +252,7 @@ renderer.shadowMap.enabled = GFX() >= 1; renderer.shadowMap.type = THREE.PCFSoft
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xbfdcf0); scene.fog = new THREE.Fog(0xbfdcf0, 60, 140);
 const camera = new THREE.PerspectiveCamera(45, 16 / 9, .1, 300); scene.add(camera);
 function onResize() {
-  const r = $('rot'); r.style.width = VW() + 'px'; r.style.height = VH() + 'px'; r.style.transform = ROT.on ? 'rotate(90deg) translateY(-100%)' : 'none';
+  document.body.classList.toggle('short', VH() <= 520 && VW() >= VH()); document.body.classList.toggle('port', VW() < VH()); const r = $('rot'); r.style.width = VW() + 'px'; r.style.height = VH() + 'px'; r.style.transform = ROT.on ? 'rotate(90deg) translateY(-100%)' : 'none';
   document.documentElement.style.setProperty('--bs', SET.bs);
   const g = GFX(), pr = Math.min(devicePixelRatio || 1, g >= 2 ? 2 : g === 1 ? 1.5 : 1);
   renderer.setPixelRatio(pr); renderer.setSize(VW(), VH(), false); camera.aspect = VW() / VH(); camera.updateProjectionMatrix(); try { if (CK.cam) { CK.cam.aspect = camera.aspect; CK.cam.updateProjectionMatrix(); } } catch (e) { /* まだない */ }
@@ -434,7 +438,7 @@ function signMesh(text, col) { const [c, g] = cvs(512, 128); g.fillStyle = '#fff
 // カメラのある側のかべを低くする（中が見えるように）
 function updWalls(dt) {
   const S = SHOP, cx = camera.position.x, cz = camera.position.z;
-  for (const w of WORLD.walls) { const out = w.side === 'back' ? cz < 0 : w.side === 'front' ? cz > S.D : w.side === 'left' ? cx < 0 : cx > S.W; const tgt = G.mode === 'cook' ? 1 : out ? .22 : 1; w.k = damp(w.k ?? 1, tgt, 6, dt); w.inner.scale.y = w.k; w.inner.visible = w.k > .02; if (w.side === 'front' && WORLD.awning) { const sh = w.k > .6 || G.mode === 'title'; WORLD.awning.visible = WORLD.sign.visible = sh; if (WORLD.door) WORLD.door.g.scale.y = w.k; } }
+  for (const w of WORLD.walls) { const out = w.side === 'back' ? cz < 0 : w.side === 'front' ? cz > S.D : w.side === 'left' ? cx < 0 : cx > S.W; const tgt = G.mode === 'build' && out ? .22 : 1; w.k = damp(w.k ?? 1, tgt, 6, dt); w.inner.scale.y = w.k; w.inner.visible = w.k > .02; if (w.side === 'front' && WORLD.awning) { const sh = w.k > .6 || G.mode === 'title'; WORLD.awning.visible = WORLD.sign.visible = sh; if (WORLD.door) WORLD.door.g.scale.y = w.k; } }
   const d = WORLD.door; if (d) { const near = PEOPLE.some(p => Math.abs(p.p.x - d.x) < 1.6 && Math.abs(p.p.z - S.D) < 2.2) || (PL && Math.abs(PL.p.x - d.x) < 1.6 && Math.abs(PL.p.z - S.D) < 2.2); d.open = damp(d.open, near ? 1 : 0, 6, dt); d.g.userData['l-1'].position.x = -.45 - d.open * .85; d.g.userData['l1'].position.x = .45 + d.open * .85; }
 }
 
@@ -800,7 +804,7 @@ const hasApp = app => SHOP.items.some(I => (IT[I.id].tags || []).includes(app));
 const menuOn = () => Object.keys(DISH).filter(id => SHOP.menu[id] && SHOP.menu[id].on && known(id) && hasApp(DISH[id].app));
 const menuSlots = () => 3 + Math.floor(SHOP.lv / 2);
 function dishPrice(id) { const m = SHOP.menu[id] || {}; return Math.round(DISH[id].price * (m.p || 1) * (1 + ((m.lv || 1) - 1) * .15) * (SHOP.special === id ? 1.1 : 1) / 10) * 10; }
-function dishCost(id) { return Math.round(DISH[id].cost * (1 - (SHOP.res.ingred || 0) * .08) * evCost()); }
+function dishCost(id) { return Math.round(DISH[id].cost * (1 - (SHOP.res.ingred || 0) * .08) * evCost() * (unlocked('bulk') ? .85 : 1)); }
 // ---------- お客さん ----------
 function pickType() { const ok = CTYPE.filter(c => !c.minRep || SHOP.rep >= c.minRep), tot = ok.reduce((a, c) => a + c.w, 0); let r = Math.random() * tot; for (const c of ok) { r -= c.w; if (r <= 0) return c; } return ok[0]; }
 function spawnGroup(forceType) {
@@ -1333,7 +1337,6 @@ function updScooter(dt) {
   if (!TOWN.scooter) { TOWN.scooter = scooterMesh(); scene.add(TOWN.scooter); } if (!TOWN.park) { TOWN.park = V3(WORLD.door.x + 3.2, 0, SHOP.D + 3.2); TOWN.parkF = Math.PI; }
   const sc = TOWN.scooter, nearShop = PL.p.z < SHOP.D + 2.6 && PL.p.x > -3 && PL.p.x < SHOP.W + 3, ground = PL.gy < .05;
   if (TOWN.ride) { if (!ground || nearShop || !outdoors()) { TOWN.ride = false; TOWN.park = nearShop ? V3(WORLD.door.x + 3.2, 0, SHOP.D + 3.2) : PL.p.clone(); TOWN.parkF = nearShop ? Math.PI : PL.face; TOWN.park.y = 0; } }
-  else if (ground && outdoors() && !nearShop && Math.hypot(PL.p.x - TOWN.park.x, PL.p.z - TOWN.park.z) < 1.6) { TOWN.ride = true; AU.tone(180, .35, .06, 'sawtooth', 0, 260); }
   if (TOWN.ride) { sc.position.set(PL.p.x, PL.p.y, PL.p.z); sc.rotation.y = PL.face; PL.a = 'sit'; PL.sitH = .66; PL.speed = 9.5; if (PL.moving) AU.lvl && AU.loop && (AU.loop('engine', 140, .8, 'lowpass'), AU.lvl('engine', .12, .1)); else AU.loops && AU.loops.engine && AU.lvl('engine', .03, .2); }
   else { sc.position.copy(TOWN.park); sc.rotation.y = TOWN.parkF; PL.speed = 4.2; if (PL.a === 'sit') PL.a = 'idle'; AU.loops && AU.loops.engine && AU.lvl('engine', 0, .2); }
 }
@@ -1352,7 +1355,8 @@ function updTownLife(dt) {
 TOWN.res = [];
 function resident(A) { const L = randLook(); const R = { kind: 'res', g: personMesh(L), L, p: A.door.clone().addScaledVector(V3(0, 0, A.face), -.62), face: Math.PI * (A.face < 0 ? 1 : 0), a: 'wave', mood: .95, t: 2.6 }; R.p.y = A.y; scene.add(R.g); setBubble(R, '😋'); TOWN.res.push(R); A.dg.userData.t = 2.6; AU.tone(880, .3, .06, 'sine'); AU.tone(700, .45, .06, 'sine', .3); }
 // カメラが建物にめりこまないように
-function camHit(eye, dir, dist) { let best = dist; for (const b of TOWN.boxes) { let t0 = 0, t1 = best; for (let a = 0; a < 3; a++) { const o = a ? (a === 1 ? eye.y : eye.z) : eye.x, d = a ? (a === 1 ? dir.y : dir.z) : dir.x, mn = b[a * 2], mx = b[a * 2 + 1]; if (Math.abs(d) < 1e-6) { if (o < mn || o > mx) { t0 = 1; t1 = 0; break; } continue; } let ta = (mn - o) / d, tb = (mx - o) / d; if (ta > tb) [ta, tb] = [tb, ta]; t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) break; } if (t0 <= t1 && t0 > 0) best = Math.min(best, t0); } return Math.max(.6, best - .3); }
+function shopCamBoxes() { const S = SHOP; if (!S || !WORLD.door) return []; const W = S.W, Dd = S.D, dx = WORLD.door.x, dw = 1.8, H = 3.35, t = .18; return [[-t, t, 0, H, 0, Dd], [W - t, W + t, 0, H, 0, Dd], [0, W, 0, H, -t, t], [0, dx - dw / 2, 0, H, Dd - t, Dd + t], [dx + dw / 2, W, 0, H, Dd - t, Dd + t], [dx - dw / 2, dx + dw / 2, 2.7, H, Dd - t, Dd + t]]; }
+function camHit(eye, dir, dist) { let best = dist; for (const b of TOWN.boxes.concat(shopCamBoxes())) { let t0 = 0, t1 = best; for (let a = 0; a < 3; a++) { const o = a ? (a === 1 ? eye.y : eye.z) : eye.x, d = a ? (a === 1 ? dir.y : dir.z) : dir.x, mn = b[a * 2], mx = b[a * 2 + 1]; if (Math.abs(d) < 1e-6) { if (o < mn || o > mx) { t0 = 1; t1 = 0; break; } continue; } let ta = (mn - o) / d, tb = (mx - o) / d; if (ta > tb) [ta, tb] = [tb, ta]; t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) break; } if (t0 <= t1 && t0 > 0) best = Math.min(best, t0); } return Math.max(.6, best - .3); }
 // ---------- 地図（ミニマップ） ----------
 const MM = { x0: -112, z0: 0, s: 2 };
 function buildMinimap() {
@@ -1366,7 +1370,7 @@ function buildMinimap() {
   MM.src = c;
 }
 function drawMinimap(target) {
-  const el = $('mmap'); if (!el) return; const show = (outdoors() || PL.dlv) && G.mode === 'play'; el.style.display = show ? '' : 'none'; if (!show) return;
+  const el = $('mmap'); if (!el) return; const show = (outdoors() || PL.dlv) && G.mode === 'play'; el.style.display = show ? '' : 'none'; document.body.classList.toggle('mapon', show); if (!show) return;
   const g = el.getContext('2d'), R = el.width / 2, sc = .9; g.clearRect(0, 0, el.width, el.height); g.save(); g.beginPath(); g.arc(R, R, R - 2, 0, TAU); g.clip(); g.fillStyle = '#b8d8a0'; g.fillRect(0, 0, el.width, el.height);
   g.translate(R, R); g.rotate(IN.camYaw); g.scale(sc, sc); g.drawImage(MM.src, -(PL.p.x - MM.x0) * MM.s, -(PL.p.z - MM.z0) * MM.s); g.restore();
   const toMap = p => { const dx = (p.x - PL.p.x) * MM.s * sc, dz = (p.z - PL.p.z) * MM.s * sc, c = Math.cos(IN.camYaw), s = Math.sin(IN.camYaw); return [dx * c - dz * s, dx * s + dz * c]; };
@@ -1443,14 +1447,18 @@ function updTown2(dt) { if (!TOWN.built || !SHOP) return; updTownLife(dt); if (G
 function townActs(add) {
   if (!TOWN.built) return; if (!PL.dlv) { for (const O of DLV) if (O.state === 'ready' && !O.by) { const t = O.tickets.find(t => t.m); if (t) add(t.m.position, { k: 'dlvpick', O, txt: `🛵 配達に持っていく：${O.A.name}` }, .5); } }
   else { const A = PL.dlv.A; if (Math.abs(PL.gy - A.y) < .5) add(A.door, { k: 'deliver', O: PL.dlv, txt: `🔔 ピンポン！ ${A.name}に とどける` }, -.4); }
+  if (!TOWN.ride && TOWN.park && PL.gy < .05 && outdoors() && Math.hypot(PL.p.x - TOWN.park.x, PL.p.z - TOWN.park.z) < 2) add(TOWN.park, { k: 'mount', txt: '🛵 スクーターに乗る' }, .4);
   for (const E of TOWN.elev) if (PL.p.x > E.x0 && PL.p.x < E.x1 && PL.p.z > E.z0 && PL.p.z < E.z1) { const cur = Math.round(PL.gy / E.fh), d = PL.dlv && PL.dlv.A.bld === E.b ? PL.dlv.A.floor : null, to = d !== null && d !== cur ? d : (cur + 1) % E.floors; add(V3((E.x0 + E.x1) / 2, 0, (E.z0 + E.z1) / 2), { k: 'elev', E, to, txt: `🛗 エレベーターで ${to + 1}階へ` }, 1); }
 }
 function townDo(a) {
   if (a.k === 'dlvpick') { const O = a.O; if (O.state !== 'ready' || O.by) return true; pickupDelivery(O, PL); PL.dlv = O; toast(`🛵 ${O.A.name}へ！`, `${O.A.sub}　店の前のスクーターに乗っていこう（地図の赤い印）`, 3.5); AU.click(); return true; }
   if (a.k === 'deliver') { const O = a.O; PL.dlv = null; finishDelivery(O, 'pl'); PL.a = 'wave'; PL.waveT = .8; return true; }
+  if (a.k === 'mount') { PL.p.x = TOWN.park.x; PL.p.z = TOWN.park.z; PL.face = TOWN.parkF; TOWN.ride = true; AU.tone(180, .35, .06, 'sawtooth', 0, 260); return true; }
   if (a.k === 'elev') { const f = $('fade'); f.classList.add('on'); AU.tone(988, .2, .05, 'sine'); setTimeout(() => { PL.gy = PL.p.y = a.to * a.E.fh; PL.vy = 0; AU.tone(1318, .3, .05, 'sine'); f.classList.remove('on'); }, 450); return true; }
   return false;
 }
+// ジャンプで どこでも降りる（となりに降りて、スクーターはそこに止める）
+function scooterOff() { TOWN.ride = false; TOWN.park = V3(PL.p.x, 0, PL.p.z); TOWN.parkF = PL.face; const sx = Math.cos(PL.face) * .9, sz = -Math.sin(PL.face) * .9; for (const k of [1, -1]) { const h = walk3(PL.p.x + sx * k, PL.p.z + sz * k, PL.gy || 0); if (h !== null) { PL.p.x += sx * k; PL.p.z += sz * k; PL.gy = h; break; } } PL.vy = 5; PL.a = 'idle'; PL.speed = 4.2; AU.tone(300, .15, .05, 'triangle', 0, 200); }
 function clearTown() { for (const O of [...DLV]) cancelDelivery(O, null); DLV.length = 0; if (PL) PL.dlv = null; G.dlvT = null; G.caterDone = 0; TOWN.ride = false; TOWN.park = null; if (TOWN.marker) TOWN.marker.visible = false; }
 
 // =========================================================================================
@@ -1468,7 +1476,7 @@ const jobOf = id => JOBS.find(j => j.id === id);
 const jobCount = id => SHOP.staff.filter(f => f.role === id).length;
 const UNLOCKS = [
   { id: 'dlv', n: '🛵 デリバリー', d: '町の家・アパート・マンションから注文が入る。店の前のスクーターで部屋の前までとどけよう（配達員にもまかせられる）', need: ['chef', 'waiter', 'host'] },
-  { id: 'fast', n: '⏩ 早送り×5', d: 'お店が自分なしで回るので、一日を5倍の速さで進められる（右上の ▶）', need: ['chef', 'waiter', 'host', 'cleaner'] },
+  { id: 'bulk', n: '🛒 まとめ仕入れ', d: 'お店が自分なしで回るので、店長が市場で仕入れの交渉。材料費がずっと15%安くなる', need: ['chef', 'waiter', 'host', 'cleaner'] },
   { id: 'cater', n: '🍱 ケータリング', d: '毎日お昼に、町の会社から5〜7品の大口注文。大もうけのチャンス', need: ['chef', 'waiter', 'host', 'cleaner', 'deliv'] },
 ];
 const unlocked = id => !!(SHOP && SHOP.unl && SHOP.unl[id]);
@@ -2856,7 +2864,7 @@ function updPlayer(dt) {
 }
 function placeAct() { const a = PL.near, ae = $('act'); if (!a || PL.qc || G.mode !== 'play') { ae.classList.remove('on'); return; } $('actLabel').textContent = a.txt; camera.updateMatrixWorld(); const ap = a.k === 'cook' ? workOf(a.I).p : a.pos, y = a.k === 'pick' ? 1.3 : a.k === 'cook' ? 1.5 : 1.9; const v = V3(ap.x, y, ap.z).project(camera);
   if (v.z < 1 && Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2) { ae.style.left = clamp((v.x * .5 + .5) * VW(), 90, VW() - 90).toFixed(1) + 'px'; ae.style.top = clamp((-v.y * .5 + .5) * VH(), 110, VH() - 10).toFixed(1) + 'px'; } else { ae.style.left = (VW() / 2) + 'px'; ae.style.top = (VH() * .72) + 'px'; } ae.classList.add('on'); }
-function jump() { if (PL && PL.p.y <= (PL.gy || 0) + .001 && !PL.qc && !PL.cleanT && !TOWN.ride) { PL.vy = 7.5; AU.tone(520, .08, .04, 'triangle', 0, 760); } }
+function jump() { if (PL && TOWN.ride) { scooterOff(); return; } if (PL && PL.p.y <= (PL.gy || 0) + .001 && !PL.qc && !PL.cleanT) { PL.vy = 7.5; AU.tone(520, .08, .04, 'triangle', 0, 760); } }
 // タップ：卵を盗むと同じく「E」の吹き出しをタップでする。近くの物を直接タップしてもいい
 function tapPlay(x, y) { const h = floorHit(x, y, .8); if (!h) return; const near = acts(h, 1.2)[0]; if (near && dist2(PL.p, near.pos) < 2.6) { const b = acts(PL.p, 2.6).find(q => q.k === near.k && (q.g || q.t || q.T || q.I) === (near.g || near.t || near.T || near.I)); if (b) doAct(b); } }
 // ---------- カメラ ----------
@@ -2869,7 +2877,7 @@ function updCam(dt) {
   const eye = V3(PL.p.x, PL.p.y + EYE_Y, PL.p.z), yaw = IN.camYaw, pitch = IN.look.pitch, cp = Math.cos(pitch), dir = V3(-Math.sin(yaw) * cp, Math.sin(pitch), -Math.cos(yaw) * cp);
   CAM.t.copy(eye); camera.rotation.order = 'YXZ';
   if (IN.look.dist < .9) { camera.position.copy(eye); camera.rotation.set(pitch, yaw, 0); PL.g.visible = false; }
-  else { PL.g.visible = true; const want = eye.clone().addScaledVector(dir, -camHit(eye, dir.clone().negate(), IN.look.dist)); if (want.y < .4) want.y = .4; camera.position.copy(want); camera.lookAt(eye); }
+  else { PL.g.visible = true; const cd = camHit(eye, dir.clone().negate(), IN.look.dist), want = eye.clone().addScaledVector(dir, -cd); PL.g.visible = cd > 1.1; if (want.y < .4) want.y = .4; camera.position.copy(want); camera.lookAt(eye); }
 }
 // ---------- 時間の光（夕方・夜） ----------
 const SKY = { day: new THREE.Color(0xbfdcf0), eve: new THREE.Color(0xf2a878), night: new THREE.Color(0x1e2a4a) };
@@ -2989,7 +2997,7 @@ function renderPanel() {
       <div class="row"><div class="tx"><b>ボタンの大きさ</b></div>${[[.85, '小'], [1, '中'], [1.2, '大']].map(([v, n]) => `<button class="pill ${SET.bs === v ? 'on' : ''}" data-a="bs" data-i="${v}">${n}</button>`).join('')}</div>`}
       ${k === 'sys' ? `<h3 style="margin:12px 0 4px">データの引っこし</h3><p>下の文字をコピーしておけば、ほかの端末でも「読みこむ」で同じお店をつづけられる。</p><textarea id="exT" readonly>${btoa(unescape(encodeURIComponent(packShop())))}</textarea><div style="display:flex;gap:6px;margin-top:4px"><button class="btn w" data-a="copy">コピー</button><button class="btn w" data-a="import">貼りつけて 読みこむ</button></div>
       <button class="btn big r" data-a="title" style="margin-top:12px">タイトルにもどる（セーブする）</button>` : ''}`; }
-  else if (k === 'help') { h = `<h2>❓ 遊び方 ${X}</h2><p>📋 <b>担当表</b>（スタッフ）：シェフ・ウェイター・案内役・そうじ係・配達員の<b>枠</b>に従業員を入れる。シェフ・ウェイター・案内役がそろうと自分なしでお店が回り、<b>デリバリー</b>が解放。そうじ係で<b>早送り×5</b>、配達員で<b>ケータリング</b>も。</p><p>🛵 <b>デリバリー</b>：できた料理を配膳台で受け取り、店の前のスクーターで町へ。地図の赤い印の家や、アパートの階段・マンションのエレベーターで部屋の前まで行って、ピンポン！ 早いほどチップ。</p><p>🌸 <b>季節と天気</b>：7日ごとに春・夏・秋・冬。旬の料理が人気。雨・雪・猛暑・お祭り・テレビ取材などのイベントもある。</p><p>💛 <b>常連さん</b>：8人のおなじみさんが来る。好きな料理で満足させると なかよしになり、プレゼントがもらえる。</p><p>🛵 <b>テイクアウト</b>（Lv3〜）：電話の注文を時間内につくると、配達員さんが取りに来る。</p><p>🎖️ <b>料理コンテスト</b>：7日ごとに開店前に出場。調理シーンの点数でライバルと勝負、優勝でトロフィー。</p><p>🐈 <b>看板猫</b>：ねこベッドを置くと猫が住みつく。なでるとお客さんもにっこり。　💦 こぼれた飲み物は早くふこう。</p><p>🏪 <b>お店をひらく</b>：上の「開店する」を押すと一日がはじまる（10:00〜22:00）。</p><p>🙋 <b>お客さん</b>：入口で待つ→席に案内→メニューを見て注文→料理を待つ→食べる→お会計。待たせすぎると怒って帰ってしまう。</p><p>🧑‍🍳 <b>じぶんで働く</b>：近づくと調べる物の上に <b>E</b> の吹き出しが出る（タップでもいい）。案内・注文・調理・配膳・かたづけ、なんでもできる。調理すると料理ごとの調理シーン！「いま！」のタイミングで味が決まる。</p><p>👩‍🍳 <b>スタッフ</b>：やとうと自動で働いてくれる。研修でレベルアップ。</p><p>🔨 <b>建てる</b>：席・調理機器・かざり・照明・かべかざり・床とかべ紙・外観・増築。かざりが多いほど満足度と評判が上がる。</p><p>📋 <b>メニュー</b>：料理をえらんで、値段とレシピを強化。新しい料理はレベルが上がると覚える。</p><p>⭐ <b>評判</b>が上がると、VIPやグルメ評論家も来るように。毎日の目標と実績でボーナス。</p><p>💾 セーブは3つまで。自動でもセーブされる。</p><p>🎮 <b>操作</b>（「卵を盗む」と同じ）：PCは WASD で歩く・マウスをドラッグで視点・ホイールで近づく／はなれる（いちばん近いと一人称）・スペースでジャンプ・E で調べる物の上の吹き出しの「する」。スマホは左下のスティックで歩く・画面をドラッグで視点・2本指で近づく／はなれる・右下でジャンプ・吹き出しをタップで「する」。B：建てる　R：回す</p>`; }
+  else if (k === 'help') { h = `<h2>❓ 遊び方 ${X}</h2><p>📋 <b>担当表</b>（スタッフ）：シェフ・ウェイター・案内役・そうじ係・配達員の<b>枠</b>に従業員を入れる。シェフ・ウェイター・案内役がそろうと自分なしでお店が回り、<b>デリバリー</b>が解放。そうじ係で<b>まとめ仕入れ</b>（材料費15%引き）、配達員で<b>ケータリング</b>も。</p><p>🛵 <b>デリバリー</b>：できた料理を配膳台で受け取り、店の前のスクーターに<b>E</b>で乗って町へ（<b>ジャンプ</b>でどこでも降りられる）。地図の赤い印の家や、アパートの階段・マンションのエレベーターで部屋の前まで行って、ピンポン！ 早いほどチップ。</p><p>🌸 <b>季節と天気</b>：7日ごとに春・夏・秋・冬。旬の料理が人気。雨・雪・猛暑・お祭り・テレビ取材などのイベントもある。</p><p>💛 <b>常連さん</b>：8人のおなじみさんが来る。好きな料理で満足させると なかよしになり、プレゼントがもらえる。</p><p>🛵 <b>テイクアウト</b>（Lv3〜）：電話の注文を時間内につくると、配達員さんが取りに来る。</p><p>🎖️ <b>料理コンテスト</b>：7日ごとに開店前に出場。調理シーンの点数でライバルと勝負、優勝でトロフィー。</p><p>🐈 <b>看板猫</b>：ねこベッドを置くと猫が住みつく。なでるとお客さんもにっこり。　💦 こぼれた飲み物は早くふこう。</p><p>🏪 <b>お店をひらく</b>：上の「開店する」を押すと一日がはじまる（10:00〜22:00）。</p><p>🙋 <b>お客さん</b>：入口で待つ→席に案内→メニューを見て注文→料理を待つ→食べる→お会計。待たせすぎると怒って帰ってしまう。</p><p>🧑‍🍳 <b>じぶんで働く</b>：近づくと調べる物の上に <b>E</b> の吹き出しが出る（タップでもいい）。案内・注文・調理・配膳・かたづけ、なんでもできる。調理すると料理ごとの調理シーン！「いま！」のタイミングで味が決まる。</p><p>👩‍🍳 <b>スタッフ</b>：やとうと自動で働いてくれる。研修でレベルアップ。</p><p>🔨 <b>建てる</b>：席・調理機器・かざり・照明・かべかざり・床とかべ紙・外観・増築。かざりが多いほど満足度と評判が上がる。</p><p>📋 <b>メニュー</b>：料理をえらんで、値段とレシピを強化。新しい料理はレベルが上がると覚える。</p><p>⭐ <b>評判</b>が上がると、VIPやグルメ評論家も来るように。毎日の目標と実績でボーナス。</p><p>💾 セーブは3つまで。自動でもセーブされる。</p><p>🎮 <b>操作</b>（「卵を盗む」と同じ）：PCは WASD で歩く・マウスをドラッグで視点・ホイールで近づく／はなれる（いちばん近いと一人称）・スペースでジャンプ・E で調べる物の上の吹き出しの「する」。スマホは左下のスティックで歩く・画面をドラッグで視点・2本指で近づく／はなれる・右下でジャンプ・吹き出しをタップで「する」。B：建てる　R：回す</p>`; }
   $('pBox').innerHTML = h;
 }
 const ADS = [['チラシをくばる', 1, 1500, 1], ['SNSキャンペーン', 3, 7000, 4], ['テレビCM', 7, 40000, 9]];
@@ -3022,7 +3030,6 @@ function initPanels() {
   $('panel').addEventListener('input', e => { const t = e.target; if (t.dataset.a === 'price') { SHOP.menu[t.dataset.i].p = +t.value / 100; $('pr_' + t.dataset.i).textContent = fmt(dishPrice(t.dataset.i)) + '円'; } if (t.dataset.a === 'vol') { SET[t.dataset.i] = +t.value / 100; saveSet(); AU.setVol(); } });
   $('side').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b || G.mode !== 'play') return; if (b.dataset.p === 'build') enterBuild(); else openPanel(b.dataset.p); });
   $('openB').onclick = () => { if (G.mode !== 'play') return; if (!SHOP.open) openShop(); else toast('営業中', `閉店は22:00　いま ${clockStr()}`); };
-  $('spdB').onclick = () => { { const sq = unlocked('fast') ? [1, 2, 3, 5] : [1, 2, 3]; G.speed = sq[(sq.indexOf(G.speed) + 1) % sq.length]; } $('spdB').textContent = `▶ ×${G.speed}`; AU.click(); };
   $('report').addEventListener('click', e => { if (e.target.closest('[data-next]')) { $('report').classList.remove('on'); AU.click(); } });
 }
 // ---------- 一日のおわりの報告 ----------
@@ -3038,10 +3045,10 @@ function showReport(L, profit) {
 // =========================================================================================
 function clearShop() { if (!SHOP) return; clearMore(); clearTown(); for (const I of SHOP.items) if (I.m) scene.remove(I.m); for (const I of SHOP.walls) if (I.m) scene.remove(I.m); for (const P of PEOPLE) { scene.remove(P.g); if (P.bubble) scene.remove(P.bubble); } PEOPLE.length = 0; for (const t of G.tickets) if (t.m) scene.remove(t.m); for (const T of TBL.values()) for (const m of T.plates) scene.remove(m); TBL.clear(); for (const f of FLOATS) scene.remove(f.s); FLOATS.length = 0; FXP.length = 0; G.groups = []; G.tickets = []; if (PL && PL.g) scene.remove(PL.g); }
 function enterShop(S) {
-  clearShop(); SHOP = S; S.owned = S.owned || { f: [S.floor], w: [S.wall] }; S.res = S.res || {}; S.ach = S.ach || {}; S.reviews = S.reviews || []; S.known = S.known || []; S.st = Object.assign({ served: 0, earned: 0, tips: 0, perfect: 0, critic5: 0, vip: 0, days: 0, dishes: {} }, S.st || {}); S.regs = S.regs || {}; S.gifts = S.gifts || {}; S.contest = S.contest || { wins: 0, best: 0, last: 0 }; S.unl = S.unl || {}; if (S.special === undefined) S.special = null; WX.applied = -1; SIGN.key = ''; for (const id of Object.keys(DISH)) S.menu[id] = S.menu[id] || { on: false, p: 1, lv: 1 }; S.open = false; S.time = 0; S.cands = null;
+  clearShop(); SHOP = S; S.owned = S.owned || { f: [S.floor], w: [S.wall] }; S.res = S.res || {}; S.ach = S.ach || {}; S.reviews = S.reviews || []; S.known = S.known || []; S.st = Object.assign({ served: 0, earned: 0, tips: 0, perfect: 0, critic5: 0, vip: 0, days: 0, dishes: {} }, S.st || {}); S.regs = S.regs || {}; S.gifts = S.gifts || {}; S.contest = S.contest || { wins: 0, best: 0, last: 0 }; S.unl = S.unl || {}; if (S.unl.fast && !S.unl.bulk) S.unl.bulk = S.unl.fast; if (S.special === undefined) S.special = null; WX.applied = -1; SIGN.key = ''; for (const id of Object.keys(DISH)) S.menu[id] = S.menu[id] || { on: false, p: 1, lv: 1 }; S.open = false; S.time = 0; S.cands = null;
   G.uid = 1 + Math.max(0, ...S.items.map(I => I.uid || 0), ...S.walls.map(I => I.uid || 0), ...S.staff.map(f => f.id || 0)); for (const I of S.items) { if (!I.uid) I.uid = uid(); I.busy = null; I.slots = null; } for (const I of S.walls) if (!I.uid) I.uid = uid();
   buildShell(); for (const I of S.items) spawnItemMesh(I); for (const I of S.walls) spawnWallMesh(I); buildNav(); refreshTables(); for (const f of S.staff) { f.P = null; f.home = null; spawnStaffMesh(f); } spawnPlayer(); clearTown(); fitSlots(); for (const f of S.staff) if (f.P && f.role === 'idle') f.home = null;
-  G.mode = 'play'; G.speed = 1; $('spdB').textContent = '▶ ×1'; IN.camYaw = 0; IN.camDist = 13; IN.camPitch = .92; IN.look.pitch = -.22; IN.look.dist = 6; CAM.t.set(PL.p.x, 0, PL.p.z); document.body.classList.add('playing'); $('title').classList.remove('on'); $('newShop').classList.remove('on'); G.autoT = 0;
+  G.mode = 'play'; G.speed = 1; IN.camYaw = 0; IN.camDist = 13; IN.camPitch = .92; IN.look.pitch = -.22; IN.look.dist = 6; CAM.t.set(PL.p.x, 0, PL.p.z); document.body.classList.add('playing'); $('title').classList.remove('on'); $('newShop').classList.remove('on'); G.autoT = 0;
   if (!S.missions) newMissions(); feed(`🏪 <b>${S.name}</b>　${S.day}日目`); if (S.day === 1 && !S.st.days) setTimeout(() => toast('ようこそ！', '上の「開店する」でお店をあけよう　❓は「お店」→遊び方', 4), 400);
 }
 function toTitle() { clearShop(); if (SIGN.m) SIGN.m.visible = false; if (WX.inst) WX.inst.count = WX.rainI.count = 0; SHOP = null; G.mode = 'title'; document.body.classList.remove('playing', 'building', 'cooking'); renderSlots(); $('title').classList.add('on'); }
@@ -3101,7 +3108,7 @@ async function boot() {
   const step0 = step; step = function (dt) { if (G.mode === 'title') { titleCam(dt); updTown(dt); updWalls(dt); for (const I of demo.items) if (I.m && I.m.userData.anim) I.m.userData.anim(clock.elapsedTime); renderer.render(scene, camera); readInput(); IN.ev.length = 0; IN.taps.length = 0; return; } step0(dt); };
   const toT = toTitle; toTitle = function () { toT(); SHOP = demo; demoOn = true; buildShell(); for (const I of demo.items) spawnItemMesh(I); for (const I of demo.walls) spawnWallMesh(I); };
   let demoOn = true; const ent = enterShop; enterShop = function (S) { if (demoOn) { demoOn = false; for (const I of demo.items) if (I.m) scene.remove(I.m); for (const I of demo.walls) if (I.m) scene.remove(I.m); if (PL && PL.g) scene.remove(PL.g); SHOP = null; } ent(S); };
-  window.__RS = { tick: dt => tick(dt), renderer, scene, camera, PEOPLE, spawnStaffMesh, newCandidate, addItem, canPlace, reachableAll, buildNav, refreshTables, menuOn, dishMini, KT, $, G, CK, get SHOP() { return SHOP; }, get PL() { return PL; }, startCook, finishCook, ckTap, enterShop, newShop, openShop, closeDay, spawnGroup, acts, doAct, BLD, enterBuild, exitBuild, openPanel, IT, DISH, SCN, TBL, walkable, saveShop, slotInfo, updCook, get MORE() { return { CAT, SPILLS, TKO, REGS, EVENTS, SIGN, WX, startContest, petCat, maybeRegular, maybeSpill, wipeSpill, addGift, giftN, regSt, renderMorePanel, pickEvent, SEAS, BLD, placeHere, setSel, renderBItems, PL, TOWN, DLV, newDelivery, walk3, groundOK, unlocked, checkUnlocks, JOBS, jobCount, finishDelivery, staffPanel, outdoors, IN }; } };
+  window.__RS = { tick: dt => tick(dt), renderer, scene, camera, PEOPLE, spawnStaffMesh, newCandidate, addItem, canPlace, reachableAll, buildNav, refreshTables, menuOn, dishMini, KT, $, G, CK, get SHOP() { return SHOP; }, get PL() { return PL; }, startCook, finishCook, ckTap, enterShop, newShop, openShop, closeDay, spawnGroup, acts, doAct, BLD, enterBuild, exitBuild, openPanel, IT, DISH, SCN, TBL, walkable, saveShop, slotInfo, updCook, get MORE() { return { CAT, SPILLS, TKO, REGS, EVENTS, SIGN, WX, startContest, petCat, maybeRegular, maybeSpill, wipeSpill, addGift, giftN, regSt, renderMorePanel, pickEvent, SEAS, BLD, placeHere, setSel, renderBItems, PL, TOWN, DLV, newDelivery, walk3, groundOK, unlocked, checkUnlocks, JOBS, jobCount, finishDelivery, staffPanel, outdoors, IN, ROT, onResize, scooterOff }; } };
   loop();
 }
 boot();
