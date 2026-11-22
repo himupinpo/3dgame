@@ -85,7 +85,7 @@ body.hub #obj { left: calc(58px + env(safe-area-inset-left, 0px)); }   /* 3dgame
 /* 字幕・章の題・ヒント */
 #sub { left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(760px, calc(84 * var(--sw))); text-align: center; font-size: 17px; line-height: 1.55; font-weight: 600; opacity: 0; transition: opacity .25s; }
 #sub span { background: rgba(6,7,10,.55); padding: 3px 12px; border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-#sub b { margin-right: .5em; } #sub b.sakura { color: #ff9ec2; } #sub b.go { color: var(--blue); } #sub b.doc { color: var(--amber); } #sub b.hq { color: var(--green); } #sub b.me { color: #d7d2c8; }
+#sub b { margin-right: .5em; } #sub b.sakura { color: #ff9ec2; } #sub b.go { color: var(--blue); } #sub b.doc { color: var(--amber); } #sub b.hq { color: var(--green); } #sub b.tora { color: #ffb070; } #sub b.saeki, #sub b.genji { color: var(--amber); } #sub b.me { color: #d7d2c8; }
 #big { left: 0; right: 0; top: 26%; text-align: center; opacity: 0; transition: opacity .8s; }
 #big small { display: block; font-size: 15px; letter-spacing: .5em; color: var(--red); font-weight: 700; margin-bottom: 6px; }
 #big h1 { margin: 0; font: 400 min(60px, calc(9 * var(--sw))) var(--f-title); letter-spacing: .06em; text-shadow: 0 3px 0 rgba(0,0,0,.6), 0 0 26px rgba(0,0,0,.7); }
@@ -138,6 +138,7 @@ body.touch #prompt b { display: none; }
 .mb:disabled { opacity: .35; }
 .mb small { display: block; font-size: 11px; color: var(--dim); letter-spacing: .02em; margin-top: 2px; font-weight: 500; }
 .row { display: flex; gap: 8px; } .row .mb { flex: 1; }
+#opList .op { text-align: left; } #opList .op b { color: var(--amber); font-weight: 700; } #ops .seg { margin-bottom: 6px; } #end.op .panel h1#endT { font-size: min(30px, calc(6 * var(--sw))); white-space: normal; }
 .seg { display: flex; gap: 6px; margin: 4px 0 10px; } .seg button { flex: 1; padding: 8px 4px; font: 600 14px var(--f-ui); color: var(--ink); background: rgba(241,236,228,.06); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
 .seg button.on { background: rgba(255,59,48,.32); border-color: var(--red); }
 .lab { text-align: left; font-size: 13px; color: var(--dim); margin-top: 10px; }
@@ -202,6 +203,7 @@ body.cine .hud:not(#sub):not(#big), body.cine #tbtns, body.cine #bFireL, body.ci
   <p>感染爆発から72時間。封鎖された夜の渋谷を、仲間とともに突破せよ。</p>
   <button class="mb" id="tCont" type="button">つづきから<small id="tContS"></small></button>
   <button class="mb" id="tNew" type="button">はじめから</button>
+  <button class="mb" id="tOps" type="button">作戦地図（その後の戦い）<small id="tOpsS"></small></button>
   <div class="row"><button class="mb" id="tSet" type="button">設定</button><button class="mb" id="tHow" type="button">操作方法</button></div>
 </div></div>
 <div class="screen" id="diff"><div class="panel">
@@ -244,10 +246,18 @@ body.cine .hud:not(#sub):not(#big), body.cine #tbtns, body.cine #bFireL, body.ci
   <button class="mb" id="dTitle" type="button">タイトルへ</button>
 </div></div>
 <div class="screen" id="story"><div id="storyLines"></div><div class="skip" id="storySkip">タップでスキップ</div></div>
+<div class="screen" id="ops"><div class="panel">
+  <h2>作戦地図</h2><div class="tag">AFTER THE LAST LINE</div>
+  <p>東京の夜明けから3週間。ワクチンを日本じゅうへ届けるため、早瀬たちの戦いは、東京のほかの街・大阪・京都へ続く。</p>
+  <div class="lab">難しさ</div><div class="seg" id="oDiff"><button data-v="0" type="button">やさしい</button><button data-v="1" type="button">ふつう</button><button data-v="2" type="button">むずかしい</button></div>
+  <div id="opList"></div>
+  <button class="mb" id="oBack" type="button">もどる</button>
+</div></div>
 <div class="screen" id="end"><div class="panel">
-  <h1>東京ラストライン</h1>
+  <h1 id="endT">東京ラストライン</h1>
   <p id="endP"></p>
   <div class="res" id="endRes"></div>
+  <button class="mb" id="eOps" type="button" style="display:none">作戦地図へ</button>
   <button class="mb" id="eTitle" type="button">タイトルへ</button>
 </div></div>
 </div>
@@ -686,6 +696,20 @@ const SIGN_V = ['カラオケ', '居酒屋', 'ラーメン', '薬', '焼肉', '�
 const SIGN_H = ['ラーメン 龍神', '居酒屋 とり吉', 'カラオケ うたまる', 'さくら薬局', 'コンビニ 24h', '焼肉 牛若', '回転寿司', 'ゲームセンター', 'カメラ・家電', '書店 文林堂', '喫茶 ひまわり', '古着 レトロ', '100円ショップ', 'たこ焼き', '牛丼・定食', '立ち食いそば',
   'パン工房', 'クリーニング', '交番 KOBAN', '水瀬診療所', 'さくら通り商店街', '渋谷駅', '地下鉄 SUBWAY', '高架下酒場', '夜鳴きそば', '餃子の店', '質屋', '携帯ショップ', 'めがね', '銭湯', 'ビジネスホテル', 'まんが喫茶'];
 const SIGN_COL = [['#e02020', '#fff'], ['#ffd21f', '#111'], ['#1560d4', '#fff'], ['#0d8f4a', '#fff'], ['#f2f2f2', '#c1121f'], ['#141414', '#ffd21f'], ['#ff5fa2', '#fff'], ['#ff7a1a', '#fff'], ['#f2f2f2', '#111'], ['#6a1fb5', '#fff'], ['#12a3b8', '#fff'], ['#f2f2f2', '#1560d4']];
+// ---------- 地区（その後の作戦で、ほかの街を作る）：ページを読みなおすときに、行き先を localStorage で受けとる ----------
+const GOTO = (() => { try { const g = JSON.parse(localStorage.getItem('tokyoz-goto') || 'null'); localStorage.removeItem('tokyoz-goto'); return g; } catch (e) { return null; } })();
+const AREA_IDS = ['shibuya', 'shinjuku', 'akiba', 'asakusa', 'dotonbori', 'shinsekai', 'gion'];
+const AREA = GOTO && AREA_IDS.includes(GOTO.area) ? GOTO.area : 'shibuya';
+// 看板の字：地区ごとに、渋谷だけの看板（交番・駅など）を入れかえる
+const AREA_SIGNS = {
+  shinjuku: [['新宿駅 西口', 'ツインタワー', '都庁通り', 'バスターミナル', '新都心 歩道橋', '高層ビル街'], ['ホテル', '証券', '銀行', 'オフィス']],
+  akiba: [['秋葉原駅 電気街口', 'ラジオ会館', 'アニメ・ゲーム', 'パソコン パーツ', '電子部品 無線', 'メイド喫茶'], ['PC', 'ゲーム', 'アニメ', '無線', 'パーツ', '中古', 'DVD', '模型']],
+  asakusa: [['浅草 大門', '浅草寺', '水上バス のりば', '人形焼', '雷おこし', '天ぷら'], ['団子', '甘味', 'せんべい', '人形焼', 'もんじゃ', '天ぷら', 'どぜう', '土産']],
+  dotonbori: [['たこ焼き 浪花', 'お好み焼 鉄板', '串カツ 天下', 'かに料理 浜', '大阪 ミナミ', 'ふぐ料理 てっちり', 'ひかり橋', '戎通り商店街'], ['たこ焼', '串カツ', 'お好み焼', 'ふぐ', 'うどん', '焼肉', 'BAR', '粉もん']],
+  shinsekai: [['串カツ 天下', 'たこ焼き 浪花', 'ふぐ料理 てっちり', '将棋・囲碁', 'ホルモン 鉄', '新世界 本通'], ['串カツ', '射的', 'ホルモン', '将棋', 'どて焼', '立ち飲み', '演芸', 'スマートボール']],
+  gion: [['祇園 白川', '京料理 花月', '甘味処 ぎをん', '茶房 かつら', '湯葉 しずく', '和菓子 京香'], ['茶', '和菓子', '甘味', '湯葉', '京料理', '漬物', '扇子', '豆腐']],
+};
+if (AREA !== 'shibuya') { const [h, v] = AREA_SIGNS[AREA]; h.forEach((t, k) => (SIGN_H[18 + k] = t)); v.forEach((t, k) => (SIGN_V[k * 3] = t)); }
 function makeSignAtlas(fontOK) {
   const S = 2048, c = newCanvas(S), g = c.getContext('2d'), r = rng(303);
   const F1 = '"Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo","IPAPGothic",sans-serif', F2 = fontOK ? '"Dela Gothic One",' + F1 : F1;
@@ -703,7 +727,7 @@ function makeSignAtlas(fontOK) {
     g.font = `700 26px ${F1}`; g.fillText(pick(['1F', '2F', '3F', 'B1', '24h', '→', '4F', '5F'], r), x + 64, y + 482);
   });
   SIGN_H.forEach((t, i) => {
-    const x = (i % 4) * 512, y = 1024 + ((i / 4) | 0) * 128, [bg, fg] = t === '渋谷駅' ? ['#f2f2f2', '#111'] : t.startsWith('交番') ? ['#f2f2f2', '#1b3f8f'] : t === '水瀬診療所' ? ['#f2f2f2', '#0d8f4a'] : t.startsWith('地下鉄') ? ['#1560d4', '#fff'] : t.startsWith('さくら通り') ? ['#ff5fa2', '#fff'] : SIGN_COL[(i * 7 + 1) % SIGN_COL.length];
+    const x = (i % 4) * 512, y = 1024 + ((i / 4) | 0) * 128, [bg, fg] = /駅/.test(t) ? ['#f2f2f2', '#111'] : t.startsWith('交番') ? ['#f2f2f2', '#1b3f8f'] : t === '水瀬診療所' ? ['#f2f2f2', '#0d8f4a'] : t.startsWith('地下鉄') ? ['#1560d4', '#fff'] : t.startsWith('さくら通り') ? ['#ff5fa2', '#fff'] : SIGN_COL[(i * 7 + 1) % SIGN_COL.length];
     plate(x, y, 512, 128, bg); g.fillStyle = fg;
     let px = 78; g.font = `900 ${px}px ${i % 2 ? F1 : F2}`; const w = g.measureText(t).width; if (w > 460) { px *= 460 / w; g.font = `900 ${px}px ${i % 2 ? F1 : F2}`; }
     g.fillText(t, x + 256, y + 68);
@@ -848,6 +872,7 @@ function makeMaterials() {
   MAT.carGlass = std({ color: 0x0c1016, roughness: 0.06, metalness: 0.3, envMapIntensity: 1.8 });
   MAT.carLight = new THREE.MeshBasicMaterial({ vertexColors: true });
   MAT.skyline = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
+  MAT.water = std({ color: 0x061016, roughness: 0.08, metalness: 0.25, envMapIntensity: 1.1 });   // 川・運河
 }
 
 // ---------- 空（夜〜夜明け）と、うつりこみ用の環境 ----------
@@ -1074,7 +1099,7 @@ const NAV = {
 
 // ---------- 形をまとめる入れもの（材質 × 南北4つの帯） ----------
 const BATCH = { m: new Map() };
-const NOSHADOW = new Set(['pool', 'emis', 'sign', 'propD', 'mark', 'markY', 'glass', 'screen', 'skyline', 'blink', 'carLight', 'siren', 'sigA0', 'sigA1', 'sigA2', 'sigB0', 'sigB1', 'sigB2']);
+const NOSHADOW = new Set(['water', 'pool', 'emis', 'sign', 'propD', 'mark', 'markY', 'glass', 'screen', 'skyline', 'blink', 'carLight', 'siren', 'sigA0', 'sigA1', 'sigA2', 'sigB0', 'sigB1', 'sigB2']);
 function bget(key, z = 0) {
   const k = key + '#' + clamp(Math.floor((z + 216) / 84), 0, 3); let e = BATCH.m.get(k);
   if (!e) { e = { key, pos: [], nor: [], uv: [], col: [], idx: [], n: 0 }; BATCH.m.set(k, e); }
@@ -1473,8 +1498,7 @@ function roomWalls(x0, z0, x1, z1, h, col, doors, key = 'concrete') {   // 部�
     if (t < hi) seg(side, t, hi, 0, h);
   }
 }
-async function buildWorld(say) {
-  COL.init(); WORLD.fires = 0;
+async function buildShibuya(say) {
   say('道路をしいています…'); await nextFrame();
   ROADS.push([-8, -134, 8, 66], [-100, 56, 100, 66], [-100, -7, 100, 7], [-100, -66, 100, -58], [57, 7, 63, 56]);
   bquad('asphalt', [-140, 0, 140], [140, 0, 140], [140, 0, -240], [-140, 0, -240], [-23.3, 0, 23.3, 63.3]);
@@ -1728,6 +1752,10 @@ async function buildWorld(say) {
     for (const yy of [95, 150, y]) { glow(tx, yy, tz, 22, [1, .1, .05], 1); }
     bcyl('skyline', tx, y + 20, tz, .8, 40, [.4, .1, .06], 5); glow(tx, y + 40, tz, 18, [1, .1, .05], 1);
   }
+}
+async function buildWorld(say) {
+  COL.init(); WORLD.fires = 0;
+  if (AREA === 'shibuya') { await buildShibuya(say); PLACES.title = { x: 0, z: 0 }; } else await AREA_DEF[AREA].build(say);
   // まとめて Mesh に
   say('まとめています…'); await nextFrame();
   WORLD.meshes = buildBatches();
@@ -2513,6 +2541,9 @@ const ZOMBIES = {
 const ALLY_DEF = {
   sakura: { name: 'サクラ', cls: 'sakura', model: 'W_Soldier', scale: .9, hp: 220, slot: [-1.7, 2.3], armed: true, look: (n, c) => n === 'Swat' ? [.13, .17, .08] : n === 'Black' ? [.045, .055, .035] : n === 'Grey' ? [.1, .12, .08] : n === 'Skin' ? [.62, .45, .32] : H_HAIR.includes(n) ? [.025, .02, .018] : c },
   go: { name: 'ゴウ', cls: 'go', model: 'M_Swat', scale: .98, hp: 260, slot: [1.8, 2.5], armed: true, look: (n, c) => n === 'Swat' ? [.04, .055, .11] : n === 'Swat_Black' ? [.018, .02, .035] : n === 'Skin' ? [.55, .4, .28] : n === 'Visor' ? [.02, .03, .05] : c },
+  tora: { name: 'トラ', cls: 'tora', model: 'M_Suit', scale: 1.0, hp: 240, slot: [-.6, 4.2], armed: true, look: (n, c) => n === 'Black' ? [.08, .07, .07] : n === 'White' ? [.72, .7, .66] : n === 'Skin' ? [.6, .42, .3] : H_HAIR.includes(n) ? [.06, .04, .03] : c },
+  saeki: { name: '佐伯さん', cls: 'doc', model: 'M_Casual_2', scale: .95, hp: 150, slot: [.8, 3.6], armed: false, look: (n, c) => n === 'Skin' ? [.64, .48, .36] : c },
+  genji: { name: '源さん', cls: 'doc', model: 'M_Worker', scale: .9, hp: 150, slot: [.8, 3.6], armed: false, look: (n, c) => n === 'Skin' ? [.6, .44, .32] : H_HAIR.includes(n) ? [.7, .7, .68] : c },
   doc: { name: '水瀬博士', cls: 'doc', model: 'W_Suit', scale: .9, hp: 150, slot: [0, 3.4], armed: false, look: (n, c) => n === 'Black' ? [.78, .79, .78] : n === 'White' ? [.3, .5, .55] : n === 'Skin' ? [.66, .5, .38] : H_HAIR.includes(n) ? [.03, .022, .018] : c },
 };
 function allyGun() {
@@ -2526,7 +2557,7 @@ const ALLIES = {
   add(id, x, z, yaw = 0) {
     const D = ALLY_DEF[id], h = makeHuman(D.model, D.scale); setLook(h, D.look, 0);
     const a = { id, D, h, x, z, y: groundH(x, z), yaw, hp: D.hp, alive: true, rad: .34, state: 'follow', hold: null, target: null, fireT: rr(.3, 1), burst: 0, mag: 30, reloadT: 0, thinkT: 0, hurtT: 9, downT: 0, sp: 0, stuck: 0, face: null, gun: null, cower: 0,
-      hurt(d, fx, fz) { if (!this.alive || GAME.cine) return; this.hp -= d * (this.D.armed ? .55 : .8) * (GAME.diff === 0 ? .6 : 1); this.hurtT = 0; AUDIO.at('ahurt', this.x, this.z, .6); if (this.hp <= 0) { this.hp = 0; this.alive = false; if (this.D.armed) { this.state = 'down'; this.downT = 12; this.h.cur = null; SAY.bark(this.id, 'down'); } else GAME.fail('doc'); } else if (!this.D.armed && Math.random() < .5) SAY.bark('doc', 'help'); } };
+      hurt(d, fx, fz) { if (!this.alive || GAME.cine) return; this.hp -= d * (this.D.armed ? .55 : .8) * (GAME.diff === 0 ? .6 : 1); this.hurtT = 0; AUDIO.at('ahurt', this.x, this.z, .6); if (this.hp <= 0) { this.hp = 0; this.alive = false; if (this.D.armed) { this.state = 'down'; this.downT = 12; this.h.cur = null; SAY.bark(this.id, 'down'); } else { GAME.failName = this.D.name; GAME.fail('doc'); } } else if (!this.D.armed && Math.random() < .5) SAY.bark(BARKS[this.id] ? this.id : 'doc', 'help'); } };
     if (D.armed) { a.gun = allyGun(); h.b.handR.add(a.gun); a.gun.rotation.set(-Math.PI / 2, 0, Math.PI / 2); a.gun.position.set(0, .1, .03); }
     h.root.position.set(x, a.y, z); h.root.rotation.y = yaw; this.list.push(a); UI.team(); return a;
   },
@@ -2581,7 +2612,7 @@ const ALLIES = {
   },
   aimPose(a) { const T = a.target; if (!T) return; const d = Math.hypot(T.x - a.x, T.z - a.z); hTurn(a.h, a.h.b.chest, H_RIGHT, clamp(Math.atan2(T.y + 1.2 * T.hs - (a.y + 1.35), d), -.5, .5) * .9); if (a.recoil > 0) hTurn(a.h, a.h.b.armR, H_RIGHT, a.recoil * .25); },
   pickTarget(a) {
-    let best = null, bs = 1e9; const doc = this.get('doc');
+    let best = null, bs = 1e9; const doc = this.list.find(x => !x.D.armed);
     for (const zb of ZOMBIES.list) {
       if (zb.state === 'dead' || zb.state === 'lie' || (!zb.active && a.state !== 'script')) continue; const d = Math.hypot(zb.x - a.x, zb.z - a.z); if (d > 34) continue;
       let s = d; const dp = Math.hypot(zb.x - PLAYER.pos.x, zb.z - PLAYER.pos.z); if (dp < 6) s -= 6; if (doc && Math.hypot(zb.x - doc.x, zb.z - doc.z) < 7) s -= 9; if (zb.type !== 'walker') s -= 4; if (zb === a.target) s -= 2;
@@ -2614,11 +2645,13 @@ const ALLIES = {
 // =========================================================================================
 //  会話（字幕）・画面の表示（HUD）・拾える物・ゾンビを出す係・ヘリ
 // =========================================================================================
-const SPEAK = { sakura: 'サクラ', go: 'ゴウ', doc: '水瀬博士', hq: '司令部', me: '早瀬' };
+const SPEAK = { sakura: 'サクラ', go: 'ゴウ', doc: '水瀬博士', hq: '司令部', me: '早瀬', tora: 'トラ', saeki: '佐伯', genji: '源さん' };
 const BARKS = {
   sakura: { kill: ['一体、片づけた', 'クリア', '倒した！'], reload: ['リロードする！', '弾倉交換！'], down: ['くっ…やられた…！'], up: ['まだ…戦える'], nice: ['ナイスショット！', 'いい腕ね'], warn: ['近い、気をつけて！', 'うしろ！'] },
   go: { kill: ['一丁あがりだ', 'よし、次！', '仕留めた'], reload: ['リロード！ カバーしろ！', '弾を込める！'], down: ['ぐっ…しくじった…'], up: ['こんなもんで、くたばるか'], nice: ['やるな、新人', 'いい腕だ'], warn: ['新人、囲まれるぞ！', '近いぞ！'] },
   doc: { help: ['きゃっ…！ 助けて！', '来ないで…！'] },
+  tora: { kill: ['いてもうたで！', '次や次！', '一丁あがりや'], reload: ['弾こめるで、援護たのむわ！', 'リロードや！'], down: ['あかん…やられてもうた…'], up: ['まだまだこれからや！'], nice: ['やるやんけ！', 'ええ腕しとるな！'], warn: ['後ろや、気ぃつけ！', '囲まれとるで！'] },
+  saeki: { help: ['うわっ！ た、助けて！', 'こっちに来る…！'] }, genji: { help: ['こりゃいかん…！', 'わしはまだ死なんぞ…！'] },
 };
 const SAY = {
   q: [], cur: null, t: 0, gap: 0, barkT: 4,
@@ -2709,6 +2742,10 @@ const PICK = {
     else if (type === 'med') { box(M.white, .34, .22, .22); box(M.red, .16, .05, .225, 0, 0, 0); box(M.red, .05, .16, .225, 0, 0, 0); }
     else if (type === 'gren') { const s = new THREE.Mesh(GRENADES.geo, M.dark); s.scale.setScalar(1.5); g.add(s); box(M.yel, .03, .05, .03, 0, .09, 0); }
     else if (type === 'crate') { box(M.olive, 1.0, .5, .56, 0, .25, 0); box(M.yel, 1.01, .06, .57, 0, .34, 0); box(M.dark, 1.04, .05, .6, 0, .51, 0); }
+    else if (type === 'case') { box(M.white, .52, .34, .36, 0, .17, 0); box(M.red, .2, .06, .37, 0, .2, 0); box(M.red, .06, .2, .37, 0, .2, 0); box(M.dark, .3, .04, .06, 0, .36, 0); }
+    else if (type === 'part') { box(M.dark, .34, .22, .26, 0, .11, 0); box(M.yel, .08, .04, .27, -.08, .14, 0); const a = box(M.white, .02, .5, .02, .1, .45, 0); }
+    else if (type === 'radio') { box(M.olive, .6, .4, .4, 0, .2, 0); box(M.dark, .5, .12, .02, 0, .3, .21); box(M.yel, .06, .06, .03, -.18, .14, .21); box(M.white, .02, 1.4, .02, .22, 1.0, -.1); }
+    else if (type === 'switch') { box(M.olive, .7, 1.1, .3, 0, .9, 0); box(M.dark, .5, .7, .02, 0, .95, .16); box(M.yel, .5, .06, .03, 0, 1.36, .16); box(M.red, .08, .2, .05, .12, .9, .18); }
     else if (type === 'shotgun' || type === 'rifle') { const s = (type === 'rifle' ? buildRifle() : buildShotgun()).g; s.children.forEach(c => { if (c.isGroup && c !== s.children[0]) { /* 腕は見せない */ } }); s.traverse(o => { if (o.isMesh && (o.material === VMAT.glove || o.material === VMAT.sleeve)) o.visible = false; }); s.rotation.set(0, Math.PI / 2, Math.PI / 2); s.position.y = .05; g.add(s); }
     return g;
   },
@@ -2952,15 +2989,15 @@ const STORY = {
   onKill(zb) { this.kills++; if (zb.type !== 'brute') PICK.drop(zb.x, zb.z); else { PICK.add('med', zb.x + .6, zb.z); PICK.add('ammo', zb.x - .6, zb.z); PICK.add('gren', zb.x, zb.z + .7); } },
   // cont＝前の章からそのまま続けて入った（人や物を置き直さない）
   begin(ch, cont) {
-    const C = CHAPTERS[ch]; this.ch = ch; this.si = -1; this.flags = {}; this.brute = null;
-    if (!cont) { ZOMBIES.clear(); PICK.clear(); GRENADES.clear(); ALLIES.clear(); SAY.clear(); HELI.hide(); FX.flare = null; UI.hint('', .01); }
+    const L = this.list || CHAPTERS, C = L[ch]; this.ch = ch; this.si = -1; this.flags = {}; this.brute = null;
+    if (!cont) { ZOMBIES.clear(); PICK.clear(); GRENADES.clear(); ALLIES.clear(); SAY.clear(); HELI.hide(); VEH.hide(); FX.flare = null; UI.hint('', .01); }
     DIR.off(); UI.progress(null); setSky(C.sky);
-    if (!cont) loadSave(true);
+    if (!cont && !this.op) loadSave(true);
     C.start(cont); this.steps = C.steps; NAV.flow(PLAYER.pos.x, PLAYER.pos.z);
-    writeSave(); UI.team(); UI.big('第' + (ch + 1) + '章', C.name, C.sub, 4.5); AUDIO.sfx('chapter');
+    if (!this.op) writeSave(); UI.team(); UI.big(this.op ? this.op.tag : '第' + (ch + 1) + '章', C.name, C.sub, 4.5); AUDIO.sfx('chapter');
     this.next();
   },
-  next() { this.si++; this.st = 0; this.kills = 0; const s = this.steps[this.si]; if (!s) { if (this.ch < CHAPTERS.length - 1) this.begin(this.ch + 1, true); return; } s.on && s.on(); },
+  next() { this.si++; this.st = 0; this.kills = 0; const s = this.steps[this.si]; if (!s) { if (!this.op && this.ch < CHAPTERS.length - 1) this.begin(this.ch + 1, true); return; } s.on && s.on(); },
   update(dt) { this.st += dt; const s = this.steps[this.si]; if (!s) return; s.tick && s.tick(dt); if (s.until && s.until()) this.next(); },
 };
 // ---------- セーブ（章の始まりごと） ----------
@@ -2979,21 +3016,23 @@ function loadSave(apply) {
 // =========================================================================================
 //  ゲームの流れ：タイトル → 物語の前口上 → 遊ぶ ⇔ 一時停止 → 失敗 / エンディング
 // =========================================================================================
-const SCREENS = ['load', 'title', 'diff', 'pause', 'settings', 'how', 'dead', 'story', 'end'];
+const SCREENS = ['load', 'title', 'diff', 'pause', 'settings', 'how', 'dead', 'story', 'end', 'ops'];
 function showScreen(id) { for (const s of SCREENS) $(s).classList.toggle('on', s === id); if (id && document.pointerLockElement) document.exitPointerLock(); }
 const INTRO = ['20XX年 10月。東京。', '未知のウイルスによる<em>感染爆発</em>から、72時間。', '感染者は理性を失い、人を襲う。都心は封鎖された。', '午前3時。渋谷駅の地下で、最後の避難列車が止まった。', '生き残った機動隊員は、きみひとりだ。'];
 const GAME = {
   state: 'load', t: 0, diff: 1, cine: false, failT: 0, failWhy: '', back: 'title', endT: 0, storyT: 0, storyI: 0, pausedAt: 0, titleA: 0,
   setPlaying(on) { document.body.classList.toggle('playing', on); },
   toTitle() {
-    this.state = 'title'; this.cine = true; this.endCut = this.endShown = false; this.setPlaying(false); document.body.classList.remove('cine'); showScreen('title'); $('fade').style.opacity = 0; $('flash').style.opacity = 0; $('end').classList.remove('day'); VMSTATE.show = false;
-    ZOMBIES.clear(); PICK.clear(); ALLIES.clear(); GRENADES.clear(); SAY.clear(); HELI.hide(); HELI.fly = false; FX.flare = null; DIR.off(); UI.progress(null); setSky(.05); AUDIO.mode('title');
+    this.state = 'title'; this.cine = true; this.endCut = this.endShown = false; this.setPlaying(false); document.body.classList.remove('cine'); showScreen('title'); $('fade').style.opacity = 0; $('flash').style.opacity = 0; $('end').classList.remove('day', 'op'); VMSTATE.show = false;
+    ZOMBIES.clear(); PICK.clear(); ALLIES.clear(); GRENADES.clear(); SAY.clear(); HELI.hide(); VEH.hide(); HELI.fly = false; FX.flare = null; DIR.off(); UI.progress(null); setSky(AREA === 'gion' ? .5 : .05); AUDIO.mode('title'); STORY.op = null; STORY.list = CHAPTERS; $('eOps').style.display = 'none';
     PLAYER.pos.set(0, 0, 0); PLAYER.alive = false; PLAYER.light = false; LIGHTS.torch.intensity = 0; UI.css('hurt', 'opacity', 0); UI.css('low', 'opacity', 0);
-    for (let i = 0; i < 12; i++) zplace('walker', rr(-14, 14), rr(-12, 12));
+    const T0 = PLACES.title || { x: 0, z: 0 }; for (let i = 0; i < 12; i++) zplace('walker', T0.x + rr(-14, 14), T0.z + rr(-12, 12));
+    $('tOps').disabled = !mainClear(); $('tOpsS').textContent = mainClear() ? `${Object.keys(opsDone()).length} / ${OP_ORDER.length} 作戦クリア` + (AREA !== 'shibuya' ? `・いまいる街：${AREA_DEF[AREA].name}` : '') : '本編をクリアすると開く';
     const s = readSave(); $('tCont').disabled = !s; $('tContS').textContent = s ? `第${s.ch + 1}章「${CHAPTERS[s.ch].name}」・${DIFF[s.diff | 0] ? DIFF[s.diff | 0].name : ''}` : '';
   },
   // 始める：fresh＝はじめから（前口上つき）
   start(ch, fresh) {
+    if (AREA !== 'shibuya') { gotoArea({ area: 'shibuya', act: fresh ? 'new' : 'cont' }); return; }
     ZOMBIES.clear(); this.cine = false; document.body.classList.remove('cine'); PLAYER.alive = true; this.failT = 0; $('fade').style.opacity = 0; HELI.fly = false;
     if (fresh) { PLAYER.st = { shots: 0, hits: 0, kills: 0, heads: 0, time: 0 }; try { localStorage.removeItem('tokyoz-save'); } catch (e) { /* なし */ } STORY.ch = 0; this.story(); return; }
     const s = readSave(); if (s) { this.diff = clamp(s.diff | 0, 0, 2); }
@@ -3003,14 +3042,24 @@ const GAME = {
     this.state = 'story'; this.setPlaying(false); showScreen('story'); this.storyT = 0; this.storyI = 0; AUDIO.mode('story');
     $('storyLines').innerHTML = INTRO.map(t => `<div class="ln">${t}</div>`).join('');
   },
-  play(ch) { showScreen(null); UI.css('hurt', 'opacity', 0); UI.css('low', 'opacity', 0); UI.hurtA = 0; this.cine = false; document.body.classList.remove('cine'); PLAYER.alive = true; this.failT = 0; $('fade').style.opacity = 0; this.state = 'play'; this.setPlaying(true); VMSTATE.show = true; AUDIO.mode('play'); STORY.begin(ch, false); if (!IS_TOUCH) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* クリックで固定 */ } } },
-  pause() { if (this.state !== 'play' || this.failT > 0) return; this.state = 'pause'; this.setPlaying(false); showScreen('pause'); $('pStat').textContent = `第${STORY.ch + 1}章「${CHAPTERS[STORY.ch].name}」・${DIFF[this.diff].name}`; AUDIO.duck(true); IN.fire = false; },
+  play(ch) { if (STORY.op) { STORY.list = [STORY.op]; ch = 0; } else STORY.list = CHAPTERS; showScreen(null); UI.css('hurt', 'opacity', 0); UI.css('low', 'opacity', 0); UI.hurtA = 0; this.cine = false; document.body.classList.remove('cine'); PLAYER.alive = true; this.failT = 0; $('fade').style.opacity = 0; this.state = 'play'; this.setPlaying(true); VMSTATE.show = true; AUDIO.mode('play'); STORY.begin(ch, false); if (!IS_TOUCH) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* クリックで固定 */ } } },
+  pause() { if (this.state !== 'play' || this.failT > 0) return; this.state = 'pause'; this.setPlaying(false); showScreen('pause'); $('pStat').textContent = STORY.op ? `${STORY.op.tag}「${STORY.op.name}」・${DIFF[this.diff].name}` : `第${STORY.ch + 1}章「${CHAPTERS[STORY.ch].name}」・${DIFF[this.diff].name}`; AUDIO.duck(true); IN.fire = false; },
   resume() { this.state = 'play'; this.setPlaying(true); showScreen(null); AUDIO.duck(false); if (!IS_TOUCH) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* クリックで固定 */ } } },
   fail(why) { if (this.state !== 'play' || this.failT > 0 || this.cine) return; this.failT = 1e-4; this.failWhy = why; PLAYER.frozen = true; AUDIO.sfx('fail'); },
   ending() {
     this.cine = true; document.body.classList.add('cine'); PLAYER.frozen = true; this.endT = 0; this.state = 'end'; DIR.off(); AUDIO.mode('end'); SAY.clear();
     const P = PLAYER; this.result = [['かかった時間', `${Math.floor(P.st.time / 60)}分${String(Math.floor(P.st.time % 60)).padStart(2, '0')}秒`], ['倒したゾンビ', P.st.kills + '体'], ['ヘッドショット', P.st.heads + '回'], ['命中率', (P.st.shots ? Math.round(P.st.hits / P.st.shots * 100) : 0) + '%'], ['難しさ', DIFF[this.diff].name]];
-    try { localStorage.removeItem('tokyoz-save'); } catch (e) { /* なし */ }
+    try { localStorage.removeItem('tokyoz-save'); localStorage.setItem('tokyoz-clear', '1'); } catch (e) { /* なし */ }
+  },
+  // その後の作戦
+  startOp(id, diff) {
+    const O = OPS[id]; if (!O) return; if (O.area !== AREA) { gotoArea({ area: O.area, act: 'op', op: id, diff }); return; }
+    this.diff = clamp(diff | 0, 0, 2); STORY.op = O; STORY.list = [O]; PLAYER.st = { shots: 0, hits: 0, kills: 0, heads: 0, time: 0 }; setSky(O.sky); this.play(0);
+  },
+  opClear() {
+    const O = STORY.op; this.cine = true; document.body.classList.add('cine'); PLAYER.frozen = true; this.endT = 0; this.state = 'opend'; DIR.off(); AUDIO.mode('end'); SAY.clear();
+    const P = PLAYER; this.result = [['かかった時間', `${Math.floor(P.st.time / 60)}分${String(Math.floor(P.st.time % 60)).padStart(2, '0')}秒`], ['倒したゾンビ', P.st.kills + '体'], ['ヘッドショット', P.st.heads + '回'], ['命中率', (P.st.shots ? Math.round(P.st.hits / P.st.shots * 100) : 0) + '%'], ['難しさ', DIFF[this.diff].name]];
+    try { const id = Object.keys(OPS).find(k => OPS[k] === O), D = opsDone(); D[id] = Math.max(D[id] || 0, this.diff + 1); localStorage.setItem('tokyoz-ops', JSON.stringify(D)); } catch (e) { /* なし */ }
   },
 };
 // 一時停止・失敗・エンディング・タイトルのときの毎フレーム
@@ -3018,13 +3067,22 @@ const _gv = V3();
 function tickOther(dt, real) {
   const G = GAME;
   if (G.state === 'title' || G.state === 'load' || G.state === 'story' || G.state === 'diff') {
-    G.titleA += dt * .06; camera.position.set(Math.sin(G.titleA) * 5.5, 13 + Math.sin(G.titleA * .7) * 2.5, 38 + Math.cos(G.titleA * .6) * 9); camera.lookAt(Math.sin(G.titleA * .5) * 4, 7, 0); if (camera.fov !== 60) { camera.fov = 60; camera.updateProjectionMatrix(); }
+    const T0 = PLACES.title || { x: 0, z: 0 }; G.titleA += dt * .06; camera.position.set(T0.x + Math.sin(G.titleA) * 5.5, 13 + Math.sin(G.titleA * .7) * 2.5, T0.z + 38 + Math.cos(G.titleA * .6) * 9); camera.lookAt(T0.x + Math.sin(G.titleA * .5) * 4, 7, T0.z); if (camera.fov !== 60) { camera.fov = 60; camera.updateProjectionMatrix(); }
     if (G.state !== 'load') { ZOMBIES.update(dt); FX.update(dt, _gv.set(0, 0, 0)); }
     if (G.state === 'story') {
       G.storyT += real; const L = $('storyLines').children, n = Math.floor(G.storyT / 2.7);
       for (let i = 0; i < L.length; i++) L[i].classList.toggle('on', i <= n && G.storyT < L.length * 2.7 + 2.2);
       if (G.storyT > L.length * 2.7 + 3.4) showScreen('diff'), G.state = 'diff';
     }
+  } else if (G.state === 'opend') {
+    G.endT += dt; const t = G.endT;
+    if (t < 1.6) { $('flash').style.opacity = clamp(t / 1.3, 0, 1); PLAYER.update(dt); ZOMBIES.update(dt); ALLIES.update(dt); HELI.update(dt); VEH.update(dt); }
+    else { if (!G.endCut) { G.endCut = true; VMSTATE.show = false; ZOMBIES.clear(); PICK.clear(); G.setPlaying(false); LIGHTS.torch.intensity = 0; setSky(STORY.op && STORY.op.area === 'gion' ? 1 : Math.max(SKY.k, .8)); }
+      $('flash').style.opacity = clamp(1 - (t - 1.8) / 2.2, 0, 1); const P = PLAYER.pos, k = t - 1.6; camera.position.set(P.x - 18 - k * .6, 8 + k * 1.2, P.z + 18 + k * .5); camera.lookAt(P.x, 3, P.z); if (camera.fov !== 55) { camera.fov = 55; camera.updateProjectionMatrix(); }
+      if (t > 4.5 && !G.endShown) { G.endShown = true; showScreen('end'); $('end').classList.add('day', 'op'); const id = Object.keys(OPS).find(k2 => OPS[k2] === STORY.op);
+        $('endT').textContent = `${STORY.op.tag}　${STORY.op.name}　成功`; $('endP').innerHTML = OP_END[id] + (id === 'gion' ? '<br><b>すべての作戦を、やりとげた。</b>' : '<br><b>次の作戦が、作戦地図に開いた。</b>');
+        $('endRes').innerHTML = G.result.map(r => `<span>${r[0]}</span><span>${r[1]}</span>`).join(''); $('eOps').style.display = ''; } }
+    HELI.update(dt); FX.update(dt, PLAYER.pos); SAY.update(dt);
   } else if (G.state === 'end') {
     G.endT += dt; const t = G.endT, L = PLACES.lz;
     if (t < 1.6) { $('flash').style.opacity = clamp(t / 1.3, 0, 1); PLAYER.update(dt); ZOMBIES.update(dt); ALLIES.update(dt); }
@@ -3033,7 +3091,7 @@ function tickOther(dt, real) {
       $('flash').style.opacity = clamp(1 - (t - 1.8) / 2.2, 0, 1);
       const k = t - 1.6; camera.position.set(L.x - 26 - k * .5, 5 + k * 1.1, L.z + 20 + k * .4); _gv.copy(HELI.pos); _gv.y += 1; camera.lookAt(_gv); if (camera.fov !== 55) { camera.fov = 55; camera.updateProjectionMatrix(); }
       if (t > 7.5 && !G.endShown) { G.endShown = true; showScreen('end'); $('end').classList.add('day');
-        $('endP').innerHTML = '午前5時42分。東京に、朝が来た。<br>水瀬博士のデータから、3週間後、最初のワクチンが完成する。<br>戦いは、まだ終わらない。<br>だが今夜、最後の防衛線は守られた。';
+        $('endT').textContent = '東京ラストライン'; $('endP').innerHTML = '午前5時42分。東京に、朝が来た。<br>水瀬博士のデータから、3週間後、最初のワクチンが完成する。<br>戦いは、まだ終わらない。<br>だが今夜、最後の防衛線は守られた。<br><b>タイトルの「作戦地図」から、その後の作戦（東京・大阪・京都）へ行けるようになった。</b>';
         $('endRes').innerHTML = G.result.map(r => `<span>${r[0]}</span><span>${r[1]}</span>`).join(''); }
     }
     HELI.update(dt); FX.update(dt, PLAYER.pos); SAY.update(dt);
@@ -3058,6 +3116,11 @@ function setupMenus() {
   $('dRetry').addEventListener('click', () => { PLAYER.alive = true; GAME.failT = 0; $('fade').style.opacity = 0; GAME.play(STORY.ch); });
   $('dTitle').addEventListener('click', () => GAME.toTitle());
   $('eTitle').addEventListener('click', () => { GAME.endCut = GAME.endShown = false; for (const a of ALLIES.list) a.h.root.visible = true; GAME.toTitle(); });
+  $('eOps').addEventListener('click', () => { GAME.endCut = GAME.endShown = false; GAME.toTitle(); drawOps(); showScreen('ops'); });
+  $('tOps').addEventListener('click', () => { AUDIO.resume(); drawOps(); showScreen('ops'); });
+  $('oBack').addEventListener('click', () => showScreen('title'));
+  for (const b of $('oDiff').children) b.addEventListener('click', () => { GAME.diff = +b.dataset.v; drawOps(); });
+  $('opList').addEventListener('click', e => { const b = e.target.closest('[data-op]'); if (!b || b.disabled) return; AUDIO.resume(); GAME.startOp(b.dataset.op, GAME.diff); });
 }
 
 // =========================================================================================
@@ -3233,11 +3296,11 @@ function tick(dt, real = dt) {
       G.failT += real; $('fade').style.opacity = clamp((G.failT - .25) / 1.3, 0, 1);
       camera.position.y = Math.max(PLAYER.pos.y + .45, camera.position.y - dt * 1.1); camera.rotation.z += dt * .45; camera.updateMatrixWorld();
       ZOMBIES.update(dt); ALLIES.update(dt); SAY.update(dt);
-      if (G.failT > 1.9) { G.state = 'dead'; G.setPlaying(false); showScreen('dead'); $('deadP').textContent = G.failWhy === 'doc' ? '水瀬博士が倒れた。抗体データは失われた…' : 'きみは倒れた。東京は、まだ救いを待っている。'; }
+      if (G.failT > 1.9) { G.state = 'dead'; G.setPlaying(false); showScreen('dead'); $('deadP').textContent = G.failWhy === 'doc' ? (!G.failName || G.failName === '水瀬博士' ? '水瀬博士が倒れた。抗体データは失われた…' : G.failName + 'を守りきれなかった…') : (STORY.op ? 'きみは倒れた。仲間たちが、まだ待っている。' : 'きみは倒れた。東京は、まだ救いを待っている。'); }
     } else if (G.state === 'play') {
       PLAYER.update(dt);
       navT -= dt; if (navT <= 0) { navT = .3; NAV.flow(PLAYER.pos.x, PLAYER.pos.z); }
-      ZOMBIES.update(dt); ALLIES.update(dt); GRENADES.update(dt); PICK.update(dt); DIR.update(dt); STORY.update(dt); HELI.update(dt); SAY.update(dt);
+      ZOMBIES.update(dt); ALLIES.update(dt); GRENADES.update(dt); PICK.update(dt); DIR.update(dt); STORY.update(dt); HELI.update(dt); VEH.update(dt); SAY.update(dt);
       if (GAME.state === 'play') UI.update(dt);
     }
     FX.update(dt, PLAYER.pos);
@@ -3273,6 +3336,7 @@ async function boot() {
     VM.init(); FX.init(); PICK.init(); setupMenus();
     SKY.envK = -9; setSky(.05); applyQuality();
     GAME.toTitle();
+    if (GOTO && GOTO.act) { AUDIO.resume(); if (GOTO.act === 'op') GAME.startOp(GOTO.op, GOTO.diff); else if (GOTO.act === 'new') GAME.start(0, true); else if (GOTO.act === 'cont') { const s = readSave(); if (s) GAME.start(s.ch, false); } }
     requestAnimationFrame(frame);
   } catch (err) {
     say('読み込みに失敗しました。ページを再読み込みしてください。（' + (err && err.message || err) + '）');
@@ -3280,7 +3344,596 @@ async function boot() {
   }
   window.__ready = true;
 }
-window.__TZ = { loop: v => (RUN = v), step: (sec, d = 1 / 30) => { for (let t = 0; t < sec; t += d) tick(d); }, tick, render, THREE, scene, camera, renderer, vmScene, vmCam, GAME, PLAYER, ZOMBIES, ALLIES, STORY, CHAPTERS, DIR, PICK, UI, SAY, FX, VM, HELI, AUDIO, COL, NAV, ROT, onResize, applyHome, PLACES, SPAWNS, LAMPS, IN, SET, QUAL, MAT, TEX, SKY, WEAPONS, GRENADES, setSky, applyQuality, groundH, showScreen, readSave, zplace };
+
+// =========================================================================================
+//  その後の作戦：東京のほかの地区・大阪・京都の街（本編をクリアすると、作戦地図から行ける）
+//  街は1つずつ作る（ほかの地区へ行くときは、ページを読みなおして、その街を組み立てる）
+// =========================================================================================
+// ---------- 共通の部品 ----------
+function aGround(x0, z0, x1, z1) { bquad('asphalt', [x0, 0, z1], [x1, 0, z1], [x1, 0, z0], [x0, 0, z0], [x0 / 6, z0 / 6, x1 / 6, z1 / 6]); }
+// 車道（中央線と車線の点線つき）。axis＝道の向き
+function aRoad(x0, z0, x1, z1, o = {}) {
+  ROADS.push([x0, z0, x1, z1]); const along = Math.abs(z1 - z0) > Math.abs(x1 - x0) ? 'z' : 'x';
+  if (o.plain) return;
+  if (along === 'z') { const c = (x0 + x1) / 2, w = x1 - x0; markBox(c, (z0 + z1) / 2, .16, z1 - z0, 0, 'markY'); if (w > 12) { dashes('z', c - w / 4, z0, z1); dashes('z', c + w / 4, z0, z1); } }
+  else { const c = (z0 + z1) / 2, w = z1 - z0; markBox((x0 + x1) / 2, c, x1 - x0, .16, 0, 'markY'); if (w > 12) { dashes('x', c - w / 4, x0, x1); dashes('x', c + w / 4, x0, x1); } }
+}
+// 街のはしの見えない壁と、道のはしの封鎖（バリケード・車・赤いランプ）
+function aBounds(x0, z0, x1, z1) { COL.box(x0 - 8, z0 - 8, x0, z1 + 8, 0, 40); COL.box(x1, z0 - 8, x1 + 8, z1 + 8, 0, 40); COL.box(x0 - 8, z0 - 8, x1 + 8, z0, 0, 40); COL.box(x0 - 8, z1, x1 + 8, z1 + 8, 0, 40); }
+function aBlockade(x, z, axis, w) {
+  const ry = axis === 'x' ? Math.PI / 2 : 0;
+  if (w > 10) { truck(axis === 'x' ? x : x - 3.6, axis === 'x' ? z - 3.6 : z, ry, [.5, .52, .5]); truck(axis === 'x' ? x : x + 3.6, axis === 'x' ? z + 3.6 : z, ry + Math.PI, [.74, .74, .72]); } else bus(x, z, ry, 0);
+  for (let k = -1; k <= 1; k++) barricade(axis === 'x' ? x - 3 * Math.sign(x || 1) : x + k * w * .3, axis === 'x' ? z + k * w * .3 : z - 3 * Math.sign(z || 1), axis === 'x' ? Math.PI / 2 : 0, 2.2);
+  glow(x, 2.2, z, 5, [1, .1, .06], 2);
+}
+// 遠くの街なみ（シルエット）
+function aSkyline(cx, cz, rIn, rOut, ex, hk = 1, n = 64) {
+  const sk = [.05, .06, .09];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU + Rr(-.03, .03), d = Rr(rIn, rOut), x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d * 1.15, w = Rr(16, 40), h = (Rr(18, 60) + (R() < .16 ? Rr(50, 130) : 0)) * hk, dd = Rr(16, 34);
+    if (x > ex[0] && x < ex[2] && z > ex[1] && z < ex[3]) continue;
+    bbox('skyline', x, h / 2, z, w, h, dd, { col: sk.map(v => v * Rr(.55, 1)), faces: 'xXzZY' });
+    const m = (h * w / 100) | 0, fx = Math.abs(x - cx) > Math.abs(z - cz), sgn = fx ? Math.sign(cx - x) : Math.sign(cz - z);
+    for (let k = 0; k < m; k++) { const u = Rr(-.45, .45), y = Rr(4, h - 2), c2 = pick([[.9, .75, .45], [.7, .8, 1], [1, .9, .7]], R).map(v => v * Rr(.12, .4));
+      if (fx) bbox('skyline', x + sgn * (w / 2 + .1), y, z + u * dd, .1, .9, 1.4, { col: c2, faces: sgn > 0 ? 'X' : 'x' }); else bbox('skyline', x + u * w, y, z + sgn * (dd / 2 + .1), 1.4, .9, .1, { col: c2, faces: sgn > 0 ? 'Z' : 'z' }); }
+    if (h > 80) { bbox('blink', x, h + .8, z, 1.2, 1.6, 1.2); glow(x, h + 1, z, 14, [1, .1, .05], 1); }
+  }
+}
+// 水面（川・運河）と、岸の石垣
+function aWater(x0, z0, x1, z1, y = -1.3) { bquad('water', [x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], [x0 / 8, z0 / 8, x1 / 8, z1 / 8]); }
+function aBank(x0, z0, x1, z1, y = -1.6) { bbox('concrete', (x0 + x1) / 2, (CURB + y) / 2, (z0 + z1) / 2, x1 - x0, CURB - y, z1 - z0, { col: [.46, .45, .42], faces: 'xXzZ' }); }
+// 人が入れない水の上（弾は通る）
+function aNoWalk(x0, z0, x1, z1) { COL.box(x0, z0, x1, z1, -2, 1.2, { pass: true, mat: 'water' }); }
+// 町家（京都）：黒っぽい木の格子・白いしっくい・かわら屋根。face＝通りに向く側
+function machiya(x0, z0, x1, z1, face, o = {}) {
+  const w = x1 - x0, d = z1 - z0, h1 = 3.1, h2 = o.one ? 0 : 2.5, H = h1 + h2, wood = o.wood || [.2, .13, .08], plaster = [.82, .78, .7], roof = [.16, .17, .18];
+  bbox('wood', (x0 + x1) / 2, H / 2, (z0 + z1) / 2, w - .1, H, d - .1, { col: wood });
+  if (h2) bbox('paint', (x0 + x1) / 2, h1 + h2 * .55, (z0 + z1) / 2, w - .06, h2 * .5, d - .06, { col: plaster });
+  COL.box(x0, z0, x1, z1, 0, H + 1.4, { mat: 'wood' });
+  // 屋根（通りに向かってかたむく）
+  const fN = face === 'n' || face === 's', sgn = face === 'n' || face === 'w' ? -1 : 1, L = fN ? w : d, D = fN ? d : w, ry = fN ? 0 : Math.PI / 2;
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, ang = .38 * sgn;
+  bgeo('paint', GEO.box || (GEO.box = new THREE.BoxGeometry(1, 1, 1)), mat4(cx, H + .55, cz, ry, L + .5, .16, D + .8, fN ? ang : 0, fN ? 0 : -ang), roof);
+  // 1階のひさし・格子・のれん・ちょうちん
+  const ox = fN ? 0 : sgn * (w / 2 + .45), oz = fN ? sgn * (d / 2 + .45) : 0;
+  bbox('paint', cx + ox, h1 + .05, cz + oz, fN ? L + .2 : .9, .12, fN ? .9 : L + .2, { col: roof });
+  const n = Math.max(3, Math.round(L / .22)); for (let i = 0; i < n; i++) { const t = -L / 2 + .2 + i * (L - .4) / (n - 1); if (Math.abs(t) < .8 && o.door !== false) continue; bbox('wood', cx + (fN ? t : sgn * (w / 2 + .04)), 1.35, cz + (fN ? sgn * (d / 2 + .04) : t), fN ? .05 : .06, 2.5, fN ? .06 : .05, { col: wood.map(v => v * .8) }); }
+  if (R() < .6) { const nc = pick([[.12, .16, .32], [.45, .1, .08], [.86, .84, .78], [.1, .22, .14]], R); bbox('matte', cx + (fN ? 0 : sgn * (w / 2 + .1)), 2.25, cz + (fN ? sgn * (d / 2 + .1) : 0), fN ? 1.5 : .03, .8, fN ? .03 : 1.5, { col: nc }); }
+  if (R() < .55) { const lx = cx + (fN ? L / 2 - .6 : sgn * (w / 2 + .3)), lz = cz + (fN ? sgn * (d / 2 + .3) : L / 2 - .6); lantern(lx, 2.6, lz); pool(lx, lz + (fN ? sgn * 1.5 : 0), 3, [.3, .14, .05], CURB + .03); }
+}
+// 低い店（浅草の仲見世など）：赤い柱・白い看板・シャッター
+function stall(x0, z0, x1, z1, face) {
+  const w = x1 - x0, d = z1 - z0, H = 3.6, col = [.86, .84, .8], cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  bbox('paint', cx, H / 2, cz, w - .1, H, d - .1, { col }); COL.box(x0, z0, x1, z1, 0, H + .6, { mat: 'stone' });
+  bbox('paint', cx, H + .25, cz, w + .3, .5, d + .3, { col: [.52, .1, .08] });
+  const fN = face === 'n' || face === 's', sgn = face === 'n' || face === 'w' ? -1 : 1, L = fN ? w : d;
+  const px = fN ? (sgn > 0 ? x0 : x1) : (sgn > 0 ? x1 : x0), pz = fN ? (sgn > 0 ? z1 : z0) : (sgn > 0 ? z1 : z0), ux = fN ? -sgn : 0, uz = fN ? 0 : sgn;
+  decalW('facade', FUV(R() < .5 ? 4 : (R() * 2) | 0, 4), fN ? (sgn > 0 ? x0 : x1) : px, fN ? pz : (sgn > 0 ? z0 : z1), fN ? sgn : 0, fN ? 0 : -sgn, 0, L, 3, 0.02);
+  decalW('sign', SUV_H((R() * 18) | 0), fN ? cx - sgn * L * .4 : px + sgn * .02, fN ? pz + sgn * .02 : cz + sgn * L * .4, fN ? sgn : 0, fN ? 0 : -sgn, 3.05, L * .8, L * .2, 0.06);
+  for (const t of [-L / 2 + .2, L / 2 - .2]) bcyl('paint', fN ? cx + t : px + sgn * .25, 1.7, fN ? pz + sgn * .25 : cz + t, .09, 3.4, [.62, .1, .07], 6);
+  lantern(fN ? cx : px + sgn * .5, 3.2, fN ? pz + sgn * .5 : cz); pool(fN ? cx : px + sgn * 1.6, fN ? pz + sgn * 1.6 : cz, 3, [.3, .12, .05], CURB + .03); LAMPS.push({ x: fN ? cx : px + sgn * 1.2, y: 3, z: fN ? pz + sgn * 1.2 : cz, dim: .3 });
+}
+// 寺・神社の建物：石の基壇・朱の柱・大きな屋根（寄棟）
+function hall(cx, cz, w, d, h, o = {}) {
+  const pil = o.pillar || [.62, .12, .06], wall = o.wall || [.3, .18, .1], roof = o.roof || [.16, .18, .18];
+  bbox('concrete', cx, .6, cz, w + 3, 1.2, d + 3, { col: [.5, .49, .46] }); COL.box(cx - w / 2 - 1.5, cz - d / 2 - 1.5, cx + w / 2 + 1.5, cz + d / 2 + 1.5, 0, 1.2, { mat: 'stone' });
+  bbox('wood', cx, 1.2 + h / 2, cz, w - 1.4, h, d - 1.4, { col: wall }); COL.box(cx - w / 2 + .7, cz - d / 2 + .7, cx + w / 2 - .7, cz + d / 2 - .7, 1.2, 1.2 + h, { mat: 'wood' });
+  for (let i = 0; i <= 6; i++) for (const s of [-1, 1]) { bcyl('paint', cx - w / 2 + i * w / 6, 1.2 + h / 2, cz + s * d / 2, .3, h, pil, 8); bcyl('paint', cx + s * w / 2, 1.2 + h / 2, cz - d / 2 + i * d / 6, .3, h, pil, 8); }
+  bbox('paint', cx, 1.2 + h + .3, cz, w + .6, .6, d + .6, { col: pil.map(v => v * .7) });
+  bgeo('paint', coneG(4), mat4(cx, 1.2 + h + .6 + h * .45, cz, Math.PI / 4, (w + 6) * .72, h * .9, (d + 6) * .72), roof);
+  bbox('paint', cx, 1.2 + h + .6 + h * .9, cz, w * .5, .5, .5, { col: roof.map(v => v * .7) });
+  if (o.lamp !== false) { for (const s of [-1, 1]) { lantern(cx + s * w * .25, 1.2 + h - .6, cz + d / 2 + .6); } pool(cx, cz + d / 2 + 4, 8, [.32, .14, .05], CURB + .03); LAMPS.push({ x: cx, y: 1.2 + h - 1, z: cz + d / 2 + 2, dim: .5 }); glow(cx, 1.2 + h - .6, cz + d / 2 + .6, 5, [1, .5, .2]); }
+}
+// 五重塔
+function pagoda(cx, cz, s = 1, far) {
+  const key = far ? 'skyline' : 'paint', base = 9 * s; let y = 0;
+  if (!far) { bbox('concrete', cx, .5, cz, base + 2, 1, base + 2, { col: [.5, .49, .46] }); COL.box(cx - base / 2 - 1, cz - base / 2 - 1, cx + base / 2 + 1, cz + base / 2 + 1, 0, 40, { mat: 'wood' }); y = 1; }
+  for (let i = 0; i < 5; i++) { const k = 1 - i * .09, bw = base * k * .62, hh = 4.6 * s;
+    bbox(key, cx, y + hh / 2, cz, bw, hh, bw, { col: far ? [.07, .06, .07] : [.55, .12, .07] });
+    bgeo(key, coneG(4), mat4(cx, y + hh + .9 * s, cz, Math.PI / 4, base * k * .82, 1.8 * s, base * k * .82), far ? [.05, .05, .06] : [.15, .16, .17]); y += hh + 1.4 * s; }
+  bcyl(key, cx, y + 4 * s, cz, .25 * s, 8 * s, far ? [.06, .05, .05] : [.55, .45, .2], 6);
+  if (!far) { glow(cx, y + 8 * s, cz, 4, [1, .1, .05], 1); }
+}
+// 大きな門（雷門のような門・楼門）。大ちょうちん（lan＝文字）つき
+function gate(cx, cz, w, h, o = {}) {
+  const red = o.col || [.66, .1, .06], roof = [.16, .17, .18];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { bcyl('paint', cx + sx * w / 2, h / 2, cz + sz * 1.6, .4, h, red, 10); COL.add(cx + sx * w / 2, cz + sz * 1.6, .45, .45, 0, h, 0, { mat: 'wood' }); }
+  for (const sx of [-1, 1]) { bbox('paint', cx + sx * (w / 2 + 2.6), h * .4, cz, 4.4, h * .8, 3.4, { col: red.map(v => v * .8) }); COL.box(cx + sx * (w / 2 + .4) - (sx < 0 ? 4.6 : 0), cz - 1.7, cx + sx * (w / 2 + .4) + (sx > 0 ? 4.6 : 0), cz + 1.7, 0, h, { mat: 'wood' }); }
+  bbox('paint', cx, h + .5, cz, w + 10, 1, 4.6, { col: red.map(v => v * .7) });
+  bgeo('paint', coneG(4), mat4(cx, h + 2.2, cz, Math.PI / 4, (w + 14) * .72, 3, 9.5 * .72), roof);
+  if (o.lan) { bsph('paint', cx, h - 2.2, cz, 1.7, 2.1, 1.7, [.72, .08, .05]); for (const y of [h - 4.1, h - .3]) bcyl('paint', cx, y, cz, 1.2, .3, [.06, .06, .06], 12);
+    decalW('sign', signH(o.lan), cx - 1.4, cz + 1.75, 1, 0, h - 2.9, 2.8, .7, 0.02); decalW('sign', signH(o.lan), cx + 1.4, cz - 1.75, -1, 0, h - 2.9, 2.8, .7, 0.02); glow(cx, h - 2.2, cz, 6, [1, .3, .15]); pool(cx, cz, 7, [.35, .1, .05], CURB + .03); LAMPS.push({ x: cx, y: h - 3, z: cz, dim: .6 }); }
+}
+// 鳥居
+function torii(cx, cz, w, h, ry = 0, col = [.72, .15, .07]) {
+  const c = Math.cos(ry), s = Math.sin(ry), P = t => [cx + t * c, cz - t * s];
+  for (const t of [-w / 2, w / 2]) { const [x, z] = P(t); bcyl('paint', x, h / 2, z, .32, h, col, 10); COL.add(x, z, .34, .34, 0, h, 0, { mat: 'wood', nav: false }); }
+  bbox('paint', cx, h + .25, cz, w + 2.4, .45, .7, { col, ry }); bbox('paint', cx, h + .6, cz, w + 3, .22, .9, { col: [.06, .06, .06], ry }); bbox('paint', cx, h - .9, cz, w + .6, .32, .36, { col, ry });
+}
+// 石灯籠
+function stoneLantern(x, z) { bbox('concrete', x, CURB + .6, z, .34, 1.2, .34, { col: [.45, .45, .44] }); bbox('emis', x, CURB + 1.4, z, .42, .4, .42, { col: [1.6, 1.1, .5] }); bbox('concrete', x, CURB + 1.75, z, .76, .18, .76, { col: [.42, .42, .41] }); glow(x, CURB + 1.4, z, 1.6, [1, .6, .25]); COL.add(x, z, .3, .3, 0, 1.9, 0, { nav: false }); }
+// 屋根のついた商店街（アーケード）
+function arcade(x0, z0, x1, z1, y = 7.4) {
+  bbox('glass', (x0 + x1) / 2, y, (z0 + z1) / 2, x1 - x0, .08, z1 - z0, { faces: 'yY' });
+  const along = Math.abs(z1 - z0) > Math.abs(x1 - x0);
+  for (let t = (along ? z0 : x0); t <= (along ? z1 : x1); t += 6) { if (along) { bbox('metal', (x0 + x1) / 2, y - .2, t, x1 - x0, .3, .3, { col: [.4, .42, .44] }); bbox('emis', (x0 + x1) / 2, y - .45, t, 1.6, .08, .3, { col: [2, 1.9, 1.7] }); LAMPS.push({ x: (x0 + x1) / 2, y: y - 1, z: t, dim: .35 }); pool((x0 + x1) / 2, t, 5, [.26, .24, .2], CURB + .03); }
+    else { bbox('metal', t, y - .2, (z0 + z1) / 2, .3, .3, z1 - z0, { col: [.4, .42, .44] }); bbox('emis', t, y - .45, (z0 + z1) / 2, .3, .08, 1.6, { col: [2, 1.9, 1.7] }); LAMPS.push({ x: t, y: y - 1, z: (z0 + z1) / 2, dim: .35 }); pool(t, (z0 + z1) / 2, 5, [.26, .24, .2], CURB + .03); } }
+}
+// 壁の大きな看板（ネオン）：(px,pz)＝左下、u＝右向き
+function neon(name, px, pz, ux, uz, y0, w, col) { const h = w / 4; decalW('sign', signH(name), px, pz, ux, uz, y0, w, h, 0.25); const cx = px + ux * w / 2, cz = pz + uz * w / 2, nx = -uz, nz = ux; bbox('paint', cx + nx * .12, y0 + h / 2, cz + nz * .12, Math.abs(ux) * (w + .3) + Math.abs(uz) * .2, h + .3, Math.abs(uz) * (w + .3) + Math.abs(ux) * .2, { col: [.05, .05, .06] }); glow(cx + nx * .6, y0 + h / 2, cz + nz * .6, w * 1.1, col.map(v => v * .7)); pool(cx + nx * 4, cz + nz * 4, w * .9, col.map(v => v * .14), CURB + .03); }
+// 大型ビジョン
+function vision(px, pz, ux, uz, y0, w) { decalW('screen', [0, 0, 1, 1], px, pz, ux, uz, y0, w, w * .5625, 0.3); const nx = -uz, nz = ux; glow(px + ux * w / 2 + nx, y0 + w * .28, pz + uz * w / 2 + nz, w, [.3, .3, .5]); pool(px + ux * w / 2 + nx * 8, pz + uz * w / 2 + nz * 8, w * .8, [.1, .1, .2], .03); }
+// 鉄の展望塔（新世界）
+function steelTower(cx, cz) {
+  const H = 64, leg = 9, mc = [.55, .56, .58];
+  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const x0 = cx + sx * leg, z0 = cz + sz * leg, x1 = cx + sx * 2.6, z1 = cz + sz * 2.6, len = Math.hypot(x1 - x0, H * .55, z1 - z0);
+    bgeo('metal', GEO.box || (GEO.box = new THREE.BoxGeometry(1, 1, 1)), mat4((x0 + x1) / 2, H * .275, (z0 + z1) / 2, Math.atan2(x1 - x0, z1 - z0), .8, len, .8, Math.atan2(Math.hypot(x1 - x0, z1 - z0), H * .55)), mc);
+    COL.add(x0, z0, .7, .7, 0, 8, 0, { mat: 'metal' });
+  }
+  for (let y = 5; y < H * .55; y += 6) { const k = 1 - y / (H * .55) * .72, r = leg * k + .6; for (const [a, b] of [[[-r, -r], [r, -r]], [[r, -r], [r, r]], [[r, r], [-r, r]], [[-r, r], [-r, -r]]]) { const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, L = Math.hypot(b[0] - a[0], b[1] - a[1]); bbox('metal', cx + mx, y, cz + mz, Math.abs(b[0] - a[0]) || .25, .25, Math.abs(b[1] - a[1]) || .25, { col: mc }); } }
+  bbox('metal', cx, H * .55 + 3, cz, 9, 6, 9, { col: [.85, .86, .88] }); bbox('emis', cx, H * .55 + 3, cz, 9.1, 1.2, 9.1, { col: [1.4, 1.6, 2], faces: 'xXzZ' });
+  bbox('metal', cx, H * .55 + 13, cz, 3.2, 14, 3.2, { col: mc }); bbox('metal', cx, H * .55 + 21, cz, 6.5, 3.5, 6.5, { col: [.85, .86, .88] });
+  bcyl('metal', cx, H + 8, cz, .2, 10, mc, 6);
+  for (let i = 0; i < 4; i++) glow(cx + [-4.6, 4.6, 0, 0][i], H * .55 + 3, cz + [0, 0, -4.6, 4.6][i], 10, [.5, .7, 1]);
+  PLACES.beacon = { x: cx, y: H + 13, z: cz };
+}
+// 動く乗り物（作戦の脱出用）：船・装甲車
+const VEH = {
+  g: null, kind: '', t: -1, T: 1, from: null, to: null, arrived: false, light: null,
+  build(kind) {
+    if (this.g) { scene.remove(this.g); this.g = null; }
+    const g = new THREE.Group(), std = o => new THREE.MeshStandardMaterial(o), add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+    const box = (w, h, d) => new THREE.BoxGeometry(w, h, d), lit = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.1, 1.5) }), red = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, .2, .1) });
+    if (kind === 'boat') { const hull = std({ color: 0xe8e6e0, roughness: .5 }), dark = std({ color: 0x1a2430, roughness: .3, metalness: .4 }), blue = std({ color: 0x1d4f8a, roughness: .5 });
+      add(box(4.6, 1.4, 16), hull, 0, .2, 0); add(box(4.7, .35, 16.1), blue, 0, -.3, 0); add(new THREE.CylinderGeometry(2.3, 2.3, 1.4, 3, 1), hull, 0, .2, 8.6).rotation.y = Math.PI / 2;
+      add(box(3.8, 2.2, 10), hull, 0, 2, -1.2); add(box(3.9, 1.0, 9.6), dark, 0, 2.2, -1.2); for (let i = 0; i < 6; i++) add(box(.1, .5, 1.1), lit, 1.96, 2.3, -5.2 + i * 1.6), add(box(.1, .5, 1.1), lit, -1.96, 2.3, -5.2 + i * 1.6);
+      add(box(3.2, .2, 9.6), blue, 0, 3.2, -1.2); this.lamp = add(new THREE.SphereGeometry(.18, 6, 4), red, 0, 3.5, 3.4); add(new THREE.SphereGeometry(.22, 6, 4), lit, 0, 1.2, 9.6); }
+    else { const body = std({ color: 0x3a4430, roughness: .6, metalness: .3 }), dark = std({ color: 0x111312, roughness: .5 }), glass = std({ color: 0x1a222a, roughness: .1, metalness: .4 });
+      add(box(2.6, 2.2, 6.8), body, 0, 1.7, 0); add(box(2.5, 1.0, 1.6), glass, 0, 2.3, 2.9); for (const x of [-1.25, 1.25]) for (const z of [-2.4, 0, 2.4]) { const w = add(new THREE.CylinderGeometry(.55, .55, .4, 12), dark, x, .55, z); w.rotation.z = Math.PI / 2; }
+      add(box(2.2, .3, 4), dark, 0, 2.95, -1); this.lamp = add(new THREE.SphereGeometry(.16, 6, 4), red, 0, 3.2, 1.2); add(box(.4, .25, .1), lit, -.85, 1.6, 3.42); add(box(.4, .25, .1), lit, .85, 1.6, 3.42); }
+    this.light = new THREE.PointLight(0xffe2b0, 0, 18, 2); this.light.position.set(0, 3, kind === 'boat' ? 8 : 4); g.add(this.light);
+    g.visible = false; scene.add(g); this.g = g; this.kind = kind;
+  },
+  start(kind, from, to, T, yaw) { this.build(kind); this.from = from; this.to = to; this.T = T; this.t = 0; this.arrived = false; this.yaw = yaw; this.g.visible = true; this.light.intensity = 30; AUDIO.heli(false); },
+  hide() { if (this.g) this.g.visible = false; this.t = -1; this.arrived = false; },
+  update(dt) {
+    if (!this.g || this.t < 0) return; this.t += dt; const k = sm(clamp(this.t / this.T, 0, 1)), f = this.from, to = this.to, y = this.kind === 'boat' ? -1.2 : 0;
+    this.g.position.set(lerp(f.x, to.x, k), y + (this.kind === 'boat' ? Math.sin(GAME.t * 1.3) * .08 : 0), lerp(f.z, to.z, k)); this.g.rotation.y = this.yaw; if (this.lamp) this.lamp.visible = Math.floor(GAME.t * 2.2) % 2 === 0;
+    if (k >= 1 && !this.arrived) { this.arrived = true; AUDIO.sfx('obj'); }
+    if (this.t < this.T && Math.random() < .3) AUDIO.at('thud', this.g.position.x, this.g.position.z, .4);
+  },
+};
+
+// ---------- 地区ごとの街 ----------
+const AREA_DEF = {
+  // ===================================================================== 新宿・西口の高層ビル街
+  shinjuku: { name: '新宿・西口', pref: '東京都', async build(say) {
+    say('新宿の道をしいています…'); await nextFrame();
+    aGround(-140, -230, 140, 140);
+    aRoad(-10, -108, 10, 50); aRoad(-70, 33, 70, 47); aRoad(-70, -37, 70, -23); aRoad(-70, -107, 70, -93);
+    for (const b of [[-70, 47, -10, 50], [10, 47, 70, 50], [-70, -23, -10, 33], [10, -23, 70, 33], [-70, -93, -10, -37], [10, -93, 70, -37], [-70, -175, -10, -107], [10, -175, 70, -107]]) block(b[0], b[1], b[2], b[3]);
+    block(-70, 50, 70, 104); block(-10, -175, 10, -108);
+    bbox('brick', 0, CURB + .012, 77, 90, .02, 52, { faces: 'Y', uvs: 2.4, col: [.8, .8, .84] });   // 駅前のバスターミナル
+    bbox('brick', 0, CURB + .012, -128, 80, .02, 40, { faces: 'Y', uvs: 2.4, col: [.78, .78, .8] });   // 都民広場のような広場
+    for (const z of [38, -30, -100]) { zebra('z', -11, z - 6, z + 6); zebra('z', 11, z - 6, z + 6); zebra('x', z - 8, -9, 9); zebra('x', z + 8, -9, 9); }
+    say('高層ビルを建てています…'); await nextFrame();
+    const glassT = B => { B.style = 3; B.col = pick([[.8, .9, 1], [.7, .78, .86], [.86, .9, .92], [.6, .66, .72]], R); B.lit = .26; B.shut = .25; B.signs = R() < .3; B.billboard = R() < .3 ? (B.faces.e === 'street' ? 'e' : 'w') : null; };
+    for (const [z0, z1] of [[-20, 30], [-90, -40]]) { rowZ(-66, -14, z0, z1, 'e', { fmin: 20, fmax: 38, wmin: 18, wmax: 26, endN: 'street', endS: 'street', back: 'alley', tweak: glassT }); rowZ(14, 66, z0, z1, 'w', { fmin: 20, fmax: 38, wmin: 18, wmax: 26, endN: 'street', endS: 'street', back: 'alley', tweak: glassT }); }
+    // ツインタワー（北のつきあたり）
+    for (const s of [-1, 1]) building({ x0: s < 0 ? -36 : 8, x1: s < 0 ? -8 : 36, z0: -176, z1: -150, floors: 44, style: 0, col: [.78, .76, .72], lit: .2, shut: .2, signs: false, faces: { s: 'street', e: s < 0 ? 'alley' : 'street', w: s < 0 ? 'street' : 'alley' } });
+    building({ x0: -8, x1: 8, z0: -168, z1: -150, floors: 6, style: 0, col: [.74, .72, .7], lit: .3, shut: 0, signs: false, faces: { s: 'street' } });
+    for (const s of [-1, 1]) building({ x0: s < 0 ? -66 : 44, x1: s < 0 ? -44 : 66, z0: -172, z1: -112, floors: 14, style: 1, col: pick(BCOL, R), lit: .15, shut: .3, signs: false, faces: { n: 'alley', s: 'street', e: s < 0 ? 'street' : null, w: s > 0 ? 'street' : null } });
+    // 駅（南）
+    { for (let i = 0; i < 18; i++) { const ax = 45 - i * 5, bx = ax - 5; bquad('facade', [ax, 0, 104], [bx, 0, 104], [bx, 5, 104], [ax, 5, 104], FUV(i === 8 || i === 9 ? 5 : i % 3 === 1 ? 2 : 0, 4), [.8, .82, .86]); for (let f = 0; f < 5; f++) bquad('facade', [ax, 5 + f * 3.75, 104], [bx, 5 + f * 3.75, 104], [bx, 8.75 + f * 3.75, 104], [ax, 8.75 + f * 3.75, 104], FUV(5, 5), [.8, .82, .86]); }
+      COL.box(-45, 104, 45, 118, 0, 24, { mat: 'stone' }); bbox('concrete', 0, 5.2, 102.9, 40, .35, 2.4, { col: [.7, .7, .72] });
+      neon('新宿駅 西口', 6, 104, -1, 0, 6.3, 12, [.6, .6, .7]); LAMPS.push({ x: 0, y: 4.6, z: 100 }); pool(0, 98, 10, [.3, .3, .34], CURB + .03); }
+    // バスターミナル：屋根つきのりば・バス・タクシー
+    for (const z of [64, 78, 92]) { bbox('metal', 0, CURB + 3, z, 60, .2, 3, { col: [.4, .42, .44] }); for (let x = -28; x <= 28; x += 8) bcyl('metal', x, CURB + 1.5, z + 1.2, .08, 3, [.4, .42, .44], 6); bbox('emis', 0, CURB + 2.85, z, 50, .05, .25, { col: [.9, .9, .85], faces: 'y' }); pool(0, z, 14, [.22, .22, .24], CURB + .03); LAMPS.push({ x: -16, y: 2.6, z, dim: .4 }); LAMPS.push({ x: 16, y: 2.6, z, dim: .4 }); }
+    bus(-20, 70, Math.PI / 2, 0); bus(14, 71, -Math.PI / 2 + .1, 1); bus(-8, 85, Math.PI / 2 + .2, 0); bus(30, 86, -Math.PI / 2, 1);
+    for (const [x, z, r] of [[-36, 58, .3], [36, 56, 2.9], [-40, 96, 1.4]]) car('Taxi', x, z, r, [.02, .02, .025], { lights: R() < .5 });
+    // 車の列・事故・燃える車
+    jam('z', -6, -100, 30, Math.PI, { skip: .35 }); jam('z', -2.2, -95, 28, Math.PI, { skip: .55 }); jam('z', 2.2, -96, 30, 0, { skip: .55 }); jam('z', 6, -100, 30, 0, { skip: .35 });
+    jam('x', 37, -66, -14, Math.PI / 2, { skip: .4 }); jam('x', 43, 14, 66, -Math.PI / 2, { skip: .4 }); jam('x', -27, -66, -14, Math.PI / 2, { skip: .45 }); jam('x', -33, 14, 66, -Math.PI / 2, { skip: .45 });
+    car('Cop', -4, -30, 1.2, WHITE, { siren: true }); car('SUV', 4, 37, -.4, CAR_PAINTS[1], { fire: true }); WORLD.fires++;
+    // 街灯・木・信号・小物
+    for (let z = -96; z <= 40; z += 18) for (const s of [-1, 1]) lamp(s * 11.2, z, -s, 0, 9);
+    for (const z of [40, -30, -100]) for (const x of [-56, -30, 30, 56]) lamp(x, z + (x < 0 ? -8.2 : 8.2), 0, x < 0 ? 1 : -1, 8);
+    for (let z = -90; z <= 26; z += 12) for (const s of [-1, 1]) tree(s * 13, z + 6, 1.2, 0);
+    for (const z of [40, -30, -100]) { trafficLight(-9.2, z - 8, Math.PI / 2, 'A'); trafficLight(9.2, z + 8, -Math.PI / 2, 'A'); }
+    for (const [x, z] of [[-30, 58], [30, 58], [-50, 96], [50, 96]]) tree(x, z, 1.3, 0);
+    for (const [x, z, ry] of [[-13, 10, Math.PI / 2], [13, -60, -Math.PI / 2], [-13, -78, Math.PI / 2], [26, 51, 0]]) vending(x, z, ry);
+    for (const [x, z] of [[-14, -45], [15, 20], [-44, -36.5], [50, 32.5], [-60, -106]]) trash(x, z, 4);
+    // 広場（ヘリの着陸地点）：土のう・テント
+    decalG(PD.heli, 0, -130, 13, 13, 0, CURB + .03);
+    for (const [x, z, ry] of [[-14, -118, .3], [14, -120, -.3], [-16, -140, 0], [16, -138, 0]]) sandbags(x, z, ry, 3.4, 3);
+    for (const [x, z] of [[-28, -134], [28, -134]]) { bbox('matte', x, CURB + 2.6, z, 5.4, .14, 3.6, { col: [.82, .82, .8] }); bgeo('matte', coneG(4), mat4(x, CURB + 3.1, z, Math.PI / 4, 3.8, 1, 2.6), [.82, .82, .8]); crates(x - 1.8, z - .8, 2); }
+    for (const [x, z] of [[-30, -118], [30, -118], [-30, -142], [30, -142]]) parkLamp(x, z);
+    truck(-20, -112, Math.PI / 2, [.2, .24, .16], [.2, .24, .16]);
+    // はしの封鎖
+    for (const z of [40, -30, -100]) for (const s of [-1, 1]) aBlockade(s * 66, z, 'x', 14);
+    aBounds(-70, -176, 70, 104);
+    // ゾンビが出てくる場所
+    for (const p of [[-64, 40], [64, 40], [-64, -30], [64, -30], [-64, -100], [64, -100], [-40, 49], [40, 49], [0, 60], [-30, 100], [30, 100], [-12, -10], [12, 0], [-12, -60], [12, -70], [-40, -36], [40, -24], [-40, -94], [40, -106], [-20, -150], [20, -150], [-60, -150], [60, -150], [0, -60], [0, -15]]) SPAWNS.push({ x: p[0], z: p[1] });
+    aSkyline(0, -40, 190, 320, [-110, -230, 110, 130], 1.4);
+    PLACES.start = { x: 0, z: 82 }; PLACES.title = { x: 0, z: -60 }; PLACES.lz = { x: 0, z: -130 }; PLACES.survivors = { x: 0, z: -124 };
+    PLACES.supply = [{ x: -40, z: 30 }, { x: 46, z: -36 }, { x: -46, z: -94 }]; PLACES.crate = { x: 6, z: 58 }; PLACES.crate2 = { x: -6, z: -116 };
+  } },
+  // ===================================================================== 秋葉原・電気街
+  akiba: { name: '秋葉原・電気街', pref: '東京都', async build(say) {
+    say('電気街の道をしいています…'); await nextFrame();
+    aGround(-140, -230, 140, 140);
+    aRoad(-8, -140, 8, 80); aRoad(-60, 40, 60, 50); aRoad(-60, -55, 60, -45); aRoad(-60, -105, 60, -95);
+    for (const b of [[-60, 50, -8, 80], [8, 50, 60, 80], [-60, -45, -8, 40], [8, -45, 60, 40], [-60, -95, -8, -55], [8, -95, 60, -55], [-60, -140, -8, -105], [8, -140, 60, -105]]) block(b[0], b[1], b[2], b[3]);
+    for (const [a, b] of [[-140, -105], [-95, -55], [-45, 40], [50, 80]]) for (const x of [-30, 30]) bbox('brick', x, CURB + .012, (a + b) / 2, 6, .02, b - a, { faces: 'Y', uvs: 2.4, col: [.74, .72, .7] });   // 裏通り
+    for (const z of [45, -50, -100]) { zebra('z', -9, z - 4, z + 4); zebra('z', 9, z - 4, z + 4); zebra('x', z - 6, -7, 7); zebra('x', z + 6, -7, 7); }
+    say('電気街のビルを建てています…'); await nextFrame();
+    const elec = B => { B.shut = .12; B.lit = .32; B.style = R() < .5 ? 2 : 1; if (R() < .45) B.billboard = B.faces.e === 'street' ? 'e' : B.faces.w === 'street' ? 'w' : B.faces.s === 'street' ? 's' : 'n'; };
+    for (const [z0, z1, eN, eS] of [[50, 80, 'street', null], [-45, -14, 'street', null], [16, 40, null, 'street'], [-95, -55, 'street', 'street'], [-140, -105, null, 'street']]) {
+      rowZ(-27, -11.6, z0, z1, 'e', { fmin: 5, fmax: 10, wmin: 6, wmax: 9, endN: eS, endS: eN, back: 'street', tweak: elec }); rowZ(11.6, 27, z0, z1, 'w', { fmin: 5, fmax: 10, wmin: 6, wmax: 9, endN: eS, endS: eN, back: 'street', tweak: elec });
+      rowZ(-60, -33, z0, z1, 'e', { fmin: 4, fmax: 8, wmin: 7, wmax: 11, endN: eS, endS: eN, tweak: elec }); rowZ(33, 60, z0, z1, 'w', { fmin: 4, fmax: 8, wmin: 7, wmax: 11, endN: eS, endS: eN, tweak: elec });
+    }
+    // 高架の線路（東西）と駅
+    { const zc = 0, y1 = 6.2;
+      bbox('concrete', 0, y1 + .5, zc, 160, 1.0, 28, { col: [.5, .5, .5], uvs: 4 }); for (const z of [-13.85, 13.85]) bbox('concrete', 0, y1 + 1.6, z, 160, 1.2, .3, { col: [.48, .48, .47], uvs: 4 });
+      for (const [a, b] of [[-60, -9], [9, 60]]) { COL.box(a, -14, b, 14, 0, y1 + 1);
+        for (const [z, ux] of [[14, 1], [-14, -1]]) { const n = Math.round((b - a) / 3.3), bw = (b - a) / n; for (let i = 0; i < n; i++) { const x0 = ux > 0 ? a + i * bw : b - i * bw, g = R() < .5 ? [(R() * 2) | 0, 4] : R() < .5 ? [4, 4] : [5, 4];
+          bquad('facade', [x0, 0, z], [x0 + ux * bw, 0, z], [x0 + ux * bw, GH, z], [x0, GH, z], FUV(g[0], g[1]), [.64, .64, .62]); bquad('facade', [x0, GH, z], [x0 + ux * bw, GH, z], [x0 + ux * bw, y1, z], [x0, y1, z], FUV(3, 5), [.5, .5, .5]); } } }
+      neon('秋葉原駅 電気街口', -50, 14, 1, 0, 4.2, 12, [.3, .6, 1]); bbox('concrete', -44, 4.2, 15.2, 16, .3, 2.4, { col: [.7, .7, .72] });
+      bquad('concrete', [-9, y1, -14], [9, y1, -14], [9, y1, 14], [-9, y1, 14].slice(), [0, 0, 4, 6], [.3, .3, .3]);
+      for (const z of [-9, 0, 9]) { bbox('concrete', -9.4, y1 / 2, z, .9, y1, .9, { col: [.55, .55, .54] }); bbox('concrete', 9.4, y1 / 2, z, .9, y1, .9, { col: [.55, .55, .54] }); }
+      for (let i = 0; i < 4; i++) { const cx = -45 + i * 20.4; bbox('metal', cx, y1 + 2.85, -5, 19.8, 2.7, 2.9, { col: [.62, .64, .66] }); bbox('paint', cx, y1 + 2.2, -5, 19.84, .34, 2.94, { col: [.9, .75, .1] }); for (const s of [1, -1]) decalW('propE', PUV(PE.train), cx - s * 9.7, -5 + s * 1.48, s, 0, y1 + 2.5, 19.4, 1.2, 0.0); }
+      for (const [x, z] of [[-4, -4], [4, 6]]) { bbox('emis', x, y1 - .12, z, .12, .06, 1.5, { col: [1.6, 1.8, 1.6] }); LAMPS.push({ x, y: y1 - 2.2, z, dim: .3 }); pool(x, z, 4, [.12, .16, .13], .03); }
+    }
+    // 大型ビジョン・ネオン
+    vision(-11.6, -20, 0, 1, 10, 12); vision(11.6, 60, 0, -1, 12, 14); vision(-11.6, 72, 0, 1, 9, 10);
+    neon('ラジオ会館', -27, -45, 1, 0, 9, 10, [1, .3, .2]); neon('アニメ・ゲーム', 27, 50, -1, 0, 11, 12, [.4, .6, 1]); neon('パソコン パーツ', -11.6, 30, 0, 1, 14, 10, [.3, 1, .5]); neon('電子部品 無線', 11.6, -70, 0, -1, 10, 10, [1, .8, .2]);
+    // 車・小物
+    jam('z', -5, -130, 70, Math.PI, { skip: .45 }); jam('z', 5, -128, 70, 0, { skip: .45 }); car('Cop', 3, -50, 2.5, WHITE, { siren: true }); car('SUV', -4, 44, .6, CAR_PAINTS[3], { fire: true }); WORLD.fires++;
+    for (let z = -130; z <= 74; z += 16) for (const s of [-1, 1]) if (Math.abs(z) > 18) lamp(s * 9, z, -s, 0, 7.4);
+    for (const [x, z, ry] of [[-9.6, 34, Math.PI / 2], [9.6, -30, -Math.PI / 2], [-9.6, -80, Math.PI / 2], [9.6, 66, -Math.PI / 2], [-31, -70, Math.PI / 2], [31, 20, -Math.PI / 2]]) vending(x, z, ry);
+    for (const [x, z] of [[-30, -120], [30, -80], [-30, 60], [30, -30], [-30, 25]]) R() < .5 ? crates(x, z, 3) : trash(x, z, 4);
+    for (const [x, z] of [[-32, 70], [28, -125], [-28, -62], [32, 30]]) { lantern(x, 3, z); LAMPS.push({ x, y: 2.6, z, dim: .3 }); }
+    for (const z of [45, -50, -100]) for (const s of [-1, 1]) aBlockade(s * 56, z, 'x', 10);
+    aBlockade(0, -136, 'z', 14); aBlockade(0, 76, 'z', 14);
+    aBounds(-60, -140, 60, 80);
+    for (const p of [[-56, 45], [56, 45], [-56, -50], [56, -50], [-56, -100], [56, -100], [-30, 70], [30, 70], [-30, -20], [30, 30], [-30, -80], [30, -75], [-30, -125], [30, -125], [0, -125], [0, 65], [0, -20], [0, 20], [-20, 45], [20, -50]]) SPAWNS.push({ x: p[0], z: p[1] });
+    aSkyline(0, -30, 170, 300, [-90, -200, 90, 120], 1);
+    PLACES.start = { x: 0, z: 70 }; PLACES.title = { x: 0, z: 20 }; PLACES.parts = [{ x: -10.2, z: 28, n: 'アンテナ' }, { x: 10.2, z: -72, n: '無線機' }, { x: -30, z: -118, n: '大容量バッテリー' }]; PLACES.radio = { x: -30, z: 20 }; PLACES.exit = { x: 0, z: -124 }; PLACES.crate = { x: -24, z: 20 };
+  } },
+  // ===================================================================== 浅草・大門と仲見世、川べり
+  asakusa: { name: '浅草', pref: '東京都', async build(say) {
+    say('浅草の道をしいています…'); await nextFrame();
+    aGround(-140, -230, 140, 140);
+    aRoad(-70, 50, 76, 64); aRoad(48, -130, 58, 50, { plain: true });
+    block(-70, 64, 76, 100); block(-70, -140, 48, 50); block(58, -140, 76, 50);
+    bbox('brick', 0, CURB + .012, -6, 8, .02, 104, { faces: 'Y', uvs: 2.4, col: [.86, .8, .72] });                 // 仲見世の石だたみ
+    bbox('gravel', 0, CURB + .013, -100, 100, .02, 72, { faces: 'Y', uvs: 2 });                                     // 境内
+    zebra('z', -6, 50, 64, 4); zebra('x', 46, 52, 62);
+    // 川（隅田川）と川べりの遊歩道・船着き場
+    aWater(76, -170, 140, 140); aBank(76, -170, 78, 100); bbox('brick', 70, CURB + .012, -35, 12, .02, 210, { faces: 'Y', uvs: 2.4, col: [.72, .7, .66] });
+    for (let z = -136; z < 96; z += 10) if (Math.abs(z - 6) > 6) rail(76.6, z, 76.6, Math.min(z + 9.5, 96));
+    aNoWalk(77, -170, 110, 2); aNoWalk(77, 10, 110, 100); aNoWalk(88, 2, 110, 10);
+    bbox('wood', 82.5, CURB - .2, 6, 11, .4, 8, { col: [.3, .22, .14] }); for (const z of [2.4, 9.6]) rail(77.4, z, 88, z); rail(88, 2.4, 88, 9.6 - 4); decalW('sign', signH('水上バス のりば'), 79, 1.6, 1, 0, 2.2, 4, 1, 0.02); bbox('paint', 81, 2.7, 1.7, 4.2, 1.2, .12, { col: [.08, .08, .09] }); LAMPS.push({ x: 82, y: 3, z: 6 }); pool(80, 6, 6, [.3, .28, .22], CURB + .03); glow(81, 3.2, 1.6, 4, [.4, .6, 1]);
+    // 遠くの電波塔（川の向こう）
+    { const tx = 520, tz = -620; let y = 0; for (let i = 0; i < 10; i++) { const hh = 26, w0 = 40 * Math.pow(.74, i); bgeo('skyline', GEO.tw || (GEO.tw = new THREE.CylinderGeometry(.74, 1, 1, 4, 1, true)), mat4(tx, y + hh / 2, tz, Math.PI / 4, w0 / 2, hh, w0 / 2), [.2, .24, .32]); y += hh; } bcyl('skyline', tx, y + 30, tz, .8, 60, [.3, .34, .4], 5); for (const yy of [110, 170, y + 60]) glow(tx, yy, tz, 30, [.3, .7, 1], 1); }
+    say('門と仲見世を作っています…'); await nextFrame();
+    gate(0, 48, 6, 9, { lan: '浅草 大門' });
+    for (let z = 44; z > -56; z -= 6) { stall(-12, z - 6, -4.4, z - .2, 'e'); stall(4.4, z - 6, 12, z - .2, 'w'); }
+    for (const [x0, x1, f] of [[-48, -12, 'e'], [12, 46, 'w']]) rowZ(x0 + (f === 'e' ? 22 : 0), x1 - (f === 'w' ? 22 : 0), -60, 44, f === 'e' ? 'w' : 'e', { fmin: 2, fmax: 4, wmin: 8, wmax: 12, back: null, tweak: B => { B.style = 2; } });
+    rowX(-140, -136, -60, 46, 'n', { fmin: 3, fmax: 6, back: null });
+    for (const s of [-1, 1]) rowX(66, 96, s < 0 ? -70 : 12, s < 0 ? -12 : 76, 'n', { fmin: 4, fmax: 9, endE: s < 0 ? 'street' : null, endW: s > 0 ? 'street' : null, tweak: B => { B.lit = .2; } });
+    rowZ(-70, -50, -60, 44, 'e', { fmin: 3, fmax: 6, back: null });
+    // 宝蔵門のような二つめの門・本堂・五重塔・常香炉
+    gate(0, -62, 6, 10, { lan: '浅草寺' }); hall(0, -118, 30, 20, 7.5); pagoda(-32, -96, 1);
+    bcyl('metal', 0, CURB + .7, -88, 1.3, 1.4, [.28, .24, .2], 12); bbox('metal', 0, CURB + 1.9, -88, 2.4, .8, 2.4, { col: [.24, .2, .16] }); COL.add(0, -88, 1.3, 1.3, 0, 2.4, 0, { mat: 'metal' }); for (let i = 0; i < 3; i++) glow(Rr(-.6, .6), CURB + 2.5, -88 + Rr(-.6, .6), 2, [.6, .5, .4]);
+    for (const [x, z] of [[-12, -75], [12, -75], [-12, -100], [12, -100], [-22, -128], [22, -128]]) stoneLantern(x, z);
+    for (let i = 0; i < 30; i++) { const x = Rr(-46, 44), z = Rr(-136, -70); if (Math.abs(x) < 18 && z < -104) continue; if (Math.hypot(x + 32, z + 96) < 9 || Math.abs(x) < 6) continue; tree(x, z, Rr(1.1, 1.6), R() < .25 ? 2 : 0); }
+    // 街灯・車・小物
+    for (let x = -64; x <= 70; x += 16) for (const s of [-1, 1]) lamp(x, 57 + s * 8.4, 0, -s, 7.4);
+    for (let z = -120; z <= 40; z += 20) lamp(46.4, z, 1, 0, 7);
+    jam('x', 54, -66, 70, -Math.PI / 2, { skip: .5 }); jam('x', 60, -66, 70, Math.PI / 2, { skip: .5 }); car('Cop', 30, 57, 1.9, WHITE, { siren: true }); car('Taxi', -25, 55, 1.4, [.02, .02, .025]);
+    for (const [x, z] of [[-6, 20], [6, -20], [-6, -45], [20, -80], [-30, -70]]) trash(x, z, 3);
+    sandbags(64, 2, 0, 3.6, 3); sandbags(64, 12, 0, 3.6, 3); crates(68, -4, 3);
+    aBlockade(-66, 57, 'x', 14); aBlockade(53, -134, 'z', 10);
+    aBounds(-70, -140, 77, 100);
+    for (const p of [[-64, 57], [70, 57], [-40, 90], [40, 90], [-20, 30], [20, -20], [-20, -40], [30, 10], [-40, -10], [-40, -80], [40, -80], [-40, -130], [40, -130], [53, -120], [53, -60], [53, 30], [70, -100], [70, -40], [-60, -30], [-60, 20]]) SPAWNS.push({ x: p[0], z: p[1] });
+    aSkyline(0, -40, 170, 300, [-90, -200, 118, 130], .9);
+    PLACES.start = { x: 0, z: 60 }; PLACES.title = { x: 0, z: 10 }; PLACES.hall = { x: 0, z: -104 }; PLACES.genji = { x: 0, z: -106 }; PLACES.pier = { x: 73, z: 6 }; PLACES.board = { x: 86, z: 6 }; PLACES.boatFrom = { x: 93, z: -150 }; PLACES.boatTo = { x: 92.6, z: 6 }; PLACES.crate = { x: 6, z: -84 }; PLACES.crate2 = { x: 68, z: 14 };
+  } },
+  // ===================================================================== 大阪・道頓堀（ミナミ）
+  dotonbori: { name: '大阪・道頓堀', pref: '大阪府', async build(say) {
+    say('道頓堀の運河を作っています…'); await nextFrame();
+    aGround(-140, -230, 140, 140);
+    aRoad(-90, -60, 90, -48); aRoad(-90, 48, 90, 60); aRoad(-62, -90, -52, -60, { plain: true }); aRoad(52, 60, 62, 90, { plain: true });
+    block(-90, -48, 90, -13); block(-90, 13, 90, 48); block(-90, -90, -62, -60); block(-52, -90, 90, -60); block(-90, 60, 52, 90); block(62, 60, 90, 90);
+    // 運河（東西）・遊歩道・橋
+    aWater(-140, -8, 140, 8); for (const s of [-1, 1]) aBank(-140, s < 0 ? -9 : 8, 140, s < 0 ? -8 : 9);
+    for (const s of [-1, 1]) bbox('brick', 0, CURB + .012, s * 11, 180, .02, 4.4, { faces: 'Y', uvs: 2.4, col: [.7, .62, .54] });
+    const BR = [[-50, 8], [0, 14], [50, 8]];
+    for (const s of [-1, 1]) { let x = -90; for (const [bx, bw] of BR.concat([[200, 0]])) { const a = x, b = bx - bw / 2; if (b > a) { for (let t = a; t < b - .5; t += 9) rail(t, s * 8.6, Math.min(t + 9, b), s * 8.6); aNoWalk(a, -8.4, b, 8.4); } x = bx + bw / 2; } }
+    for (const [bx, bw] of BR) { bbox('brick', bx, CURB / 2, 0, bw, CURB, 17, { col: [.62, .56, .5], uvs: 2.4 }); bbox('concrete', bx, -.6, 0, bw, 1, 16, { col: [.4, .39, .37], faces: 'yxXzZ' }); for (const s of [-1, 1]) { bbox('paint', bx + s * bw / 2, CURB + .55, 0, .3, 1.1, 16.6, { col: [.32, .3, .28] }); COL.add(bx + s * bw / 2, 0, .15, 8.3, 0, CURB + 1.1, 0, { mat: 'stone', pass: true }); } for (const sx of [-1, 1]) for (const sz of [-1, 1]) { lantern(bx + sx * (bw / 2 - .2), 1.8, sz * 8); } }
+    neon('ひかり橋', -6, -8.4, 1, 0, 1.4, 4.4, [1, .7, .3]);
+    say('ネオンのビルを建てています…'); await nextFrame();
+    const minami = B => { B.shut = .1; B.lit = .3; B.signs = true; };
+    for (const [x0, x1] of [[-90, -54], [-46, -7], [7, 46], [54, 90]]) { rowX(-48, -13, x0, x1, 's', { fmin: 5, fmax: 9, wmin: 8, wmax: 12, back: 'street', endW: 'street', endE: 'street', cross: 0, tweak: minami }); rowX(13, 48, x0, x1, 'n', { fmin: 5, fmax: 9, wmin: 8, wmax: 12, back: 'street', endW: 'street', endE: 'street', cross: 0, tweak: minami }); }
+    // 運河に向いた大きなネオン
+    const NE = [['たこ焼き 浪花', [1, .5, .2]], ['お好み焼 鉄板', [1, .3, .3]], ['串カツ 天下', [1, .85, .2]], ['かに料理 浜', [1, .2, .15]], ['大阪 ミナミ', [.4, .7, 1]], ['ふぐ料理 てっちり', [.3, .9, .6]], ['たこ焼き 浪花', [1, .6, .2]], ['串カツ 天下', [1, .9, .2]]];
+    let ni = 0; for (const s of [-1, 1]) for (const x of [-80, -30, 20, 66]) { const [n, c] = NE[ni++ % NE.length]; neon(n, s < 0 ? x + 12 : x, s * 13, s < 0 ? -1 : 1, 0, 6 + R() * 6, 12, c); }
+    vision(-26, -13, -1, 0, 18, 14); vision(30, 13, 1, 0, 16, 12);
+    // アーケード（橋の南北）
+    for (const [a, b] of [[-90, -60], [60, 90]]) { bbox('brick', 0, CURB + .012, (a + b) / 2, 14, .02, b - a, { faces: 'Y', uvs: 2.4, col: [.76, .72, .66] }); }
+    arcade(-7, -90, 7, -48); arcade(-7, 48, 7, 90); neon('戎通り商店街', -6, -48, 1, 0, 7.6, 12, [1, .4, .5]);
+    // 運河をゆく人のいない船・車・小物
+    for (const [x, z, ry] of [[-30, 3, 1.6], [70, -3, 1.4]]) { bbox('paint', x, -1, z, 3.4, 1.2, 10, { col: [.85, .84, .8], ry }); bbox('paint', x, .1, z, 2.6, 1.4, 4, { col: [.2, .3, .5], ry }); }
+    jam('x', -54, -88, 88, Math.PI / 2, { skip: .45 }); jam('x', 54, -88, 88, -Math.PI / 2, { skip: .45 }); car('Cop', 20, -54, .4, WHITE, { siren: true }); car('Taxi', -40, 55, 1.2, [.02, .02, .025], { fire: true }); WORLD.fires++;
+    for (let x = -80; x <= 80; x += 20) { lamp(x, -60 - 1.2, 0, 1, 7); lamp(x, 61.2, 0, -1, 7); }
+    for (const x of [-70, -25, 25, 70]) for (const s of [-1, 1]) { parkLamp(x, s * 12.6); }
+    for (const [x, z] of [[-60, 11], [40, -11], [-20, 11], [82, 11], [-84, -11]]) trash(x, z, 3);
+    for (const [x, z, ry] of [[-14, 12, 0], [14, -12, Math.PI], [-75, -12, Math.PI]]) vending(x, z, ry);
+    for (const s of [-1, 1]) { aBlockade(s * 86, -54, 'x', 12); aBlockade(s * 86, 54, 'x', 12); }
+    aBounds(-90, -90, 90, 90);
+    for (const p of [[-86, -54], [86, -54], [-86, 54], [86, 54], [-57, -86], [57, 86], [0, -86], [0, 86], [-86, 11], [86, -11], [-60, -30], [60, 30], [-30, -54], [30, 54], [-50, 30], [50, -30], [-20, 70], [20, -75]]) SPAWNS.push({ x: p[0], z: p[1] });
+    aSkyline(0, 0, 170, 300, [-110, -110, 110, 110], 1.1);
+    PLACES.start = { x: -70, z: 11 }; PLACES.title = { x: 0, z: -30 }; PLACES.bridge = { x: 0, z: 0 }; PLACES.cool = [{ x: -84, z: -11.4 }, { x: 84, z: 11.4 }, { x: 34, z: -54 }]; PLACES.boatFrom = { x: 150, z: 0 }; PLACES.boatTo = { x: 26, z: -2.2 }; PLACES.landing = { x: 26, z: -11 }; PLACES.crate = { x: 6, z: 5 }; PLACES.crate2 = { x: -8, z: -11 };
+  } },
+  // ===================================================================== 大阪・新世界（展望塔の下町）
+  shinsekai: { name: '大阪・新世界', pref: '大阪府', async build(say) {
+    say('新世界の道をしいています…'); await nextFrame();
+    aGround(-140, -230, 140, 140);
+    aRoad(-70, -66, 70, -54); aRoad(-70, 34, 70, 46);
+    block(-70, -110, 70, -66); block(-70, -54, 70, 34); block(-70, 46, 70, 90);
+    bbox('brick', 0, CURB + .012, -10, 12, .02, 200, { faces: 'Y', uvs: 2.4, col: [.78, .7, .62] });
+    bbox('brick', 0, CURB + .013, -10, 44, .02, 40, { faces: 'Y', uvs: 2.4, col: [.74, .72, .7] });       // 塔の下の広場
+    bbox('gravel', -46, CURB + .013, -10, 30, .02, 34, { faces: 'Y', uvs: 2 });                           // 駐車場（ヘリの着陸地点）
+    decalG(PD.heli, -46, -10, 12, 12, 0, CURB + .03);
+    zebra('z', -7, -66, -54); zebra('z', 7, -66, -54); zebra('z', -7, 34, 46); zebra('z', 7, 34, 46);
+    say('塔と下町を作っています…'); await nextFrame();
+    steelTower(0, -10);
+    const retro = B => { B.shut = .08; B.lit = .3; B.style = R() < .6 ? 2 : 1; B.signs = true; if (R() < .3) B.billboard = B.faces.e === 'street' ? 'e' : 'w'; };
+    for (const [z0, z1] of [[46, 90], [-110, -66]]) { rowZ(-30, -6.6, z0, z1, 'e', { fmin: 2, fmax: 5, wmin: 5, wmax: 8, back: 'alley', endN: 'street', endS: 'street', tweak: retro }); rowZ(6.6, 30, z0, z1, 'w', { fmin: 2, fmax: 5, wmin: 5, wmax: 8, back: 'alley', endN: 'street', endS: 'street', tweak: retro }); }
+    for (const [z0, z1] of [[-54, -32], [12, 34]]) { rowZ(-30, -6.6, z0, z1, 'e', { fmin: 3, fmax: 6, wmin: 6, wmax: 9, endN: z0 < 0 ? 'street' : null, endS: z0 < 0 ? null : 'street', tweak: retro }); rowZ(6.6, 30, z0, z1, 'w', { fmin: 3, fmax: 6, wmin: 6, wmax: 9, endN: z0 < 0 ? 'street' : null, endS: z0 < 0 ? null : 'street', tweak: retro }); }
+    for (const [x0, x1] of [[-70, -34], [34, 70]]) { rowX(46, 66, x0, x1, 'n', { fmin: 3, fmax: 7, tweak: retro }); rowX(-86, -66, x0, x1, 's', { fmin: 3, fmax: 7, tweak: retro }); }
+    rowZ(34, 70, -54, 34, 'w', { fmin: 3, fmax: 7, wmin: 8, wmax: 12, endN: 'street', endS: 'street', tweak: retro }); rowZ(-70, -62, 10, 34, 'e', { fmin: 2, fmax: 4, back: null, tweak: retro }); rowZ(-70, -62, -54, -28, 'e', { fmin: 2, fmax: 4, back: null, tweak: retro });
+    arcade(-6.6, 46, 6.6, 90); neon('新世界 本通', -6, 46, 1, 0, 7.6, 12, [1, .5, .3]);
+    for (const [n, x, z, ux, uz, c] of [['串カツ 天下', -6.6, 20, 0, 1, [1, .85, .2]], ['たこ焼き 浪花', 6.6, -36, 0, -1, [1, .5, .2]], ['ふぐ料理 てっちり', -6.6, -92, 0, 1, [.3, .9, .6]], ['将棋・囲碁', 6.6, 74, 0, -1, [.4, .7, 1]], ['ホルモン 鉄', -6.6, 70, 0, 1, [1, .3, .3]]]) neon(n, x, z, ux, uz, 5 + R() * 3, 8, c);
+    for (let z = -100; z <= 84; z += 7) for (const s of [-1, 1]) if (z < 46 || z > 90) { lantern(s * 6.2, 3.4, z); }
+    for (let z = -100; z <= 84; z += 14) { pool(0, z, 5, [.3, .1, .05], CURB + .03); LAMPS.push({ x: 0, y: 3.2, z, dim: .35 }); }
+    for (const [x, z] of [[-22, -28], [22, -28], [-22, 8], [22, 8]]) parkLamp(x, z);
+    jam('x', -60, -68, 68, Math.PI / 2, { skip: .5 }); jam('x', 40, -68, 68, -Math.PI / 2, { skip: .5 }); car('Cop', 30, -58, 2, WHITE, { siren: true }); car('Taxi', -24, 38, 1.5, [.02, .02, .025]);
+    for (let x = -64; x <= 64; x += 16) if (Math.abs(x) > 10) { lamp(x, -66 - 1.2, 0, 1, 7); lamp(x, 47.2, 0, -1, 7); }
+    for (const [x, z] of [[-12, -24], [12, 4], [-40, -40], [-52, 20], [5, 60]]) trash(x, z, 3);
+    for (const [x, z, ry] of [[-6.8, 0, Math.PI / 2], [6.8, -60, -Math.PI / 2], [6.8, 40, -Math.PI / 2]]) vending(x, z, ry);
+    sandbags(-14, -24, .4, 3.4, 3); sandbags(14, 4, -.4, 3.4, 3); crates(-18, 6, 3);
+    for (const s of [-1, 1]) { aBlockade(s * 66, -60, 'x', 12); aBlockade(s * 66, 40, 'x', 12); } aBlockade(0, 86, 'z', 10); aBlockade(0, -106, 'z', 10);
+    aBounds(-70, -110, 70, 90);
+    for (const p of [[-66, -60], [66, -60], [-66, 40], [66, 40], [0, 84], [0, -104], [-20, 70], [20, -90], [-40, 40], [40, -60], [-50, -60], [50, 40], [0, 50], [0, -70], [-30, -10], [40, -10], [-64, -40], [-64, 20]]) SPAWNS.push({ x: p[0], z: p[1] });
+    aSkyline(0, -10, 170, 300, [-90, -130, 90, 110], 1.1);
+    PLACES.start = { x: 0, z: 82 }; PLACES.title = { x: 0, z: -40 }; PLACES.plaza = { x: 0, z: 6 }; PLACES.lz = { x: -46, z: -10 };
+    PLACES.brk = [{ x: -60, z: 33, n: '西の配電盤' }, { x: 62, z: -53, n: '東の配電盤' }, { x: -5.6, z: 62, n: '商店街の配電盤' }]; PLACES.crate = { x: 16, z: -20 }; PLACES.crate2 = { x: -16, z: 0 };
+  } },
+  // ===================================================================== 京都・祇園（古い町並みと神社）
+  gion: { name: '京都・祇園', pref: '京都府', async build(say) {
+    say('京都の道をしいています…'); await nextFrame();
+    aGround(-140, -230, 140, 140);
+    aRoad(-70, 50, 70, 62);
+    block(-70, 62, 70, 96); block(-70, -130, 70, 50);
+    const stone = [.62, .6, .56]; bbox('brick', 0, CURB + .012, -5, 8, .02, 110, { faces: 'Y', uvs: 2.4, col: stone }); bbox('brick', 0, CURB + .012, -10, 140, .02, 8, { faces: 'Y', uvs: 2.4, col: stone }); bbox('brick', -38, CURB + .012, 20, 6, .02, 60, { faces: 'Y', uvs: 2.4, col: stone });
+    bbox('gravel', 0, CURB + .013, -98, 100, .02, 64, { faces: 'Y', uvs: 2 });   // 境内
+    zebra('z', -6, 50, 62, 4);
+    // 西の川（鴨川）
+    aWater(-140, -170, -74, 140); aBank(-76, -170, -74, 100); for (let z = -126; z < 94; z += 10) rail(-73.4, z, -73.4, Math.min(z + 9.5, 94)); aNoWalk(-110, -170, -73.6, 100);
+    say('町家を建てています…'); await nextFrame();
+    // 町家：南北の小路（x=0）・東西の小路（z=-10）・西の小路（x=-38）にそって
+    const lane = (x0, x1, z0, z1, face) => { let z = z0; while (z < z1 - 3) { const w = Math.min(Rr(5, 8), z1 - z); machiya(x0, z, x1, z + w, face); z += w; } };
+    const laneX = (z0, z1, x0, x1, face) => { let x = x0; while (x < x1 - 3) { const w = Math.min(Rr(5, 8), x1 - x); machiya(x, z0, x + w, z1, face); x += w; } };
+    lane(-14, -4.2, -60, -14.2, 'e'); lane(4.2, 14, -60, -14.2, 'w'); lane(-14, -4.2, -5.8, 48, 'e'); lane(4.2, 14, -5.8, 48, 'w');
+    laneX(-24, -14.2, -68, -14.2, 's'); laneX(-24, -14.2, 14.2, 68, 's'); laneX(-5.8, 4, -34, -14.2, 'n'); laneX(-5.8, 4, 14.2, 68, 'n');
+    lane(-48, -41.2, -5.8, 48, 'e'); lane(-34.8, -28, -5.8, 48, 'w'); lane(-68, -54, -5.8, 48, 'e');
+    for (const [x0, x1] of [[20, 44], [48, 68]]) lane(x0, x1, -5.8, 48, x0 < 40 ? 'w' : 'e');
+    for (const s of [-1, 1]) rowX(62, 92, s < 0 ? -70 : 6, s < 0 ? -6 : 70, 'n', { fmin: 3, fmax: 6, endE: s < 0 ? 'street' : null, endW: s > 0 ? 'street' : null, tweak: B => { B.lit = .22; } });
+    // 神社：楼門・本殿・舞殿・石灯籠・鳥居
+    gate(0, -66, 5, 8, { col: [.78, .18, .08] }); hall(0, -112, 26, 16, 6.5, { pillar: [.8, .2, .08], wall: [.86, .84, .78] });
+    { const cx = 0, cz = -90; bbox('wood', cx, .6, cz, 12, 1.2, 8, { col: [.3, .22, .14] }); for (const sx of [-1, 1]) for (const sz of [-1, 1]) bcyl('paint', cx + sx * 5.5, 3.2, cz + sz * 3.5, .2, 4, [.8, .2, .08], 8); bgeo('paint', coneG(4), mat4(cx, 6.2, cz, Math.PI / 4, 10, 2.4, 7.2), [.16, .17, .18]); COL.box(cx - 6, cz - 4, cx + 6, cz + 4, 0, 1.2, { mat: 'wood' });
+      for (let i = 0; i < 24; i++) { const a = i / 24, x = cx - 6 + a * 12; for (const sz of [-1, 1]) { bsph('emis', x, 4.6, cz + sz * 4.1, .22, .28, .22, [2, .9, .4]); } } glow(cx, 4.6, cz, 10, [1, .55, .25]); pool(cx, cz, 10, [.34, .16, .06], CURB + .03); LAMPS.push({ x: cx, y: 4, z: cz, dim: .7 }); }
+    for (const [x, z] of [[-10, -72], [10, -72], [-10, -82], [10, -82], [-16, -100], [16, -100], [-20, -112], [20, -112]]) stoneLantern(x, z);
+    torii(-38, 52, 5, 6, 0); for (let i = 0; i < 26; i++) { const x = Rr(-48, 46), z = Rr(-128, -70); if (Math.abs(x) < 20 || Math.hypot(x, z + 90) < 10) continue; tree(x, z, Rr(1.2, 1.7), R() < .3 ? 2 : 0); }
+    pagoda(-60, -330, 2.2, true); pagoda(60, -110, .9);
+    // 街灯（ちょうちん）・小物
+    for (let z = -56; z <= 44; z += 8) for (const s of [-1, 1]) { lantern(s * 4.6, 2.8, z + (s > 0 ? 4 : 0)); }
+    for (let z = -50; z <= 44; z += 16) { pool(0, z, 5, [.3, .12, .05], CURB + .03); LAMPS.push({ x: 0, y: 2.6, z, dim: .3 }); }
+    for (let x = -60; x <= 60; x += 15) { lamp(x, 49.2, 0, 1, 7); lamp(x, 63, 0, -1, 7); }
+    jam('x', 53, -66, 66, -Math.PI / 2, { skip: .5 }); jam('x', 59, -66, 66, Math.PI / 2, { skip: .5 }); car('Taxi', 20, 56, 1.4, [.05, .25, .12]); car('Cop', -20, 57, 1.8, WHITE, { siren: true });
+    for (const [x, z] of [[-5, 24], [5, -30], [-38, 30], [-20, -10], [30, -10]]) trash(x, z, 2);
+    sandbags(-8, -78, .3, 3.4, 3); sandbags(8, -78, -.3, 3.4, 3); crates(-6, -96, 3);
+    aBlockade(-66, 56, 'x', 12); aBlockade(66, 56, 'x', 12);
+    aBounds(-73.5, -130, 70, 96);
+    for (const p of [[-66, 56], [66, 56], [-40, 90], [40, 90], [-38, 40], [-38, 0], [-60, -10], [60, -10], [30, -10], [-30, -10], [0, 30], [0, -40], [-40, -120], [40, -120], [-44, -80], [44, -80], [0, -126]]) SPAWNS.push({ x: p[0], z: p[1] });
+    aSkyline(0, -20, 180, 300, [-100, -200, 100, 120], .45);
+    PLACES.start = { x: 0, z: 56 }; PLACES.title = { x: 0, z: 0 }; PLACES.shrine = { x: 0, z: -90 }; PLACES.gen = { x: 9, z: -100 }; PLACES.lz = { x: 0, z: -80 }; PLACES.crate = { x: -6, z: -96 }; PLACES.crate2 = { x: 3, z: 20 };
+  } },
+};
+
+
+// =========================================================================================
+//  その後の作戦（6つ）：本編のあと、ワクチンを日本じゅうへ届けるための戦い
+//  作戦は1つの「章」と同じ形（start と steps）。仲間：サクラ・ゴウ・大阪府警のトラ・守る人（倒れると失敗）
+// =========================================================================================
+const opLoadout = () => { const P = PLAYER; P.own = [true, true, true]; P.mag = [15, 30, 6]; P.res = [Infinity, 150, 24]; P.gren = 2; P.w = 1; };
+const opCount = () => Math.round(DIFF[GAME.diff].count * 1);
+// 集める物：list の場所に置いて、全部集めたら true
+function opCollect(type, list, label, short, done) {
+  STORY.got = 0; STORY.need = list.length;
+  list.forEach((p, i) => PICK.add(type, p.x, p.z, { y: (p.y ?? groundH(p.x, p.z)) + .1, label: `${p.n || label}を取る`, short, use() { STORY.got++; AUDIO.sfx('pickup'); UI.hint(`${p.n || label}を手に入れた（${STORY.got} / ${STORY.need}）`, 3); done && done(STORY.got); } }));
+}
+const OPS = {
+  // ------------------------------------------------------------------ 1 新宿
+  shinjuku: { area: 'shinjuku', tag: '作戦 1', name: '摩天楼の救出', sub: '新宿・西口　午前2時', sky: 0, desc: '高層ビル街の広場に取り残された人たちを、ヘリで助け出す',
+    start() { opLoadout(); PLAYER.reset(PLACES.start.x, PLACES.start.z, 0); ally('sakura', -2, 85, 0, false); ally('go', 2, 85.5, 0, false);
+      for (let i = 0; i < 10; i++) zplace('walker', rr(-30, 30), rr(52, 74)); zplace('runner', 20, 60); zplace('walker', -12, 46, { sleeper: true });
+      PICK.add('crate', PLACES.crate.x, PLACES.crate.z, { y: CURB }); PICK.add('crate', PLACES.crate2.x, PLACES.crate2.z, { y: CURB }); },
+    steps: [
+      { on() { SAY.lines([['hq', 'こちら司令部。新宿の広場に、避難民が取り残されている'], ['hq', 'ヘリを向かわせるが、まずは道を開けてくれ。それと、病院へ運ぶ医薬品が3つ、近くに残っている'], ['go', '高いビルばかりだな…上からの視線に気をつけろ']]);
+          STORY.need = Math.round(18 * opCount()); UI.setObj('バスターミナルのゾンビを片づける', { x: 0, z: 70 }); DIR.set({ want: 9, rate: .9, left: STORY.need - 10, runner: .15 }); },
+        tick() { UI.progress('のこりのゾンビ　' + Math.max(0, STORY.need - STORY.kills), STORY.kills / STORY.need); },
+        until: () => STORY.kills >= STORY.need || (DIR.left <= 0 && ZOMBIES.count() === 0 && STORY.st > 8) },
+      { on() { UI.progress(null); SAY.lines([['sakura', '医薬品のケースは、交差点の先に3つ。手分けしてる時間はない、全部まわろう']]); opCollect('case', PLACES.supply, '医薬品のケース', '取る'); UI.setObj('医薬品のケースを3つ集める', PLACES.supply[0]); DIR.set({ want: 9, rate: 1.1, runner: .25 }); },
+        tick() { UI.progress(`医薬品　${STORY.got} / ${STORY.need}`, STORY.got / STORY.need); const nx = PICK.list.find(it => it.type === 'case'); if (nx) UI.objPos = nx; },
+        until: () => STORY.got >= STORY.need },
+      { on() { UI.progress(null); SAY.lines([['hq', 'よくやった。避難民は北の広場にいる。ヘリはあと少しで着く'], ['go', '急げ！ 広場が囲まれ始めてる']]); UI.setObj('北の広場で、避難民と合流する', PLACES.survivors);
+          const s = ally('saeki', PLACES.survivors.x, PLACES.survivors.z, 0, false); s.state = 'script'; s.anim = 'idle'; s.animClips = ['Idle']; for (let i = 0; i < 8; i++) zplace('walker', rr(-30, 30), rr(-140, -112)); },
+        until: () => near(PLACES.survivors, 6) },
+      { on() { STORY.T = GAME.diff === 0 ? 75 : 95; const s = ALLIES.get('saeki'); s.state = 'follow'; s.hold = { x: 0, z: -120 }; for (const a of ALLIES.list) if (a.D.armed) a.hold = null;
+          SAY.lines([['saeki', '来てくれた…！ 会社のビルから、ずっとここに隠れてたんです'], ['sakura', 'もう大丈夫。ヘリが来るまで、私たちが守る'], ['hq', 'ヘリ到着まで、持ちこたえろ！']]); UI.setObj('ヘリが来るまで、広場を守る', PLACES.lz); DIR.set({ want: 12, rate: .55, runner: .3 }); },
+        tick() { const t = STORY.st, T = STORY.T, F = STORY.flags; UI.progress('ヘリ到着まで　' + Math.max(0, Math.ceil(T - t)) + '秒', t / T); DIR.want = lerp(12, 17, t / T);
+          if (!F.b1 && t > T * .45) { F.b1 = 1; const s = DIR.pickSpawn(); if (s) { ZOMBIES.spawn('brute', s.x, s.z, { active: true }); SAY.lines([['go', 'でかいのが来たぞ！']]); } }
+          if (!F.b2 && t > T * .8 && GAME.diff > 0) { F.b2 = 1; const s = DIR.pickSpawn(); if (s) ZOMBIES.spawn('brute', s.x, s.z, { active: true }); } },
+        until: () => STORY.st >= STORY.T },
+      { on() { UI.progress(null); HELI.start(); DIR.want = 8; SAY.lines([['sakura', 'ヘリよ！']]); UI.setObj('ヘリが降りるまで、守る', PLACES.lz); }, until: () => HELI.landed },
+      { on() { UI.setObj('ヘリに乗る', PLACES.lz); SAY.lines([['go', '佐伯さんが先だ！ 乗れ！']]); const p = [[-3.2, 3], [3.4, 2.4], [2.6, -2]]; ALLIES.list.forEach((a, i) => { a.hold = { x: PLACES.lz.x + p[i % 3][0], z: PLACES.lz.z + p[i % 3][1] }; }); },
+        until: () => near({ x: PLACES.lz.x, z: PLACES.lz.z + 2 }, 5.2) },
+      { on() { GAME.opClear(); }, until: () => false },
+    ] },
+  // ------------------------------------------------------------------ 2 秋葉原
+  akiba: { area: 'akiba', tag: '作戦 2', name: '電波をつなげ', sub: '秋葉原・電気街　午前1時', sky: 0, desc: '電気街の部品で無線を組み立て、関東じゅうの避難所に呼びかける',
+    start() { opLoadout(); PLAYER.reset(PLACES.start.x, PLACES.start.z, 0); ally('sakura', -2, 73, 0, false); ally('go', 2, 73.5, 0, false);
+      for (let i = 0; i < 9; i++) zplace('walker', rr(-7, 7), rr(30, 62)); zplace('walker', -30, 60, { sleeper: true }); PICK.add('crate', PLACES.crate.x, PLACES.crate.z, { y: CURB }); },
+    steps: [
+      { on() { SAY.lines([['hq', '電波塔が止まって、避難所どうしの連絡が切れている'], ['hq', '秋葉原なら部品がそろうはずだ。アンテナ・無線機・大きなバッテリー。3つ集めて、駅前で無線を組み立てろ'], ['sakura', 'お店はどこもシャッターが半分開いてる。気をつけて入ろう']]);
+          opCollect('part', PLACES.parts, '部品', '取る'); UI.setObj('部品を3つ集める（アンテナ・無線機・バッテリー）', PLACES.parts[0]); DIR.set({ want: 10, rate: 1, runner: .25 }); },
+        tick() { UI.progress(`部品　${STORY.got} / ${STORY.need}`, STORY.got / STORY.need); const nx = PICK.list.find(it => it.type === 'part'); if (nx) UI.objPos = nx; if (!STORY.flags.h && STORY.st > 20) { STORY.flags.h = 1; SAY.lines([['go', 'ビジョンの明かりで、やつらが集まってくる。止まるな']]); } },
+        until: () => STORY.got >= STORY.need },
+      { on() { UI.progress(null); SAY.lines([['sakura', '全部そろった！ 駅前の広場で組み立てよう']]); UI.setObj('駅前の広場で、無線を組み立てる', PLACES.radio);
+          PICK.add('radio', PLACES.radio.x, PLACES.radio.z, { y: CURB + .1, label: '無線を組み立てる', short: '組み立て', use() { STORY.flags.radio = 1; AUDIO.sfx('radio'); } }); },
+        until: () => STORY.flags.radio },
+      { on() { STORY.T = GAME.diff === 0 ? 70 : 90; for (const a of ALLIES.list) a.hold = { x: PLACES.radio.x + (a.id === 'go' ? 3 : -3), z: PLACES.radio.z - 3 };
+          SAY.lines([['me', 'こちら機動隊の早瀬。関東の避難所、聞こえるか'], ['hq', '電波は届き始めた。送信が終わるまで、無線を守れ！'], ['go', '音につられて、全部こっちに来るぞ！']]); UI.setObj('送信が終わるまで、無線を守る', PLACES.radio); DIR.set({ want: 13, rate: .5, runner: .35 }); },
+        tick() { const t = STORY.st, T = STORY.T, F = STORY.flags; UI.progress('送信　' + Math.floor(t / T * 100) + '%', t / T);
+          if (!F.m && t > T * .5) { F.m = 1; SAY.lines([['hq', '千葉の避難所から返事が来た！ もう少しだ']]); } if (!F.b && t > T * .6) { F.b = 1; const s = DIR.pickSpawn(); if (s) { ZOMBIES.spawn('brute', s.x, s.z, { active: true }); SAY.lines([['sakura', '大きいのが来る！']]); } } },
+        until: () => STORY.st >= STORY.T },
+      { on() { UI.progress(null); for (const a of ALLIES.list) a.hold = null; SAY.lines([['hq', '送信完了。関東じゅうの避難所とつながった！ 北の通りに装甲車を向かわせる'], ['go', 'よし、ずらかるぞ']]);
+          UI.setObj('北の通りで、装甲車に乗る', PLACES.exit); DIR.set({ want: 10, rate: .8, runner: .35 }); VEH.start('truck', { x: 0, z: -175 }, { x: 0, z: -128 }, 10, 0); },
+        until: () => VEH.arrived && near(PLACES.exit, 5) },
+      { on() { GAME.opClear(); }, until: () => false },
+    ] },
+  // ------------------------------------------------------------------ 3 浅草
+  asakusa: { area: 'asakusa', tag: '作戦 3', name: '水上バスで脱出', sub: '浅草　午前3時', sky: .1, desc: 'お寺に逃げこんだ人たちを、川の船着き場まで送り届ける',
+    start() { opLoadout(); PLAYER.reset(PLACES.start.x, PLACES.start.z, 0); ally('sakura', -2, 61, 0, false); ally('go', 2, 61.5, 0, false);
+      for (let i = 0; i < 12; i++) zplace('walker', rr(-3, 3), rr(-50, 40)); zplace('runner', 2, 10); zplace('walker', -2, -20, { sleeper: true });
+      PICK.add('crate', PLACES.crate.x, PLACES.crate.z, { y: CURB }); PICK.add('crate', PLACES.crate2.x, PLACES.crate2.z, { y: CURB }); },
+    steps: [
+      { on() { SAY.lines([['hq', '浅草寺の本堂に、町の人が何人も逃げこんでいる。助けを求める無線が入った'], ['sakura', 'この先は仲見世の通り。せまいから、前から来るのに気をつけて'], ['go', '門をくぐって、まっすぐ本堂だ']]); UI.setObj('仲見世を通って、本堂へ', PLACES.hall); DIR.set({ want: 9, rate: 1.1, runner: .2 }); },
+        until: () => near(PLACES.hall, 9) },
+      { on() { DIR.set({ want: 5, rate: 2 }); const g = ally('genji', PLACES.genji.x, PLACES.genji.z, 0, false); g.state = 'script'; g.anim = 'idle'; g.animClips = ['Idle'];
+          SAY.lines([['genji', 'おお、助けが来たか！ わしは源。この町で70年、人力車を引いてきた'], ['genji', 'ほかの者は、裏の船着き場から先に逃がした。わしが最後じゃ'], ['sakura', '源さん、私たちから離れないで。川の船着き場まで行きます']]); },
+        until: () => !SAY.busy() && STORY.st > 3 },
+      { on() { const g = ALLIES.get('genji'); g.state = 'follow'; g.anim = null; UI.setObj('源さんを、川の船着き場まで送る', PLACES.pier); DIR.set({ want: 10, rate: .9, runner: .3 }); },
+        until: () => near(PLACES.pier, 7) },
+      { on() { STORY.T = GAME.diff === 0 ? 70 : 90; const g = ALLIES.get('genji'); g.hold = { x: 80, z: 6 };
+          SAY.lines([['hq', '水上バスが上流から向かっている。着くまで船着き場を守れ'], ['go', '川を背にして守るぞ。うしろは水だ、前だけ見てろ']]); UI.setObj('水上バスが来るまで、船着き場を守る', PLACES.pier); DIR.set({ want: 12, rate: .55, runner: .35 }); },
+        tick() { const t = STORY.st, T = STORY.T, F = STORY.flags; UI.progress('水上バス到着まで　' + Math.max(0, Math.ceil(T - t)) + '秒', t / T);
+          if (!F.b && t > T * .5) { F.b = 1; const s = DIR.pickSpawn(); if (s) { ZOMBIES.spawn('brute', s.x, s.z, { active: true }); SAY.lines([['genji', 'な、なんじゃあの大きいのは…！']]); } }
+          if (!F.v && t > T - 14) { F.v = 1; VEH.start('boat', PLACES.boatFrom, PLACES.boatTo, 13, 0); SAY.lines([['hq', '水上バス、見えたぞ！']]); } },
+        until: () => STORY.st >= STORY.T && VEH.arrived },
+      { on() { UI.progress(null); UI.setObj('桟橋の先で、水上バスに乗る', PLACES.board); SAY.lines([['go', '源さん、乗ってくれ！ 全員乗ったら出すぞ！']]); for (const a of ALLIES.list) a.hold = { x: 84 + rr(-1, 1), z: 6 + rr(-1.5, 1.5) }; DIR.set({ want: 7, rate: 1 }); },
+        until: () => near(PLACES.board, 3) },
+      { on() { GAME.opClear(); }, until: () => false },
+    ] },
+  // ------------------------------------------------------------------ 4 大阪・道頓堀
+  dotonbori: { area: 'dotonbori', tag: '作戦 4', name: 'ミナミの橋を守れ', sub: '大阪・道頓堀　午前0時', sky: 0, desc: 'ワクチンの冷蔵ケースを集め、運河の船が来るまで橋を守る。大阪府警のトラが合流',
+    start() { opLoadout(); PLAYER.reset(PLACES.start.x, PLACES.start.z, Math.PI / 2); ally('sakura', -72, 13, Math.PI / 2, false); ally('go', -72, 9.6, Math.PI / 2, false);
+      const t = ally('tora', 2, 3, -Math.PI / 2, false); t.state = 'script'; t.anim = 'aim'; t.animClips = ['Idle_Gun_Pointing'];
+      for (let i = 0; i < 12; i++) zplace('walker', rr(-40, 30), rr(-12, 12) > 0 ? rr(9.5, 12.5) : rr(-12.5, -9.5)); zplace('runner', -20, -11);
+      PICK.add('crate', PLACES.crate.x, PLACES.crate.z, { y: CURB }); PICK.add('crate', PLACES.crate2.x, PLACES.crate2.z, { y: CURB }); },
+    steps: [
+      { on() { SAY.lines([['hq', '大阪へようこそ。ワクチンの第一便を積んだ船が、ミナミの運河を通る'], ['hq', '橋のたもとで、大阪府警の虎谷警部補が待っている。合流せよ'], ['tora', 'おーい！ こっちや、ひかり橋の上や！ はよ来てくれ、囲まれとるんや！']]); UI.setObj('ひかり橋で、トラと合流する', PLACES.bridge); DIR.set({ want: 10, rate: .9, runner: .2 }); },
+        until: () => near(PLACES.bridge, 6) },
+      { on() { const t = ALLIES.get('tora'); t.state = 'follow'; t.anim = null; DIR.set({ want: 8, rate: 1.1, runner: .25 });
+          SAY.lines([['tora', '助かったわ。大阪府警の虎谷や。トラでええ'], ['tora', 'ワクチンの冷蔵ケースが3つ、運河ぞいの店に置きっぱなしなんや。船が来る前に集めんと'], ['go', 'よろしくな、トラ。案内してくれ']]); opCollect('case', PLACES.cool, '冷蔵ケース', '取る'); UI.setObj('冷蔵ケースを3つ集める', PLACES.cool[0]); },
+        tick() { UI.progress(`冷蔵ケース　${STORY.got} / ${STORY.need}`, STORY.got / STORY.need); const nx = PICK.list.find(it => it.type === 'case'); if (nx) UI.objPos = nx; },
+        until: () => STORY.got >= STORY.need },
+      { on() { UI.progress(null); SAY.lines([['tora', 'よっしゃ、全部そろた！ 船は東から来る。橋の上で待とか'], ['hq', '船の到着まで、橋を守れ！']]); UI.setObj('ひかり橋にもどる', PLACES.bridge); },
+        until: () => near(PLACES.bridge, 6) },
+      { on() { STORY.T = GAME.diff === 0 ? 80 : 100; for (const a of ALLIES.list) a.hold = { x: (a.id === 'tora' ? 2 : a.id === 'go' ? 4 : -3), z: a.id === 'sakura' ? 4 : -4 };
+          SAY.lines([['tora', '南と北の両方から来よるで！ 橋の上なら、はさまれても戦える！'], ['sakura', '手榴弾は、橋のたもとに集まったところで！']]); UI.setObj('船が来るまで、橋を守る', PLACES.bridge); DIR.set({ want: 14, rate: .5, runner: .35 }); },
+        tick() { const t = STORY.st, T = STORY.T, F = STORY.flags; UI.progress('船の到着まで　' + Math.max(0, Math.ceil(T - t)) + '秒', t / T); DIR.want = lerp(14, 18, t / T);
+          if (!F.b1 && t > T * .35) { F.b1 = 1; const s = DIR.pickSpawn(); if (s) { ZOMBIES.spawn('brute', s.x, s.z, { active: true }); SAY.lines([['tora', 'なんやあのデカいの！ 足止めるで！']]); } }
+          if (!F.b2 && t > T * .7) { F.b2 = 1; const s = DIR.pickSpawn(); if (s) ZOMBIES.spawn('brute', s.x, s.z, { active: true }); }
+          if (!F.v && t > T - 16) { F.v = 1; VEH.start('boat', PLACES.boatFrom, PLACES.boatTo, 15, -Math.PI / 2); SAY.lines([['hq', '船が見えた！ 北の船着き場につける！']]); } },
+        until: () => STORY.st >= STORY.T && VEH.arrived },
+      { on() { UI.progress(null); UI.setObj('北岸の船着き場で、船に乗る', PLACES.landing); for (const a of ALLIES.list) a.hold = { x: PLACES.landing.x + rr(-2, 2), z: PLACES.landing.z }; SAY.lines([['tora', 'ほな行こか！ ワクチン、神戸まで頼むで！']]); DIR.set({ want: 8, rate: 1 }); },
+        until: () => near(PLACES.landing, 3.5) },
+      { on() { GAME.opClear(); }, until: () => false },
+    ] },
+  // ------------------------------------------------------------------ 5 大阪・新世界
+  shinsekai: { area: 'shinsekai', tag: '作戦 5', name: '塔に灯りを', sub: '大阪・新世界　午前4時', sky: .3, desc: '配電盤を直して展望塔の灯りをともし、逃げ遅れた人に救助の目印を見せる',
+    start() { opLoadout(); PLAYER.reset(PLACES.start.x, PLACES.start.z, 0); ally('sakura', -2, 84, 0, false); ally('go', 2, 84.5, 0, false); ally('tora', 0, 86.5, 0, false);
+      for (let i = 0; i < 10; i++) zplace('walker', rr(-5, 5), rr(10, 70)); zplace('runner', 3, 40); PICK.add('crate', PLACES.crate.x, PLACES.crate.z, { y: CURB }); PICK.add('crate', PLACES.crate2.x, PLACES.crate2.z, { y: CURB }); },
+    steps: [
+      { on() { SAY.lines([['tora', 'ここが新世界や。あの塔、ふだんは夜でも光っとるんやけどな'], ['hq', '塔の灯りがつけば、逃げ遅れた人たちへの目印になる。ヘリも呼べる'], ['tora', '配電盤が3つ、通りのはしにあるはずや。全部入れたら、塔が光るで']]);
+          STORY.got = 0; STORY.need = 3; PLACES.brk.forEach(p => PICK.add('switch', p.x, p.z, { y: groundH(p.x, p.z), label: `${p.n}を入れる`, short: '入れる', use() { STORY.got++; AUDIO.sfx('pin'); AUDIO.sfx('obj'); UI.hint(`${p.n}を入れた（${STORY.got} / 3）`, 3); } }));
+          UI.setObj('配電盤を3つ入れる', PLACES.brk[0]); DIR.set({ want: 10, rate: 1, runner: .3 }); },
+        tick() { UI.progress(`配電盤　${STORY.got} / ${STORY.need}`, STORY.got / STORY.need); const nx = PICK.list.find(it => it.type === 'switch'); if (nx) UI.objPos = nx; },
+        until: () => STORY.got >= STORY.need },
+      { on() { UI.progress(null); UI.setObj('塔の下の広場へ', PLACES.plaza); SAY.lines([['tora', '全部入った！ 塔の下でスイッチ入れたら、灯りがつくで！']]);
+          PICK.add('switch', PLACES.plaza.x, PLACES.plaza.z, { y: CURB, label: '塔の灯りをつける', short: 'つける', use() { STORY.flags.lit = 1; AUDIO.sfx('flare'); } }); },
+        until: () => STORY.flags.lit },
+      { on() { STORY.T = GAME.diff === 0 ? 90 : 120; FX.flare = { x: PLACES.beacon.x, y: PLACES.beacon.y, z: PLACES.beacon.z }; for (const a of ALLIES.list) a.hold = { x: PLACES.plaza.x + rr(-6, 6), z: PLACES.plaza.z + rr(-3, 6) };
+          SAY.lines([['tora', '光ったで！ …うわ、ゾンビまで集まってきよった！'], ['hq', 'ヘリは西の駐車場に降りる。到着まで、塔の下を守れ！'], ['go', 'ここが正念場だ！']]); UI.setObj('ヘリが来るまで、塔の下を守る', PLACES.plaza); DIR.set({ want: 14, rate: .45, runner: .4 }); },
+        tick() { const t = STORY.st, T = STORY.T, F = STORY.flags; UI.progress('ヘリ到着まで　' + Math.max(0, Math.ceil(T - t)) + '秒', t / T); setSky(lerp(.3, .75, t / T)); DIR.want = lerp(14, 19, t / T);
+          if (!F.b1 && t > T * .3) { F.b1 = 1; for (let k = 0; k < (GAME.diff === 2 ? 2 : 1); k++) { const s = DIR.pickSpawn(); if (s) ZOMBIES.spawn('brute', s.x, s.z, { active: true }); } SAY.lines([['tora', 'デカいのが来よったで！']]); }
+          if (!F.b2 && t > T * .65) { F.b2 = 1; const s = DIR.pickSpawn(); if (s) ZOMBIES.spawn('brute', s.x, s.z, { active: true }); }
+          if (!F.m && t > T - 40) { F.m = 1; SAY.lines([['hq', 'ヘリ、大阪湾の上を通過。まもなく着く！']]); } },
+        until: () => STORY.st >= STORY.T },
+      { on() { UI.progress(null); HELI.start(); UI.setObj('ヘリが降りるまで、駐車場を守る', PLACES.lz); for (const a of ALLIES.list) a.hold = null; SAY.lines([['sakura', 'ヘリよ！ 西の駐車場へ！']]); DIR.want = 10; }, until: () => HELI.landed },
+      { on() { UI.setObj('ヘリに乗る', PLACES.lz); const p = [[-3.2, 3], [3.4, 2.4], [2.6, -2]]; ALLIES.list.forEach((a, i) => { a.hold = { x: PLACES.lz.x + p[i % 3][0], z: PLACES.lz.z + p[i % 3][1] }; }); SAY.lines([['tora', 'ほな、京都で会おな！ わしも次の便で行くわ']]); },
+        until: () => near({ x: PLACES.lz.x, z: PLACES.lz.z + 2 }, 5.2) },
+      { on() { FX.flare = null; GAME.opClear(); }, until: () => false },
+    ] },
+  // ------------------------------------------------------------------ 6 京都・祇園（最後の作戦）
+  gion: { area: 'gion', tag: '最終作戦', name: '古都の夜明け', sub: '京都・祇園　午前4時40分', sky: .45, desc: '水瀬博士とワクチンを、神社の中の臨時研究所へ。夜明けまで守りぬく',
+    start() { opLoadout(); PLAYER.reset(PLACES.start.x, PLACES.start.z, 0); ally('sakura', -2, 58, 0, false); ally('go', 2, 58.5, 0, false); ally('doc', 0, 60, 0, false);
+      for (let i = 0; i < 12; i++) zplace('walker', rr(-3, 3), rr(-50, 40)); zplace('runner', 0, 0); zplace('walker', -38, 20, { sleeper: true }); PICK.add('crate', PLACES.crate.x, PLACES.crate.z, { y: CURB }); PICK.add('crate', PLACES.crate2.x, PLACES.crate2.z, { y: CURB }); },
+    steps: [
+      { on() { SAY.lines([['doc', 'また会えたわね、早瀬さん。ワクチンの量産は、ここ京都の研究所にかかっているの'], ['hq', '神社の境内に、臨時の研究所を作った。博士を送り届けろ'], ['sakura', '石だたみの小路は、せまくて暗い。博士、私たちのあいだに']]); UI.setObj('博士を守りながら、小路を通って神社へ', PLACES.shrine); DIR.set({ want: 10, rate: 1, runner: .25 }); },
+        until: () => near(PLACES.shrine, 12) },
+      { on() { DIR.set({ want: 6, rate: 1.6 }); SAY.lines([['doc', '研究所の発電機が止まっているわ。動かせば、すぐに作業を始められる'], ['go', '発電機は本殿の横だ。早瀬、たのむ']]); UI.setObj('本殿の横の発電機を動かす', PLACES.gen);
+          PICK.add('switch', PLACES.gen.x, PLACES.gen.z, { y: groundH(PLACES.gen.x, PLACES.gen.z), label: '発電機を動かす', short: '動かす', use() { STORY.flags.gen = 1; AUDIO.sfx('boom'); } }); const d = ALLIES.get('doc'); d.hold = { x: -4, z: -100 }; },
+        until: () => STORY.flags.gen },
+      { on() { STORY.T = GAME.diff === 0 ? 100 : 130; for (const a of ALLIES.list) if (a.D.armed) a.hold = { x: rr(-8, 8), z: -84 + rr(-3, 3) };
+          SAY.lines([['doc', '動いた…！ ワクチンの仕上げまで、時間をちょうだい'], ['hq', 'これが最後の防衛線だ。夜明けまで、博士を守りぬけ！'], ['go', '全部来やがれ！']]); UI.setObj('ワクチンができるまで、境内を守る', PLACES.shrine); DIR.set({ want: 14, rate: .45, runner: .4 }); },
+        tick() { const t = STORY.st, T = STORY.T, F = STORY.flags; UI.progress('ワクチン完成まで　' + Math.floor(t / T * 100) + '%', t / T); setSky(lerp(.45, .92, t / T)); DIR.want = lerp(14, 20, t / T); DIR.runner = lerp(.4, .5, t / T);
+          if (!F.b1 && t > T * .3) { F.b1 = 1; const s = DIR.pickSpawn(); if (s) ZOMBIES.spawn('brute', s.x, s.z, { active: true }); SAY.lines([['sakura', '大きいのが来る、門のほう！']]); }
+          if (!F.b2 && t > T * .6) { F.b2 = 1; for (let k = 0; k < (GAME.diff === 0 ? 1 : 2); k++) { const s = DIR.pickSpawn(); if (s) ZOMBIES.spawn('brute', s.x, s.z, { active: true }); } SAY.lines([['go', '二体だと！？ 手榴弾を使え！']]); }
+          if (!F.m && t > T * .8) { F.m = 1; SAY.lines([['doc', 'あと少し…！ 空が白んできたわ']]); } },
+        until: () => STORY.st >= STORY.T },
+      { on() { UI.progress(null); DIR.set({ want: 6, rate: 1.4 }); HELI.start(); UI.setObj('ヘリが降りるまで、境内を守る', PLACES.lz); SAY.lines([['doc', 'できた…！ これで、日本じゅうに届けられる'], ['hq', 'ヘリが向かっている。ワクチンを積んで、全国へ運ぶ']]); }, until: () => HELI.landed },
+      { on() { UI.setObj('ヘリに乗る', PLACES.lz); const p = [[-3.2, 3], [3.4, 2.4], [2.6, -2]]; ALLIES.list.forEach((a, i) => { a.hold = { x: PLACES.lz.x + p[i % 3][0], z: PLACES.lz.z + p[i % 3][1] }; }); SAY.lines([['sakura', '行こう、早瀬さん。朝が来る']]); },
+        until: () => near({ x: PLACES.lz.x, z: PLACES.lz.z + 2 }, 5.2) },
+      { on() { GAME.opClear(); }, until: () => false },
+    ] },
+};
+const OP_ORDER = ['shinjuku', 'akiba', 'asakusa', 'dotonbori', 'shinsekai', 'gion'];
+const OP_END = {
+  shinjuku: '佐伯さんたち12人を乗せたヘリが、朝やけの空へ上がっていく。<br>医薬品は、都内の病院へ届けられた。',
+  akiba: '無線は関東じゅうの避難所をつないだ。<br>助けを待つ人の声が、次々と届きはじめる。',
+  asakusa: '水上バスは、ゆっくりと隅田川を下っていく。<br>源さんは、遠ざかる門を、ずっと見ていた。',
+  dotonbori: 'ワクチンを積んだ船が、運河を下っていく。<br>トラは言った。「ほな、次は新世界や」',
+  shinsekai: '塔の灯りを目印に、逃げ遅れた人たちが集まってきた。<br>ヘリは何度も、大阪の空を往復した。',
+  gion: '古都に、朝が来た。<br>ワクチンは日本じゅうへ運ばれ、感染は少しずつおさまっていく。<br>最後の防衛線は、守られた。',
+};
+const opsDone = () => { try { return JSON.parse(localStorage.getItem('tokyoz-ops')) || {}; } catch (e) { return {}; } };
+const mainClear = () => { try { return localStorage.getItem('tokyoz-clear') === '1'; } catch (e) { return false; } };
+function opUnlocked(id) { if (!mainClear()) return false; const i = OP_ORDER.indexOf(id), D = opsDone(); return i === 0 || !!D[OP_ORDER[i - 1]]; }
+function drawOps() {
+  const D = opsDone(), clear = mainClear();
+  $('opList').innerHTML = OP_ORDER.map((id, i) => { const O = OPS[id], A = AREA_DEF[O.area], ok = opUnlocked(id), done = D[id];
+    return `<button class="mb op" data-op="${id}" type="button" ${ok ? '' : 'disabled'}><b>${O.tag}</b>　${O.name}${done ? '　✔' : ''}<small>${A.pref}・${A.name}　${ok ? O.desc : clear ? 'ひとつ前の作戦をクリアすると、行ける' : '本編（夜明け）をクリアすると、行ける'}</small></button>`; }).join('');
+  for (const b of $('oDiff').children) b.classList.toggle('on', +b.dataset.v === GAME.diff);
+}
+function gotoArea(o) { try { localStorage.setItem('tokyoz-goto', JSON.stringify(o)); } catch (e) { /* なし */ } $('fade').style.opacity = 1; showScreen('load'); say('移動しています…'); setTimeout(() => location.reload(), 120); }
+
+window.__TZ = { AREA, AREA_DEF, OPS, VEH, gotoArea, loop: v => (RUN = v), step: (sec, d = 1 / 30) => { for (let t = 0; t < sec; t += d) tick(d); }, tick, render, THREE, scene, camera, renderer, vmScene, vmCam, GAME, PLAYER, ZOMBIES, ALLIES, STORY, CHAPTERS, DIR, PICK, UI, SAY, FX, VM, HELI, AUDIO, COL, NAV, ROT, onResize, applyHome, PLACES, SPAWNS, LAMPS, IN, SET, QUAL, MAT, TEX, SKY, WEAPONS, GRENADES, setSky, applyQuality, groundH, showScreen, readSave, zplace };
 boot();
 </script>
 <script id="carsjson" type="application/json">{"models":{"NormalCar1":{"slots":["Black","Blue","Grey","Headlights","TailLights","Windows"],"kd":{"Black":[0.011,0.011,0.011],"Blue":[0.2783,0.4317,0.64],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"TailLights":[0.6393,0.0744,0.0594],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[0,779],"slot":[9348,779],"idx":[10128,3822]},"back":{"pos":[17772,576],"slot":[24684,576],"idx":[25260,2520]},"fl":{"pos":[30300,288],"slot":[33756,288],"idx":[34044,1260]},"fr":{"pos":[36564,288],"slot":[40020,288],"idx":[40308,1260]}}},"NormalCar2":{"slots":["Black","Grey","Headlights","LightBlue","Material.007","TailLights","Windows"],"kd":{"Black":[0.011,0.011,0.011],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"LightBlue":[0.4589,0.5479,0.64],"Material.007":[0.64,0.64,0.64],"TailLights":[0.6393,0.0744,0.0594],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[42828,909],"slot":[53736,909],"idx":[54648,4332]},"back":{"pos":[63312,576],"slot":[70224,576],"idx":[70800,2520]},"fl":{"pos":[75840,288],"slot":[79296,288],"idx":[79584,1260]},"fr":{"pos":[82104,288],"slot":[85560,288],"idx":[85848,1260]}}},"SUV":{"slots":["Black","Grey","Headlights","TailLights","White","Windows"],"kd":{"Black":[0.011,0.011,0.011],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"TailLights":[0.6393,0.0744,0.0594],"White":[0.5585,0.5585,0.5585],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[88368,998],"slot":[100344,998],"idx":[101344,4842]},"back":{"pos":[111028,576],"slot":[117940,576],"idx":[118516,2520]},"fl":{"pos":[123556,288],"slot":[127012,288],"idx":[127300,1260]},"fr":{"pos":[129820,288],"slot":[133276,288],"idx":[133564,1260]}}},"SportsCar":{"slots":["Black","DarkOrange","Grey","Headlights","Orange","TailLights","Windows"],"kd":{"Black":[0.011,0.011,0.011],"DarkOrange":[0.5585,0.2332,0.0756],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.4842,0.1386],"Orange":[0.6393,0.266,0.0856],"TailLights":[0.6393,0.0744,0.0594],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[136084,861],"slot":[146416,861],"idx":[147280,4194]},"back":{"pos":[155668,576],"slot":[162580,576],"idx":[163156,2520]},"fl":{"pos":[168196,288],"slot":[171652,288],"idx":[171940,1260]},"fr":{"pos":[174460,288],"slot":[177916,288],"idx":[178204,1260]}}},"SportsCar2":{"slots":["Black","Grey","Headlights","TailLights","White","Windows"],"kd":{"Black":[0.0107,0.0107,0.0107],"Grey":[0.1259,0.1259,0.1259],"Headlights":[0.64,0.2996,0.102],"TailLights":[0.64,0.0737,0.059],"White":[0.5488,0.5488,0.5488],"Windows":[0.0282,0.0282,0.0282]},"parts":{"body":{"pos":[180724,852],"slot":[190948,852],"idx":[191800,4404]},"back":{"pos":[200608,576],"slot":[207520,576],"idx":[208096,2520]},"fl":{"pos":[213136,288],"slot":[216592,288],"idx":[216880,1260]},"fr":{"pos":[219400,288],"slot":[222856,288],"idx":[223144,1260]}}},"Taxi":{"slots":["Black","Grey","Headlights","TailLights","Windows","Yellow"],"kd":{"Black":[0.011,0.011,0.011],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"TailLights":[0.6393,0.0744,0.0594],"Windows":[0.0285,0.0285,0.0285],"Yellow":[0.64,0.4651,0.0453]},"parts":{"body":{"pos":[225664,977],"slot":[237388,977],"idx":[238368,4794]},"back":{"pos":[247956,576],"slot":[254868,576],"idx":[255444,2520]},"fl":{"pos":[260484,288],"slot":[263940,288],"idx":[264228,1260]},"fr":{"pos":[266748,288],"slot":[270204,288],"idx":[270492,1260]}}},"Cop":{"slots":["Black","BlueLights","Grey","Headlights","TailLights","White","WhiteLights","Windows"],"kd":{"Black":[0.011,0.011,0.011],"BlueLights":[0.0418,0.1582,0.64],"Grey":[0.1612,0.1612,0.1612],"Headlights":[0.6393,0.301,0.1019],"TailLights":[0.6393,0.0744,0.0594],"White":[0.5488,0.5488,0.5488],"WhiteLights":[0.64,0.64,0.64],"Windows":[0.0285,0.0285,0.0285]},"parts":{"body":{"pos":[273012,982],"slot":[284796,982],"idx":[285780,4656]},"back":{"pos":[295092,576],"slot":[302004,576],"idx":[302580,2520]},"fl":{"pos":[307620,288],"slot":[311076,288],"idx":[311364,1260]},"fr":{"pos":[313884,288],"slot":[317340,288],"idx":[317628,1260]}}}},"license":"CC0 1.0 (Quaternius, Cars Pack)"}</script>
