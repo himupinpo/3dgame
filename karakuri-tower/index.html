@@ -31,6 +31,8 @@ body.cine .hud, body.cine .tb, body.cine #joy { display: none !important; }
 #hObj b { color: var(--brass); }
 /* 体力・ランタン・持ち物（左下） */
 #hStat { left: calc(14px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: 210px; }
+/* スマホ：スティックは左下のすみ。体力・ランタンはスティックの右どなり */
+body.touch #hStat { left: calc(22px + 124px * var(--bs) + 18px + env(safe-area-inset-left, 0px)); width: 180px; }
 .bar { height: 9px; border-radius: 5px; background: rgba(0,0,0,.55); border: 1px solid rgba(226,180,90,.45); overflow: hidden; margin-top: 5px; }
 .bar i { display: block; height: 100%; width: 100%; transition: width .2s; }
 #hpF { background: linear-gradient(90deg, #b83a2a, #ff7a5a); } #oilF { background: linear-gradient(90deg, #c8862a, #ffd46a); }
@@ -66,7 +68,7 @@ body.playing.bossOn #boss { display: block !important; }
 /* スマホ：スティック・ボタン */
 #tArea { position: absolute; inset: 0; display: none; }
 body.touch.playing #tArea { display: block; }
-#joy { position: absolute; left: calc(26px + env(safe-area-inset-left, 0px)); bottom: calc(110px + env(safe-area-inset-bottom, 0px)); width: calc(124px * var(--bs)); height: calc(124px * var(--bs)); border-radius: 50%; display: none;
+#joy { position: absolute; left: calc(22px + env(safe-area-inset-left, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: calc(124px * var(--bs)); height: calc(124px * var(--bs)); border-radius: 50%; display: none;
   background: radial-gradient(circle, rgba(255,230,180,calc(var(--opa) * .12)), rgba(255,230,180,calc(var(--opa) * .05))); border: 2px solid rgba(226,180,90,calc(var(--opa) * .9)); touch-action: none; }
 body.touch.playing #joy { display: block; }
 #joyK { position: absolute; left: 50%; top: 50%; width: 46%; height: 46%; margin: -23% 0 0 -23%; border-radius: 50%; background: rgba(226,180,90,calc(var(--opa) * .8)); box-shadow: 0 2px 8px rgba(0,0,0,.6); }
@@ -105,7 +107,7 @@ h2 { margin: 0 0 10px; font: 800 22px var(--fm); color: #f2d48a; letter-spacing:
 .stat { display: flex; justify-content: space-between; padding: 6px 4px; border-bottom: 1px solid rgba(226,180,90,.25); font-size: 15px; font-weight: 700; }
 body.hub .pcOnly { display: none; }
 /* たて長の画面：体力・油は左上へ（右下のボタンと重ならないように） */
-@media (max-aspect-ratio: 1/1) { #hStat { bottom: auto; top: calc(54px + env(safe-area-inset-top, 0px)); width: 150px; } #hObj { display: none !important; } #sub { bottom: calc(230px + env(safe-area-inset-bottom, 0px)); } #boss { top: calc(150px + env(safe-area-inset-top, 0px)); } }
+@media (max-aspect-ratio: 1/1) { #hStat, body.touch #hStat { left: calc(14px + env(safe-area-inset-left, 0px)); bottom: auto; top: calc(54px + env(safe-area-inset-top, 0px)); width: 150px; } #hObj { display: none !important; } #sub { bottom: calc(230px + env(safe-area-inset-bottom, 0px)); } #boss { top: calc(150px + env(safe-area-inset-top, 0px)); } }
 </style></head><body>
 <div id="rot">
   <canvas id="c"></canvas>
