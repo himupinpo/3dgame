@@ -139,18 +139,34 @@ body.building #lbox, body.cooking #lbox, body.building #mmap, body.cooking #mmap
 #mmap { right: calc(10px + env(safe-area-inset-right, 0px)); top: calc(56px + env(safe-area-inset-top, 0px)); width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 2px 10px rgba(40,30,20,.35); }
 body.playing.mapon #side { top: calc(216px + env(safe-area-inset-top, 0px)); }
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; z-index: 60; } #fade.on { opacity: 1; }
-/* エレベーターの階ボタン・移動中の階の表示 */
-#elv { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 8; background: rgba(20,16,12,.28); touch-action: none; }
+/* エレベーターの操作盤：ステンレスのヘアライン・四角い銀色のボタン（押すとふちがオレンジに光る・点字つき）・開閉ボタン・LEDの階表示 */
+#elv { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 8; background: rgba(20,16,12,.3); touch-action: none; }
 body.playing #elv.on { display: flex; } body.cooking #elv, body.building #elv { display: none !important; }
-#elv .eb { background: linear-gradient(#d4d8de, #9ea4ac); border-radius: 18px; padding: 10px 14px 10px; box-shadow: 0 8px 30px rgba(0,0,0,.45), inset 0 1px 0 #fff; text-align: center; max-height: 94%; overflow: auto; border: 3px solid #7a8088; }
-#elvT { font-weight: 900; color: #23262b; font-size: 15px; } #elvT small { display: block; font-size: 11.5px; color: #3a3e46; font-weight: 800; margin-top: 2px; } #elvT b { color: #c8321e; }
-#elvG { display: grid; gap: 8px 12px; justify-content: center; margin: 10px 0 8px; }
-#elvG button { width: 58px; height: 58px; border-radius: 50%; border: 3px solid #6a6e76; background: radial-gradient(circle at 40% 35%, #fdfdfd, #d2d6dc); font: 900 21px var(--f); color: #23262b; cursor: pointer; position: relative; box-shadow: 0 2px 0 #5a5e66; }
-#elvG button.cur { border-color: #2a6ad8; color: #2a6ad8; } #elvG button.go { border-color: #e8523a; box-shadow: 0 0 0 3px rgba(232,82,58,.35), 0 0 14px rgba(255,140,60,.9); }
-#elvG button.lit { background: radial-gradient(circle at 40% 35%, #fff6d8, #ffb030); box-shadow: 0 0 16px rgba(255,170,40,.95); }
-#elvG button i { position: absolute; right: -9px; top: -9px; font-style: normal; font-size: 17px; } #elvG button small { position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); font-size: 8.5px; white-space: nowrap; }
-#elvX { padding: 8px 26px; border-radius: 14px; border: none; background: #3a3e46; color: #fff; font: 800 14px var(--f); cursor: pointer; }
-body.short #elvG { gap: 5px 8px; margin: 6px 0; } body.short #elvG button { width: 46px; height: 46px; font-size: 17px; } body.short #elv .eb { padding: 6px 10px; }
+#elv .eb { position: relative; padding: 14px 18px 12px; border-radius: 5px; max-height: 94%; overflow: auto; text-align: center;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, rgba(0,0,0,.05) 1px 2px, rgba(255,255,255,0) 2px 4px), linear-gradient(100deg, #b6bbc1 0%, #e9ecef 22%, #c1c6cc 48%, #eff1f3 70%, #adb3ba 100%);
+  border: 1px solid #7c828a; box-shadow: 0 0 0 4px #5b6169, 0 12px 34px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.9); }
+#elv .eb::before, #elv .eb::after { content: ''; position: absolute; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #8a9098 60%, #545a62); box-shadow: 0 1px 0 rgba(255,255,255,.7); }
+#elv .eb::before { left: 6px; } #elv .eb::after { right: 6px; }
+.eTop { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-bottom: 10px; }
+.eLcd { min-width: 96px; padding: 4px 14px; border-radius: 4px; background: #0b0c0e; box-shadow: inset 0 2px 6px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.75); color: #ffa630; font: 800 30px/1 ui-monospace, Menlo, Consolas, monospace; text-shadow: 0 0 8px rgba(255,150,30,.85); display: flex; gap: 8px; justify-content: center; align-items: center; }
+.eLcd span { font-size: 18px; min-width: 14px; }
+#elvT { font: 800 13px var(--f); color: #383d44; text-shadow: 0 1px 0 rgba(255,255,255,.85); letter-spacing: .04em; } #elvT small { display: block; font-size: 11px; font-weight: 800; color: #4a4f56; margin-top: 1px; } #elvT b { color: #c8321e; }
+#elvG { display: grid; gap: 10px 13px; justify-content: center; margin: 2px 0 12px; } #elvG em { display: block; }
+#elvG button, .eRow button { position: relative; width: 54px; height: 54px; border-radius: 6px; cursor: pointer; padding: 0; color: #33383e;
+  background: linear-gradient(145deg, #fbfcfd 0%, #d8dce1 40%, #c0c5cb 52%, #e4e7ea 62%, #a8aeb5 100%); border: 1px solid #6f757d;
+  box-shadow: inset 0 1px 0 #fff, inset 0 -2px 3px rgba(0,0,0,.2), 0 2px 0 #686e76, 0 3px 7px rgba(0,0,0,.35); }
+#elvG button::before { content: ''; position: absolute; inset: 7px; border-radius: 3px; border: 2px solid rgba(88,94,102,.45); box-shadow: inset 0 1px 0 rgba(255,255,255,.6); transition: border-color .12s, box-shadow .12s; }
+#elvG button span { position: relative; font: 700 21px/1 "Helvetica Neue", Arial, sans-serif; text-shadow: 0 1px 0 rgba(255,255,255,.9), 0 -1px 0 rgba(0,0,0,.22); transition: color .12s; }
+#elvG button::after { content: ''; position: absolute; right: 3px; top: 50%; width: 4px; height: 12px; margin-top: -6px; background: radial-gradient(circle, #6a7078 1.1px, transparent 1.6px) 0 0 / 4px 4px; }
+#elvG button:active, .eRow button:active { transform: translateY(1px); box-shadow: inset 0 1px 3px rgba(0,0,0,.35), 0 1px 0 #686e76; }
+#elvG button.lit::before { border-color: #ff9a2a; box-shadow: 0 0 8px rgba(255,150,40,.95), inset 0 0 6px rgba(255,170,60,.8); } #elvG button.lit span { color: #e8641a; text-shadow: 0 0 6px rgba(255,150,40,.9); }
+#elvG button.go::before { border-color: rgba(232,82,58,.7); }
+#elvG button i { position: absolute; right: -10px; top: -10px; font-style: normal; font-size: 16px; }
+#elvG button small { position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%); font-size: 8px; font-weight: 800; color: #4a4f56; white-space: nowrap; }
+.eRow { display: flex; gap: 14px; justify-content: center; padding-top: 10px; border-top: 1px solid rgba(88,94,102,.35); }
+.eRow button { width: 66px; height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.eRow svg { width: 30px; height: 18px; fill: #33383e; } .eRow small { font: 800 10px var(--f); color: #33383e; line-height: 1; }
+body.short #elvG { gap: 6px 9px; margin: 0 0 8px; } body.short #elvG button { width: 44px; height: 44px; } body.short #elvG button span { font-size: 17px; } body.short #elv .eb { padding: 10px 14px 8px; } body.short .eLcd { font-size: 22px; } body.short .eTop { margin-bottom: 6px; } body.short .eRow button { height: 36px; } body.short .eRow { padding-top: 6px; }
 #lift { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9; background: rgba(8,8,10,0); transition: background .3s; pointer-events: none; }
 #lift.on { display: flex; } #lift.dark { background: rgba(8,8,10,.88); }
 #lift .ld { background: #141416; border: 3px solid #4a4a52; border-radius: 12px; padding: 8px 28px; color: #ffb030; font: 900 56px/1 ui-monospace, Menlo, Consolas, monospace; text-shadow: 0 0 14px rgba(255,160,40,.85); display: flex; gap: 16px; align-items: center; opacity: 0; transition: opacity .2s; }
@@ -197,7 +213,7 @@ body.building #tko, body.cooking #tko { display: none !important; }
   <div id="lbox" class="hud"><div id="tko" style="display:none"></div><div id="dlv" style="display:none"></div></div>
   <canvas id="mmap" class="hud" width="150" height="150" style="display:none"></canvas>
   <div id="fade"></div>
-  <div id="elv"><div class="eb"><div id="elvT"></div><div id="elvG"></div><button id="elvX">とじる</button></div></div>
+  <div id="elv"><div class="eb"><div class="eTop"><div class="eLcd"><span id="elvA"></span><b id="elvF">1</b></div><div id="elvT"></div></div><div id="elvG"></div><div class="eRow"><button id="elvO" aria-label="開"><svg viewBox="0 0 40 24"><path d="M2 12 L12 4 V20 Z M38 12 L28 4 V20 Z"/><rect x="19" y="2" width="2" height="20"/></svg><small>開</small></button><button id="elvC" aria-label="閉"><svg viewBox="0 0 40 24"><path d="M17 12 L7 4 V20 Z M23 12 L33 4 V20 Z"/><rect x="19" y="2" width="2" height="20"/></svg><small>閉</small></button></div></div></div>
   <div id="lift"><div class="ld"><span id="liftA">▲</span><b id="liftF">1</b></div><small id="liftN"></small></div>
   <div id="prompt" class="hud"></div>
   <div id="toast" class="hud"></div>
@@ -759,7 +775,7 @@ const ACH = [
   ['reg3', 'なじみのお客さん', '常連さんと ♥3 になる', s => Object.values(s.regs || {}).some(r => r.h >= 3), 3000], ['regall', 'みんな知り合い', '常連さん8人 全員が来店', s => REGS.every(r => ((s.regs || {})[r.id] || {}).v > 0), 8000], ['regmax', '一生の常連さん', '常連さんと ♥5 になる', s => Object.values(s.regs || {}).some(r => r.h >= 5), 15000],
   ['cat', '看板猫', 'ねこベッドを置いて 猫をむかえる', s => s.items.some(i => i.id === 'catbed'), 2000], ['pet50', 'ねこ好き', '看板猫を50回なでる', s => (s.st.pets || 0) >= 50, 5000], ['to10', 'テイクアウトはじめました', 'テイクアウトを10回', s => (s.st.takeout || 0) >= 10, 3000], ['to100', '出前の名店', 'テイクアウトを100回', s => (s.st.takeout || 0) >= 100, 20000],
   ['cont1', 'コンテスト優勝', '料理コンテストで優勝', s => ((s.contest || {}).wins || 0) >= 1, 10000], ['cont5', '料理界のスター', '料理コンテストで5回優勝', s => ((s.contest || {}).wins || 0) >= 5, 50000], ['year', '四季をひとめぐり', '28日営業する', s => s.day >= 29, 20000], ['spec50', '看板メニュー', 'おすすめ料理を50皿', s => (s.st.special || 0) >= 50, 6000], ['mop20', 'ピカピカの床', 'こぼれた飲み物を20回ふく', s => (s.st.mop || 0) >= 20, 3000],
-  ['auto', '店長いなくても大丈夫', 'シェフ・ウェイター・案内役をそろえる', s => !!(s.unl || {}).dlv, 5000], ['autoall', '完全おまかせ', 'ケータリングまで解放する', s => !!(s.unl || {}).cater, 20000], ['dlv1', 'はじめての配達', 'デリバリーを1回', s => (s.st.dlv || 0) >= 1, 1000], ['dlv50', '町の人気店', 'デリバリーを50回', s => (s.st.dlv || 0) >= 50, 15000], ['cater1', '大口注文', 'ケータリングをとどける', s => (s.st.cater || 0) >= 1, 8000], ['top', 'てっぺんまで', 'グリーンマンションの4階へとどける', s => !!s.st.top, 3000], ['tower', 'タワーのてっぺん', 'まんぷくタワーの10階へとどける', s => !!s.st.tower, 5000], ['rooms20', 'マンションの顔なじみ', 'アパート・マンションの20部屋へとどける', s => Object.keys(s.st.rooms || {}).length >= 20, 6000],
+  ['auto', '店長いなくても大丈夫', 'シェフ・ウェイター・案内役をそろえる', s => !!(s.unl || {}).dlv, 5000], ['autoall', '完全おまかせ', 'ケータリングまで解放する', s => !!(s.unl || {}).cater, 20000], ['dlv1', 'はじめての配達', 'デリバリーを1回', s => (s.st.dlv || 0) >= 1, 1000], ['dlv50', '町の人気店', 'デリバリーを50回', s => (s.st.dlv || 0) >= 50, 15000], ['cater1', '大口注文', 'ケータリングをとどける', s => (s.st.cater || 0) >= 1, 8000], ['top', 'てっぺんまで', 'グリーンハイム満腹の4階へとどける', s => !!s.st.top, 3000], ['tower', 'タワーのてっぺん', '満腹台タワーレジデンスの10階へとどける', s => !!s.st.tower, 5000], ['rooms20', 'マンションの顔なじみ', 'アパート・マンションの20部屋へとどける', s => Object.keys(s.st.rooms || {}).length >= 20, 6000],
 ];
 // 毎日の目標（3つ）
 const MISSION_T = [
@@ -1229,18 +1245,74 @@ const inObs = (x, z) => TOWN.obs.some(o => x > o[0] && x < o[1] && z > o[2] && z
 const gateAt = (x, z) => TOWN.gates.some(G => G.open < .85 && x > G.x0 && x < G.x1 && z > G.gz - .16 && z < G.gz + .16);
 function labelTex(t, w = 256, h = 96, bg = '#fbf6ea', fg = '#3a2a1e', font = 'serif', fs = 52) { const [c, g] = cvs(w, h); g.fillStyle = bg; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 4; g.strokeRect(2, 2, w - 4, h - 4); g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; let s = fs; do { g.font = `900 ${s}px ${font}`; s -= 2; } while (g.measureText(t).width > w - 16 && s > 10); g.fillText(t, w / 2, h / 2 + 2); return ctex(c, { rep: false }); }
 function label(t, w, h, x, y, z, ry, o = {}) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: labelTex(t, o.pw || 256, o.ph || Math.round(256 * h / w), o.bg, o.fg, o.font, o.fs), roughness: .6 })); m.position.set(x, y, z); m.rotation.y = ry; TOWN.grp.add(m); return m; }
-// 表札・部屋番号・階の表示：たくさんあるので、1枚の大きな絵（128×64のます目）にまとめて描く
-const ATL = { cur: null };
+// 表札・部屋番号札・住居表示・階の表示：大きさごとに1枚の大きな絵（1024×1024）へまとめて描く。o.st で素材（木・石・ステンレス・タイル・住居表示板・LED・電柱の町名板）
+const ATL = {}, MINCHO = '"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP","Noto Serif CJK JP",serif', GOTHIC = '"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif', ROMAN = '"Didot","Bodoni 72","Times New Roman",serif';
+function fitText(g, t, x, y, maxW, size, wt, fam) { let s = size; do { g.font = `${wt} ${s}px ${fam}`; s -= 1; } while (g.measureText(t).width > maxW && s > 7); g.fillText(t, x, y); }
+// 字と字のあいだをあけて書く（英字の館名）。はばに入らなければ小さくする
+function spacedFit(g, t, x, y, maxW, size, wt, fam, sp = .3) { let s = size, w; const cs = [...t]; do { g.font = `${wt} ${s}px ${fam}`; w = cs.reduce((a, c) => a + g.measureText(c).width + s * sp, -s * sp); s -= 1; } while (w > maxW && s > 7); s += 1; let cx = x - w / 2; g.textAlign = 'left'; for (const c of cs) { g.fillText(c, cx, y); cx += g.measureText(c).width + s * sp; } g.textAlign = 'center'; }
+// ステンレスのヘアライン（dir：'h' 横・'v' たて）
+function brushed(g, w, h, dir) { const gr = dir === 'v' ? g.createLinearGradient(0, 0, w, 0) : g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#eef0f2'); gr.addColorStop(.45, '#c6cbd1'); gr.addColorStop(.55, '#e3e6e9'); gr.addColorStop(1, '#a9afb6'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  for (let i = 0, n = (dir === 'v' ? w : h) * 1.6; i < n; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '50,55,60'},${Math.random() * .1})`; if (dir === 'v') g.fillRect(Math.random() * w, 0, 1, h); else g.fillRect(0, Math.random() * h, w, 1); } }
+function granite(g, w, h) { g.fillStyle = '#3c3a37'; g.fillRect(0, 0, w, h); for (let i = 0, n = w * h / 14; i < n; i++) { g.fillStyle = Math.random() < .55 ? `rgba(10,10,10,${Math.random() * .4})` : `rgba(235,230,220,${Math.random() * .22})`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+  const hl = g.createLinearGradient(0, 0, w, h); hl.addColorStop(0, 'rgba(255,255,255,.16)'); hl.addColorStop(.45, 'rgba(255,255,255,0)'); g.fillStyle = hl; g.fillRect(0, 0, w, h); }
+const PLS = {
+  plain(g, w, h, L, o) { const k = h / 64; g.fillStyle = o.bg || '#f6f2e8'; g.fillRect(0, 0, w, h); if (o.bd !== false) { g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 4 * k; g.strokeRect(4 * k, 4 * k, w - 8 * k, h - 8 * k); }
+    g.fillStyle = o.fg || '#2a2a2a'; L.forEach((t, i) => fitText(g, t, w / 2, L.length > 1 ? (20 + i * 25) * k : 34 * k, w - 16 * k, (L.length > 1 ? (i ? 22 : 25) : (o.fs || 38)) * k, 900, o.font || 'sans-serif')); },
+  // 木の表札（筆の明朝体）
+  wood(g, w, h, L) { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#dcb47e'); gr.addColorStop(1, '#b8874e'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(105,62,24,.3)'; g.lineWidth = 1.2;
+    for (let i = 0; i < 16; i++) { const y0 = (i + .5) * h / 16; g.beginPath(); g.moveTo(0, y0); for (let x = 0; x <= w; x += 6) g.lineTo(x, y0 + Math.sin(x * .045 + i * 1.7) * 2.2); g.stroke(); }
+    g.strokeStyle = 'rgba(70,40,15,.6)'; g.lineWidth = 4; g.strokeRect(2, 2, w - 4, h - 4); g.fillStyle = '#1e140c'; fitText(g, L[0], w / 2, h * .54, w * .8, h * .62, 700, MINCHO); },
+  // 石（みがいた御影石に金色の彫り文字）
+  stone(g, w, h, L) { granite(g, w, h); g.shadowColor = 'rgba(0,0,0,.85)'; g.shadowOffsetY = 1.5; g.shadowBlur = 1; g.fillStyle = '#ecdcaa'; fitText(g, L[0], w / 2, h * .54, w * .78, h * .6, 700, MINCHO); g.shadowColor = 'transparent'; },
+  // ステンレス（ヘアラインに黒い文字）
+  steel(g, w, h, L) { brushed(g, w, h, 'h'); g.strokeStyle = 'rgba(90,96,104,.65)'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2); g.fillStyle = '#2a2e34'; fitText(g, L[0], w / 2, h * .54, w * .8, h * .56, 600, GOTHIC); },
+  // 白いタイルに藍色の字
+  tile(g, w, h, L) { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#fbfaf6'); gr.addColorStop(1, '#e4e0d4'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.strokeStyle = '#b4ae9f'; g.lineWidth = 3; g.strokeRect(3, 3, w - 6, h - 6); g.strokeStyle = '#2a4a8a'; g.lineWidth = 1.5; g.strokeRect(10, 10, w - 20, h - 20);
+    g.fillStyle = '#1e3a7a'; fitText(g, L[0], w / 2, h * .54, w * .72, h * .54, 700, MINCHO); },
+  // 住居表示板（紺に白文字：町名と丁目／番-号）
+  addr(g, w, h, L) { g.fillStyle = '#1c3f8e'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,.92)'; g.lineWidth = 2; g.strokeRect(5, 5, w - 10, h - 10); g.fillStyle = '#fff'; fitText(g, L[0], w / 2, h * .29, w * .82, h * .21, 700, GOTHIC); fitText(g, L[1], w / 2, h * .64, w * .82, h * .42, 800, GOTHIC); },
+  // 部屋番号札（ステンレス）と、その下の名前の札
+  room(g, w, h, L) { brushed(g, w, h, 'h'); g.strokeStyle = 'rgba(80,86,94,.7)'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2); g.fillStyle = '#23272c'; fitText(g, L[0], w / 2, h * (L[1] ? .36 : .52), w * .8, h * (L[1] ? .44 : .6), 800, GOTHIC);
+    if (L[1]) { g.fillStyle = 'rgba(255,255,255,.8)'; g.fillRect(w * .14, h * .62, w * .72, h * .28); g.strokeStyle = 'rgba(80,86,94,.5)'; g.lineWidth = 1; g.strokeRect(w * .14, h * .62, w * .72, h * .28); g.fillStyle = '#33373c'; fitText(g, L[1], w / 2, h * .765, w * .64, h * .21, 700, MINCHO); } },
+  // エレベーターの階の表示（オレンジのLED）
+  led(g, w, h, L) { g.fillStyle = '#0e0f11'; g.fillRect(0, 0, w, h); g.shadowColor = 'rgba(255,150,30,.9)'; g.shadowBlur = 6; g.fillStyle = '#ffa630'; fitText(g, L[0], w / 2, h * .55, w * .8, h * .78, 800, 'ui-monospace, Menlo, Consolas, monospace'); g.shadowBlur = 0; g.shadowColor = 'transparent'; },
+  // 電柱の町名板（緑に白、たて書き）
+  pole(g, w, h, L) { g.fillStyle = '#1f6a3a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2; g.strokeRect(4, 4, w - 8, h - 8); g.fillStyle = '#fff'; const cs = [...L[0]], step = (h - 20) / cs.length; cs.forEach((c, i) => fitText(g, c, w / 2, 10 + step * (i + .5), w * .7, Math.min(step * .88, w * .62), 700, GOTHIC)); },
+};
 function tplate(lines, w, h, x, y, z, ry, o = {}) {
-  let A = ATL.cur; if (!A || A.n >= 128) { const [c, g] = cvs(1024, 1024); A = ATL.cur = { g, n: 0, m: new THREE.MeshStandardMaterial({ map: ctex(c, { rep: false }), roughness: .55 }) }; }
-  const k = A.n++, cx = (k % 8) * 128, cy = (k >> 3) * 64, g = A.g, L = Array.isArray(lines) ? lines : [lines];
-  g.save(); g.translate(cx, cy); g.fillStyle = o.bg || '#f6f2e8'; g.fillRect(0, 0, 128, 64); if (o.bd !== false) { g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 4; g.strokeRect(4, 4, 120, 56); }
-  g.fillStyle = o.fg || '#2a2a2a'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  L.forEach((t, i) => { let s = L.length > 1 ? (i ? 22 : 25) : (o.fs || 38); do { g.font = `900 ${s}px ${o.font || 'sans-serif'}`; s -= 2; } while (g.measureText(t).width > 112 && s > 8); g.fillText(t, 64, L.length > 1 ? 20 + i * 25 : 34); });
-  g.restore(); A.m.map.needsUpdate = true;
-  const geo = new THREE.PlaneGeometry(w, h), uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (cx + 3 + uv.getX(i) * 122) / 1024, 1 - (cy + 3 + (1 - uv.getY(i)) * 58) / 1024);
+  const cw = o.cw || 128, ch = o.ch || 64, key = cw + 'x' + ch, cols = Math.floor(1024 / cw), cap = cols * Math.floor(1024 / ch);
+  let A = ATL[key]; if (!A || A.n >= cap) { const [c, g] = cvs(1024, 1024); A = ATL[key] = { g, n: 0, m: new THREE.MeshStandardMaterial({ map: ctex(c, { rep: false }), roughness: .42 }) }; }
+  const k = A.n++, cx = (k % cols) * cw, cy = Math.floor(k / cols) * ch, g = A.g, L = Array.isArray(lines) ? lines : [lines];
+  g.save(); g.translate(cx, cy); g.beginPath(); g.rect(0, 0, cw, ch); g.clip(); g.textAlign = 'center'; g.textBaseline = 'middle'; (PLS[o.st] || PLS.plain)(g, cw, ch, L, o); g.restore(); A.m.map.needsUpdate = true;
+  const geo = new THREE.PlaneGeometry(w, h), uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (cx + 2 + uv.getX(i) * (cw - 4)) / 1024, 1 - (cy + 2 + (1 - uv.getY(i)) * (ch - 4)) / 1024);
   tbAdd(geo, A.m, mtx(x, y, z, ry));
 }
+// マンションの名前：壁に付いた金属の切り文字（日本語の上に英字）、石の館名板、古いアパートは木の看板
+function nameSign(jp, en, w, h, x, y, z, ry, o = {}) {
+  const st = o.st || 'metal', W = st === 'crown' ? 2048 : 1024, H = Math.max(96, Math.round(W * h / w)), [c, g] = cvs(W, H), gold = o.tone === 'gold'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const metal = () => { const gr = g.createLinearGradient(0, 0, 0, H); if (gold) { gr.addColorStop(0, '#fff3c4'); gr.addColorStop(.45, '#d2aa52'); gr.addColorStop(.56, '#f4dc98'); gr.addColorStop(1, '#9c7428'); } else { gr.addColorStop(0, '#ffffff'); gr.addColorStop(.45, '#b9c1c9'); gr.addColorStop(.56, '#eef1f4'); gr.addColorStop(1, '#878f98'); } return gr; };
+  if (st === 'plaque') { granite(g, W, H); g.strokeStyle = 'rgba(210,195,150,.55)'; g.lineWidth = 3; g.strokeRect(12, 12, W - 24, H - 24); g.shadowColor = 'rgba(0,0,0,.85)'; g.shadowOffsetY = 2; g.fillStyle = '#ead9a4';
+    fitText(g, jp, W / 2, en ? H * .42 : H * .52, W * .86, H * (en ? .4 : .55), 700, MINCHO); if (en) { g.fillStyle = '#d6cba8'; spacedFit(g, en, W / 2, H * .78, W * .8, H * .14, 600, ROMAN, .35); } g.shadowColor = 'transparent'; }
+  else if (st === 'wood') { PLS.wood(g, W, H, ['']); g.fillStyle = '#16100a'; fitText(g, jp, W / 2, H * .54, W * .84, H * .7, 800, MINCHO); }
+  else { g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowOffsetX = 3; g.shadowOffsetY = 4; g.shadowBlur = 5; g.fillStyle = metal();
+    if (st === 'crown') { spacedFit(g, en, W / 2, H * .4, W * .96, H * .52, 700, ROMAN, .22); fitText(g, jp, W / 2, H * .82, W * .5, H * .22, 700, MINCHO); }
+    else { fitText(g, jp, W / 2, en ? H * .37 : H * .52, W * .94, H * (en ? .54 : .74), 800, MINCHO); if (en) spacedFit(g, en, W / 2, H * .83, W * .8, H * .19, 600, ROMAN, .32); } }
+  const tr = st === 'metal' || st === 'crown', m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: ctex(c, { rep: false }), transparent: tr, depthWrite: !tr, roughness: .35, metalness: tr ? .2 : 0 }));
+  m.position.set(x, y, z); m.rotation.y = ry; TOWN.grp.add(m); return m;
+}
+// 入口の石の館名板（名前・英字・住所）と植えこみ。face：-1＝北（道路がわ）を向く
+function monument(x, z, face, jp, en, addr) {
+  const ry = face < 0 ? Math.PI : 0; bx(3.1, .22, 1.0, x, 0, z, 0x8a8680); bx(2.6, 1.05, .34, x, .22, z, 0, { m: TMAT('granite', 0x34322f, { roughness: .3 }) }); bx(2.72, .06, .42, x, 1.27, z, 0x2a2826);
+  nameSign(jp, en, 2.3, .62, x, .88, z + face * .176, ry, { st: 'plaque' }); tplate([addr], 1.1, .12, x, .43, z + face * .176, ry, { bg: '#34322f', fg: '#ddd2b4', bd: false, fs: 22, cw: 256, ch: 32, font: MINCHO });
+  for (const s of [-1, 1]) { bx(.7, .3, .7, x + s * 1.95, 0, z, 0x8a8680); sph(.36, x + s * 1.95, .55, z, 0x3a7a3a); }
+  obs(x - 2.35, x + 2.35, z - .5, z + .5, .08);
+}
+// エレベーターの扉・枠（ステンレス）と、乗り場の呼びボタン（▲▼）の絵
+function brushTex() { if (TOWN.brushT) return TOWN.brushT; const [c, g] = cvs(128, 256); brushed(g, 128, 256, 'v'); return (TOWN.brushT = ctex(c, { rep: false })); }
+function callTex() { if (TOWN.callT) return TOWN.callT; const [c, g] = cvs(64, 128); brushed(g, 64, 128, 'h'); g.strokeStyle = 'rgba(80,86,94,.8)'; g.lineWidth = 2; g.strokeRect(1, 1, 62, 126);
+  for (const [y, up] of [[38, 1], [90, 0]]) { const bg = g.createLinearGradient(0, y - 18, 0, y + 18); bg.addColorStop(0, '#fafbfc'); bg.addColorStop(1, '#a8aeb5'); g.fillStyle = bg; g.fillRect(14, y - 18, 36, 36); g.strokeStyle = '#6a7078'; g.lineWidth = 1.5; g.strokeRect(14, y - 18, 36, 36); g.strokeStyle = 'rgba(255,160,50,.55)'; g.strokeRect(18, y - 14, 28, 28);
+    g.fillStyle = '#3a3f46'; g.beginPath(); if (up) { g.moveTo(32, y - 9); g.lineTo(42, y + 7); g.lineTo(22, y + 7); } else { g.moveTo(32, y + 9); g.lineTo(42, y - 7); g.lineTo(22, y - 7); } g.fill(); }
+  return (TOWN.callT = ctex(c, { rep: false })); }
 // ---------- 部品 ----------
 const WIN = () => TMAT('glass', 0x6a8aa8, { roughness: .12, metalness: .5 });
 const WINL = () => TMAT('glassL', 0x6a8aa8, { roughness: .12, metalness: .5, emissive: 0xffb45a, emissiveIntensity: 0 });   // 夜に明かりがつく窓
@@ -1255,10 +1327,12 @@ const FAM = ['佐藤', '鈴木', '高橋', '田中', '伊藤', '渡辺', '山本
   '山田', '佐々木', '西村', '原田', '中島', '岡本', '村上', '長谷川', '近藤', '石井', '坂本', '遠藤', '青木', '藤井', '西田', '福田', '太田', '三浦', '藤原', '中野', '小野', '田村', '竹内', '金子', '和田', '中山', '石田', '上田', '森田', '柴田', '酒井', '工藤', '横山', '宮崎', '宮本', '内田', '高木', '安藤', '谷口', '大野', '丸山', '今井', '河野', '野口', '松田', '菅原', '久保', '千葉', '松尾', '杉山', '平野', '大塚'];
 const ROOFS = [[0xc83a2a, '赤い屋根'], [0x2a4a8a, '青い屋根'], [0x3a3a3e, '黒い屋根'], [0x2a7a4a, '緑の屋根'], [0x8a5a34, '茶色の屋根'], [0x6a6a72, '灰色の屋根']];
 const HWALL = [0xf6ecd8, 0xf2f0ea, 0xe8dcc8, 0xd8e2e8, 0xf2e0d0, 0xe0e8d8, 0xf0e6c8];
-let FAMI = 0, FAMJ = 0;
+let FAMI = 0, FAMJ = 0; const BANC = {}, KANJI = ['〇', '一', '二', '三', '四'];
+const CHO = z0 => z0 < 84 ? ['満腹町', 1] : z0 < 140 ? ['満腹町', 2] : ['満腹台', 1];   // 住所：通りでかこまれたブロックごとの町名と丁目
 // 家：o.fence＝玄関から何mのところに塀（門つき）、o.car＝となりにカーポートと車
 function house(x0, z0, w, d, face, floors = 2, o = {}) {
   const fam = FAM[FAMI++ % FAM.length], [roofC, roofN] = ROOFS[FAMI % ROOFS.length], wallC = HWALL[FAMI % HWALL.length], H = floors * 2.8;
+  const [tn, cm] = CHO(z0), ban = (BANC[tn + cm] = (BANC[tn + cm] || 0) + 1 + (FAMI % 3 === 0 ? 1 : 0)), go = 1 + (FAMI * 7) % 12, addr = `${tn}${cm}丁目${ban}-${go}`, nst = ['wood', 'stone', 'steel', 'tile'][FAMI % 4], ry = face < 0 ? Math.PI : 0;
   bx(w, H, d, x0 + w / 2, 0, z0 + d / 2, wallC); bx(w + .1, .35, d + .1, x0 + w / 2, 0, z0 + d / 2, 0x8a8478);
   const sh = new THREE.Shape(); sh.moveTo(-d / 2 - .55, 0); sh.lineTo(d / 2 + .55, 0); sh.lineTo(0, 1.8); sh.closePath(); const rg = new THREE.ExtrudeGeometry(sh, { depth: w + .7, bevelEnabled: false }); rg.rotateY(Math.PI / 2); rg.translate(x0 - .35, H, z0 + d / 2); tbAdd(rg, TMAT('roof' + roofC, roofC, { roughness: .6 }));
   const fz = face < 0 ? z0 : z0 + d, dX = x0 + Math.min(1.6, w * .25);
@@ -1266,19 +1340,23 @@ function house(x0, z0, w, d, face, floors = 2, o = {}) {
   for (let f = 0; f < floors; f++) for (const sx of [x0 - .03, x0 + w + .03]) bx(.1, 1.1, 1, sx, f * 2.8 + 1.0, z0 + d / 2, 0, { m: winM() });
   const door = mkDoor(dX, 0, fz, face, pick([0x6a3a1e, 0x8a5a34, 0x3a3a3e, 0xf2f0ea, 0x2a4a6a])); bx(1.6, .1, 1.0, dX, 2.35, fz + face * .5, 0x6a6a6a); bx(1.4, .15, 1.2, dX, 0, fz + face * .6, 0xb8b0a0);
   bx(.3, .08, .06, dX, 2.25, fz + face * .08, 0, { m: LAMPM() });   // 玄関の明かり
-  tplate(fam, .42, .21, dX + .85, 1.55, fz + face * .07, face < 0 ? Math.PI : 0, { bg: '#e8e0d0', font: 'serif', fs: 44 });
+  tplate([`${tn}${KANJI[cm]}丁目`, `${ban}-${go}`], .34, .17, x0 + w - .3, 2.05, fz + face * .05, ry, { st: 'addr', cw: 160, ch: 80 });   // 住居表示（青い板）
+  const intercom = (x, y, z) => { bx(.11, .17, .03, x, y, z, 0x2e3238); bx(.035, .035, .012, x, y + .1, z + face * .02, 0x0e0e10); bx(.055, .045, .012, x, y + .03, z + face * .02, 0xd8dce2); };
+  if (!o.fence) { tplate([fam], .3, .14, dX + .85, 1.62, fz + face * .04, ry, { st: nst, cw: 256, ch: 112 }); intercom(dX + .85, 1.1, fz + face * .03); }
   let mbX = dX + 1.6, mbZ = fz + face * 2.6;
   if (o.fence) { const lz = fz + face * o.fence, c = 0xd8d2c4, a = x0 - .3, b = x0 + w + .3;
     for (const [s0, s1] of [[a, dX - .8], [dX + .8, b]]) { bx(s1 - s0, .9, .18, (s0 + s1) / 2, 0, lz, c); bx(s1 - s0 + .04, .08, .24, (s0 + s1) / 2, .9, lz, 0x8a8478); obs(s0, s1, lz - .1, lz + .1, .1); }
     for (const sx of [a, b]) { bx(.18, .9, o.fence, sx, 0, (lz + fz) / 2, c); obs(sx - .1, sx + .1, Math.min(lz, fz), Math.max(lz, fz), .1); }
-    for (const sx of [dX - .88, dX + .88]) bx(.24, 1.15, .26, sx, 0, lz, 0x8a8478);
-    mbX = dX + 1.25; mbZ = lz - face * .2; }
-  bx(.08, .9, .08, mbX, 0, mbZ, 0x5a5a5a); bx(.34, .4, .26, mbX, .9, mbZ, 0xc83a2a);
+    bx(.24, 1.15, .26, dX + .88, 0, lz, 0x8a8478);
+    // 門柱：表札・インターホン・ポストの口
+    const px = dX - 1.05, pz = lz + face * .185; bx(.54, 1.38, .36, px, 0, lz, pick([0xd8cfbf, 0x8a8478, 0xb8a890, 0xe8e2d6, 0x6a5a4a])); bx(.6, .06, .42, px, 1.38, lz, 0x5a554c);
+    tplate([fam], .32, .15, px, 1.12, pz, ry, { st: nst, cw: 256, ch: 112 }); intercom(px, .78, pz + face * .005); bx(.28, .045, .01, px, .52, pz, 0x1a1a1a); bx(.3, .08, .012, px, .58, pz, 0x8a9098); }
+  else { const mc = pick([0x3a3e44, 0xe8e2d2, 0x5a4636, 0x8a9098]); bx(.07, .85, .07, mbX, 0, mbZ, 0x4a4a4a); bx(.36, .42, .26, mbX, .85, mbZ, mc); bx(.24, .03, .01, mbX, 1.14, mbZ + face * .13, 0x1a1a1a); }
   if (o.car) { const cx = x0 + w + 1.95, cz = z0 + d / 2; bx(2.6, .12, 5, cx, 2.3, cz, 0x8a9098); for (const [px, pz] of [[-1.15, -2.3], [1.15, -2.3], [-1.15, 2.3], [1.15, 2.3]]) bx(.1, 2.3, .1, cx + px, 0, cz + pz, 0x8a9098);
     const car = carMesh(pick([0xe8e8ea, 0x2a2a2e, 0xc83a2a, 0x3a6ab8, 0x8a8a8e, 0xf2d8a8])); car.position.set(cx, 0, cz); car.rotation.y = face < 0 ? Math.PI : 0; TOWN.grp.add(car); obs(cx - 1, cx + 1, cz - 2.2, cz + 2.2, .1); }
   obs(x0, x0 + w, z0, z0 + d); camBox(x0, x0 + w, 0, H + 1.8, z0, z0 + d);
   for (let k = 0; k < 2; k++) { const px = x0 + w * (.55 + k * .3); cyl(.22, .35, px, 0, fz + face * 1.2, 0xa8643a, 8); sph(.32, px, .55, fz + face * 1.2, pick([0x3a8a2a, 0x5aa83a])); }
-  const A = { id: 'h' + FAMI, kind: 'house', name: `${fam}さんの家`, sub: roofN, door: V3(dX, 0, fz + face * 1.0), floor: 0, y: 0, dg: door, face, roofC, fam, wp: V3(dX, 0, fz), n: V3(0, 0, face) };
+  const A = { id: 'h' + FAMI, kind: 'house', name: `${fam}さんの家`, sub: `${addr}・${roofN}`, addr, door: V3(dX, 0, fz + face * 1.0), floor: 0, y: 0, dg: door, face, roofC, fam, wp: V3(dX, 0, fz), n: V3(0, 0, face) };
   TOWN.addrs.push(A); return A;
 }
 // アパート・マンション（廊下は北向き＝道路がわ）。o.f0：部屋がはじまる階（タワーの1階はエントランス）
@@ -1294,27 +1372,31 @@ function apartment(o) {
   for (let k = 0; k <= Math.round(L / 6); k++) { const cx = x0 + .2 + k * (L - .4) / Math.round(L / 6); bx(.3, H, .3, cx, 0, z0 - 1.65, 0xd8d2c6); obs(cx - .15, cx + .15, z0 - 1.8, z0 - 1.5, .12); }
   // 部屋のドア・番号と表札・台所の窓、うしろのベランダ（室外機・せんたく物）
   for (let f = f0; f < floors; f++) for (let i = 0; i < rooms; i++) { const x = x0 + (i + .5) * L / rooms, y = f * fh, num = `${f + 1}0${i + 1}`, fam = FAM[(FAMJ++ * 13 + 7) % FAM.length];
-    const dg = mkDoor(x - .5, y, z0, -1, o.doorC || 0x5a6a7a); tplate([num, fam], .36, .22, x + .2, y + 1.72, z0 - .08, Math.PI); win(x + .75, y + 1.35, z0, -1, .9, .55); bx(.18, .14, .1, x + .32, y + 1.05, z0 - .08, 0xf2f0ea);
+    const dg = mkDoor(x - .5, y, z0, -1, o.doorC || 0x5a6a7a); tplate((FAMJ % 10) < 7 ? [num, fam] : [num], .3, .19, x + .28, y + 1.64, z0 - .03, Math.PI, { st: 'room', cw: 128, ch: 80 }); win(x + .96, y + 1.35, z0, -1, .78, .55);
+    bx(.12, .17, .03, x + .28, y + 1.08, z0 - .02, 0x2e3238); bx(.035, .035, .012, x + .28, y + 1.18, z0 - .04, 0x0e0e10); bx(.06, .045, .012, x + .28, y + 1.11, z0 - .04, 0xd8dce2);   // インターホン
     const bw = L / rooms - .3; win(x, y + 1.1, z0 + Dp, 1, Math.min(1.8, bw - .6), 1.6);
     if (f > 0) { bx(bw, .15, 1.1, x, y - .15, z0 + Dp + .55, 0xc8c2b8); bx(bw, 1.0, .1, x, y, z0 + Dp + 1.08, railC); if ((f + i) % 3 !== 1) bx(.7, .52, .28, x - bw / 2 + .55, y, z0 + Dp + .5, 0xe2e2dc); if ((f * 3 + i) % 4 === 0) for (let q = 0; q < 3; q++) bx(.32, .42, .03, x + .1 + q * .38, y + 1.25, z0 + Dp + .75, pick([0xf2f0ea, 0x8ac8e8, 0xf2b8c8, 0xf2d86a, 0xb8e0a8])); }
     TOWN.addrs.push({ id: name + num, kind: 'apt', name: `${name} ${num}号室`, sub: `${f + 1}階`, bld: name, door: V3(x - .5, y, z0 - .95), floor: f, y, dg, face: -1, elev: !!elev, entry: null, fam, wp: V3(x - .5, y, z0), n: V3(0, 0, -1) }); }
   // 名前の看板（タワーは屋上に大きく）
-  if (o.roofSign) { bx(L * .5 + .4, 2.1, .25, x0 + L / 2, H + .4, z0 + .4, 0x2a2e36); label(name, L * .5, 1.5, x0 + L / 2, H + 1.5, z0 + .26, Math.PI, { pw: 512, ph: 128, bg: o.signBg || '#2a3a4a', fg: '#fff8e8', font: 'sans-serif', fs: 84 });
+  if (o.roofSign) { bx(L * .84, 1.9, .3, x0 + L / 2, H + .35, z0 + .4, 0x2e3440); nameSign(name, o.en, L * .8, 1.45, x0 + L / 2, H + 1.28, z0 + .24, Math.PI, { st: 'crown' });
     cyl(1.2, 2.2, x0 + L - 3, H + .5, z0 + Dp - 3, 0xc8ccd2, 14); cyl(.06, 4.5, x0 + 2, H + .5, z0 + Dp - 2, 0x8a8e94, 6); bx(.3, .3, .3, x0 + 2, H + 5, z0 + Dp - 2, 0, { m: TMAT('warn', 0x400000, { emissive: 0xff2010, emissiveIntensity: 0 }) }); }
-  else label(name, 3.6, .8, x0 + L / 2, H - .6, z0 - .05, Math.PI, { pw: 512, ph: 112, bg: o.signBg || '#2a3a4a', fg: '#fff8e8', font: 'sans-serif', fs: 70 });
+  else nameSign(name, o.en, Math.min(L * .6, 7), o.en ? 1.0 : .8, x0 + L / 2, H + .14, z0 - 2.09, Math.PI, { st: o.signSt || 'metal', tone: o.tone });
+  if (o.mon) monument(o.mon[0], o.mon[1], -1, name, o.en, `${o.addr[0]}${o.addr[1]}丁目${o.addr[2]}`);
+  else if (o.addr) tplate([`${o.addr[0]}${KANJI[o.addr[1]]}丁目`, o.addr[2]], .34, .17, x0 + .4, 1.75, z0 - .03, Math.PI, { st: 'addr', cw: 160, ch: 80 });
   obs(x0, x0 + L, z0, z0 + Dp + (floors > 1 ? 1.1 : 0)); camBox(x0, x0 + L, 0, H + .5, z0, z0 + Dp);
   let entry;
   if (elev) { // エレベーター（廊下の西のはし）：うしろに昇降路、各階にスライドする扉と階の表示
     const ex0 = x0 - 2.4, hx = x0 - 1.2; bx(.25, H + .5, 2.0, ex0 - .12, 0, z0 - .9, wallC); bx(2.6, .3, 2.2, hx, H, z0 - .9, wallC);
     bx(2.4, H + 1.6, 2.4, hx, 0, z0 + 1.2, wallC); bx(2.55, .25, 2.55, hx, H + 1.6, z0 + 1.2, bandC); obs(ex0, x0, z0, z0 + 2.4, .05); camBox(ex0, x0, 0, H + 1.6, z0, z0 + 2.4);
-    const E = { x0: ex0, x1: x0, z0: z0 - 1.8, z1: z0, floors, fh, b: name, hx, dz: z0, doors: [], B }, DM = TMAT('evdoor', 0xb8bec6, { metalness: .65, roughness: .28 });
+    const E = { x0: ex0, x1: x0, z0: z0 - 1.8, z1: z0, floors, fh, b: name, hx, dz: z0, doors: [], B }, DM = TMAT('evdoor', 0xffffff, { map: brushTex(), metalness: .3, roughness: .32 });
     for (let f = 0; f < floors; f++) { const y = f * fh;
       if (f) { bx(2.4, .25, 1.9, hx, y - .25, z0 - .95, 0xc8c2b8); bx(2.4, 1.05, .14, hx, y, z0 - 1.83, railC); bx(2.4, fh - 1.35, .05, hx, y + 1.05, z0 - 1.83, 0, { m: GLS() }); TOWN.zones.push({ x0: ex0, x1: x0 + .02, z0: z0 - 1.78, z1: z0 + .02, h: y, b: name });
         tplate(`${f + 1}F`, .56, .3, ex0 + .02, y + 1.9, z0 - .9, Math.PI / 2, { bg: '#2a2e36', fg: '#fff', bd: false, fs: 42 }); }
-      bx(1.55, 2.4, .12, hx, y, z0 - .05, 0x8a8e96); bx(1.16, 2.12, .02, hx, y, z0 - .12, 0, { m: TMAT('cab', 0xe8dcc0, { emissive: 0x6a5a40, emissiveIntensity: .5 }) }); bx(1.0, .05, .03, hx, y + .9, z0 - .14, 0x9a9ea6);
+      bx(1.55, 2.4, .12, hx, y, z0 - .05, 0, { m: TMAT('evframe', 0xd2d6db, { map: brushTex(), metalness: .25, roughness: .35 }) }); bx(1.16, 2.12, .02, hx, y, z0 - .12, 0, { m: TMAT('cab', 0xe8dcc0, { emissive: 0x6a5a40, emissiveIntensity: .5 }) }); bx(1.0, .05, .03, hx, y + .9, z0 - .14, 0x9a9ea6);
       const mk = s => { const m = new THREE.Mesh(new THREE.BoxGeometry(.58, 2.12, .04), DM); m.position.set(hx + s * .29, y + 1.06, z0 - .17); m.castShadow = true; TOWN.grp.add(m); return m; };
       E.doors.push({ L: mk(-1), R: mk(1), open: 0, pulse: 0 });
-      tplate(String(f + 1), .3, .2, hx, y + 2.62, z0 - .02, Math.PI, { bg: '#16161a', fg: '#ffb030', bd: false, fs: 46 }); bx(.12, .26, .05, hx + .98, y + .9, z0 - .12, 0xd8dce2); bx(.06, .06, .02, hx + .98, y + 1.0, z0 - .15, 0, { m: LAMPM() }); }
+      bx(.4, .28, .02, hx, y + 2.48, z0 - .01, 0, { m: TMAT('evframe', 0xd2d6db, { map: brushTex(), metalness: .25, roughness: .35 }) }); tplate(String(f + 1), .32, .2, hx, y + 2.62, z0 - .025, Math.PI, { st: 'led' });
+      bx(.16, .32, .03, hx + .98, y + .82, z0 - .12, 0, { m: TMAT('callp', 0xffffff, { map: callTex(), roughness: .35 }) }); }
     obs(ex0 - .3, ex0 + .02, z0 - 2, z0, .05); TOWN.elev.push(E); B.E = E; entry = V3(hx, 0, z0 - 2.4); camBox(ex0 - .25, x0, 0, H, z0 - 2, z0);
     B.base = V3(hx, 0, z0 - .9); B.land = f => V3(hx, f * fh, z0 - .9); B.lift = true;
   } else { // 外階段（2階建て）：西のはしから 東へのぼる
@@ -1332,7 +1414,7 @@ function apartment(o) {
 // タワーの1階：ガラスのエントランス・オートロックの自動ドア・インターホン・郵便受け・管理人室
 function lobby(o, B) {
   const { x0, z0, L } = o, fh = o.fh || 3.0, gz = z0 - 4, lx0 = x0 - 2.65, lx1 = x0 + L + .1, dc = x0 + L * .42, ry = fh - .25, fr = 0x4a4e56, bandC = o.bandC || 0xd8d2c6;
-  bx(lx1 - lx0 + .3, .3, z0 - 1.8 - gz + .3, (lx0 + lx1) / 2, ry, (gz + z0 - 1.8) / 2, bandC); camBox(lx0, lx1, ry - .05, ry + .4, gz - .2, z0);
+  bx(lx1 - lx0 + .3, .3, z0 - 1.8 - gz + .3, (lx0 + lx1) / 2, ry, (gz + z0 - 1.8) / 2, 0x2e3440); camBox(lx0, lx1, ry - .05, ry + .4, gz - .2, z0);
   bx(lx1 - lx0, .03, z0 - gz, (lx0 + lx1) / 2, -.03, (gz + z0) / 2, 0xd8d0c0);
   for (const [a, b] of [[lx0, dc - .95], [dc + .95, lx1]]) { bx(b - a, ry, .06, (a + b) / 2, 0, gz, 0, { m: GLS() }); obs(a, b, gz - .1, gz + .1, .1); const n = Math.max(1, Math.round((b - a) / 2.2)); for (let k = 0; k <= n; k++) bx(.08, ry, .12, a + (b - a) * k / n, 0, gz, fr); }
   bx(1.95, .32, .14, dc, ry - .32, gz, fr); bx(lx1 - lx0, .08, .14, (lx0 + lx1) / 2, 0, gz, fr);
@@ -1341,9 +1423,9 @@ function lobby(o, B) {
   const pm = TMAT('adoor', 0xcfe8f2, { transparent: true, opacity: .4, roughness: .05, depthWrite: false }), mk = s => { const g = new THREE.Group(), gl = new THREE.Mesh(new THREE.BoxGeometry(.92, ry - .32, .04), pm); gl.position.y = (ry - .32) / 2; g.add(gl); for (const [w, h, x, y] of [[.06, ry - .32, -.43, (ry - .32) / 2], [.06, ry - .32, .43, (ry - .32) / 2], [.92, .06, 0, .03], [.92, .06, 0, ry - .35]]) { const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, .06), TMAT('c' + fr, fr)); f.position.set(x, y, 0); g.add(f); } g.position.set(dc + s * .46, 0, gz); TOWN.grp.add(g); return g; };
   const G = { dc, gz, x0: dc - .92, x1: dc + .92, open: 0, t: 0, L: mk(-1), R: mk(1), B }; TOWN.gates.push(G); B.gate = G; B.gateOut = V3(dc, 0, gz - 1.0); B.gateIn = V3(dc, 0, gz + 1.0);
   // ひさし・看板・インターホン
-  bx(4.6, .22, 1.7, dc, ry - .22, gz - .85, bandC); for (const s of [-1, 1]) { bx(.14, ry - .22, .14, dc + s * 2.1, 0, gz - 1.55, fr); obs(dc + s * 2.1 - .07, dc + s * 2.1 + .07, gz - 1.62, gz - 1.48, .06); }
+  bx(4.6, .22, 1.7, dc, ry - .22, gz - .85, 0x2e3440); for (const s of [-1, 1]) { bx(.14, ry - .22, .14, dc + s * 2.1, 0, gz - 1.55, fr); obs(dc + s * 2.1 - .07, dc + s * 2.1 + .07, gz - 1.62, gz - 1.48, .06); }
   for (const s of [-1, 1]) bx(.9, .05, .3, dc + s * 1.1, ry - .27, gz - .85, 0, { m: LAMPM() });
-  label(o.name, 3.6, .55, dc, ry + .38, gz - .2, Math.PI, { pw: 512, ph: 80, bg: o.signBg || '#2a3a4a', fg: '#fff8e8', font: 'sans-serif', fs: 56 });
+  nameSign(o.name, o.en, 4.2, .62, dc, ry + .44, gz - .19, Math.PI, { st: 'metal' });
   const ic = V3(dc + 1.45, 0, gz - .5); bx(.34, 1.25, .24, ic.x, 0, ic.z, 0x5a5e66); tplate(['📞 よびだし', '部屋番号→🔔'], .28, .18, ic.x, 1.06, ic.z - .125, Math.PI, { bg: '#1e2228', fg: '#9ae8ff', bd: false }); obs(ic.x - .17, ic.x + .17, ic.z - .12, ic.z + .12, .06); B.icom = ic;
   // 郵便受け・管理人室・ベンチ・植木・天井の明かり・玄関マット
   for (let c = 0; c < 9; c++) for (let r = 0; r < 4; r++) bx(.38, .27, .32, x0 + 1.2 + c * .41, .45 + r * .3, z0 - .17, (c + r) % 2 ? 0xc8ccd2 : 0xb8bcc4);
@@ -1489,11 +1571,11 @@ function buildTown2() {
   for (const [bxp, bzp] of [[0, 63], [24, 63], [0, 73], [24, 73]]) { bx(1.8, .08, .5, bxp, .42, bzp, 0x8a5a34); bx(1.8, .5, .06, bxp, .45, bzp + .24, 0x8a5a34); for (const s of [-.8, .8]) bx(.08, .42, .4, bxp + s, 0, bzp, 0x3a3a3e); }
   // 店がわの となりの建物（ぶつかる）
   const rnd = (k) => ((Math.sin(k * 91.7) + 1) * 4733) % 1; for (let k = -6; k <= 6; k++) { if (!k) continue; const x = k * 11 + (k > 0 ? 18 : -8), h = 5 + rnd(k) * 8; obs(x - 4.5, x + 4.5, 9, 19); camBox(x - 4.5, x + 4.5, 0, h, 9, 19); }
-  // ブロックA：ひまわりハイツ・家・公園
-  apartment({ x0: 4, z0: 46, L: 22, Dp: 9, floors: 3, rooms: 5, name: 'ひまわりハイツ', elev: 1, wallC: 0xf2e2b8, bandC: 0xe8c878, doorC: 0x8a5a34, signBg: '#c8781e' });
+  // ブロックA：メゾン・ド・ひまわり・家・公園
+  apartment({ x0: 4, z0: 46, L: 22, Dp: 9, floors: 3, rooms: 5, name: 'メゾン・ド・ひまわり', en: 'MAISON DE HIMAWARI', tone: 'gold', addr: ['満腹町', 1, '12-1'], mon: [-.7, 43.0], elev: 1, wallC: 0xf2e2b8, bandC: 0xe8c878, doorC: 0x8a5a34, signBg: '#c8781e' });
   house(-31, 41, 8, 7, -1, 2, { fence: 3, car: 1 }); house(-19, 41, 8, 7, -1, 2, { fence: 3 }); house(33, 41, 8, 7, -1, 2, { car: 1 }); house(46, 41, 8, 7, -1, 1, { fence: 3 });
-  // ブロックB：さくら荘・家
-  apartment({ x0: -80, z0: 46, L: 18, Dp: 8, floors: 2, rooms: 4, name: 'さくら荘', fh: 2.8, wallC: 0xd8c0a0, bandC: 0xb89a78, doorC: 0x6a3a1e, railC: 0x7a6a5a, signBg: '#7a3a2a' });
+  // ブロックB：第二さくら荘・家
+  apartment({ x0: -80, z0: 46, L: 18, Dp: 8, floors: 2, rooms: 4, name: '第二さくら荘', signSt: 'wood', addr: ['満腹町', 1, '3-8'], fh: 2.8, wallC: 0xd8c0a0, bandC: 0xb89a78, doorC: 0x6a3a1e, railC: 0x7a6a5a, signBg: '#7a3a2a' });
   house(-103, 41, 8, 7, -1, 2, { fence: 3, car: 1 }); house(-60, 41, 8, 7, -1, 2, { fence: 3 }); for (const x of [-104, -92, -76, -62]) house(x, 69, 8, 7, 1);
   // ブロックC：会社・コンビニ・家
   bx(22, 10.5, 14, 85, 0, 51, 0xc8d0d8); for (let f = 0; f < 3; f++) for (let k = 0; k < 9; k++) { win(75.6 + k * 2.35, f * 3.4 + 1.6, 44, -1, 1.9, 2.2, 0x8a9aa8); win(75.6 + k * 2.35, f * 3.4 + 1.6, 58, 1, 1.9, 2.2, 0x8a9aa8); }
@@ -1501,14 +1583,14 @@ function buildTown2() {
   TOWN.addrs.push({ id: 'office', kind: 'office', office: 1, name: 'まちなかオフィス', sub: '1階 受付', door: V3(85.5, 0, 43.0), floor: 0, y: 0, dg: odg, face: -1, fam: 'オフィス', wp: V3(85.5, 0, 44), n: V3(0, 0, -1) });
   bx(14, 4, 10, 109, 0, 47, 0xf2f0ea); bx(14.2, .8, .3, 109, 3.2, 41.9, 0x2aa86a); bx(14.2, .4, .3, 109, 2.8, 41.9, 0xe8523a); label('まちかどマート', 5.6, .7, 109, 3.6, 41.7, Math.PI, { pw: 512, ph: 64, bg: '#2aa86a', fg: '#fff', font: 'sans-serif', fs: 50 }); for (let k = 0; k < 4; k++) win(103.5 + k * 3.2, 1.4, 42, -1, 2.6, 2.2, 0xd8d8d8); obs(102, 116, 42, 52); camBox(102, 116, 0, 4, 42, 52);
   house(122, 41, 8, 7, -1, 2, { fence: 3 }); house(134, 41, 8, 7, -1, 1); for (const x of [76, 90, 106, 122]) house(x, 69, 8, 7, 1);
-  // ブロックD：グリーンマンション・家
-  apartment({ x0: 10, z0: 96, L: 20, Dp: 9, floors: 4, rooms: 4, name: 'グリーンマンション', elev: 1, wallC: 0xd8e8d8, bandC: 0x8ab89a, doorC: 0x3a5a4a, signBg: '#2a7a4a' });
+  // ブロックD：グリーンハイム満腹・家
+  apartment({ x0: 10, z0: 96, L: 20, Dp: 9, floors: 4, rooms: 4, name: 'グリーンハイム満腹', en: 'GREEN HEIM MANPUKU', addr: ['満腹町', 2, '9-2'], mon: [4.9, 93.0], elev: 1, wallC: 0xd8e8d8, bandC: 0x8ab89a, doorC: 0x3a5a4a, signBg: '#2a7a4a' });
   house(-31, 94, 8, 7, -1, 2, { fence: 3, car: 1 }); house(-17, 94, 8, 7, -1, 1, { fence: 3 }); house(38, 94, 8, 7, -1); house(50, 94, 7, 7, -1);
   for (const x of [-104, -90, -76, -60]) house(x, 94, 8, 7, -1, 2, { fence: 3, car: x === -104 || x === -76 }); for (const x of [76, 90, 106, 122]) house(x, 94, 8, 7, -1, x === 106 ? 1 : 2, { fence: x === 90 ? 0 : 3, car: x === 76 || x === 106 });
   // ブロックE（3本目の通りの北がわ）：家・神社・駐車場
   for (const x of [-104, -90, -76, -60, 4, 18, 32, 46, 108, 124]) house(x, 125, 8, 7, 1, x === -76 || x === 32 ? 1 : 2);
   shrine(-18); parking(74, 100, 118, 132);
-  // ブロックF（3本目の通りの南がわ）：商店街・広場・月見レジデンス・まんぷくタワー・コーポ若葉・バス停・駅
+  // ブロックF（3本目の通りの南がわ）：商店街・広場・ルミエール月見台・満腹台タワーレジデンス・コーポ若葉・バス停・駅
   house(-104, 150, 8, 7, -1, 2, { fence: 3 });
   bx(8, .02, 25, -75, -.03, 159, 0xd8ccb8);
   shopBlock({ face: 'e', xf: -79, zc: 152.5, name: 'ベーカリー こむぎ', kind: 'bakery', wall: 0xf2e6d0, roof: 0x8a5a34, awn: 0xd8843a, signBg: '#8a5a34' });
@@ -1521,13 +1603,13 @@ function buildTown2() {
   label('まんぷく商店街', 7.6, .85, -75, 5.1, 147.03, Math.PI, { pw: 768, ph: 86, bg: '#2a6ad8', fg: '#fff', font: 'sans-serif', fs: 66 }); label('まんぷく商店街', 7.6, .85, -75, 5.1, 147.57, 0, { pw: 768, ph: 86, bg: '#2a6ad8', fg: '#fff', font: 'sans-serif', fs: 66 });
   for (const lx of [-77, -73]) { tbAdd(new THREE.CylinderGeometry(.012, .012, 22, 4), TMAT('wire', 0x2a2a2a), mtx(lx, 4.35, 159, 0, Math.PI / 2, 0)); for (let z = 149.5; z < 170; z += 2.5) { sph(.22, lx, 3.95, z, 0, { sy: 1.35, m: TMAT('chochin', 0xe8402a, { emissive: 0xff5a2a, emissiveIntensity: .25 }) }); bx(.03, .2, .03, lx, 4.15, z, 0x2a2a2a); } }
   playground(-53, 157);
-  apartment({ x0: -38, z0: 152, L: 15, Dp: 8, floors: 5, rooms: 3, name: '月見レジデンス', elev: 1, wallC: 0xe8dcc8, bandC: 0xb89a6a, doorC: 0x6a4a2a, railC: 0xf2ece0, signBg: '#5a4a2a' });
-  apartment({ x0: -8, z0: 152, L: 24, Dp: 10, floors: 10, rooms: 4, name: 'まんぷくタワー', elev: 1, f0: 1, lobby: 1, roofSign: 1, wallC: 0xeceae4, bandC: 0x7a8a9a, doorC: 0x3a4a5a, railC: 0xdfe6ea, signBg: '#24344e' });
-  apartment({ x0: 33, z0: 153, L: 14, Dp: 8, floors: 2, rooms: 3, name: 'コーポ若葉', fh: 2.8, wallC: 0xdce8d0, bandC: 0x8aa878, doorC: 0x5a6a4a, railC: 0x6a7a5a, signBg: '#4a6a3a' });
+  apartment({ x0: -38, z0: 152, L: 15, Dp: 8, floors: 5, rooms: 3, name: 'ルミエール月見台', en: 'LUMIÈRE TSUKIMIDAI', tone: 'gold', addr: ['満腹台', 1, '6-5'], mon: [-43.6, 149.1], elev: 1, wallC: 0xe8dcc8, bandC: 0xb89a6a, doorC: 0x6a4a2a, railC: 0xf2ece0, signBg: '#5a4a2a' });
+  apartment({ x0: -8, z0: 152, L: 24, Dp: 10, floors: 10, rooms: 4, name: '満腹台タワーレジデンス', en: 'MANPUKUDAI TOWER RESIDENCE', addr: ['満腹台', 1, '1-1'], mon: [-14.4, 148.7], elev: 1, f0: 1, lobby: 1, roofSign: 1, wallC: 0xeceae4, bandC: 0x7a8a9a, doorC: 0x3a4a5a, railC: 0xdfe6ea, signBg: '#24344e' });
+  apartment({ x0: 33, z0: 153, L: 14, Dp: 8, floors: 2, rooms: 3, name: 'コーポ若葉', en: 'CORPO WAKABA', addr: ['満腹台', 1, '4-3'], fh: 2.8, wallC: 0xdce8d0, bandC: 0x8aa878, doorC: 0x5a6a4a, railC: 0x6a7a5a, signBg: '#4a6a3a' });
   busStop(38, 144.6); station(); house(122, 150, 8, 7, -1, 2, { fence: 3, car: 1 }); house(136, 150, 8, 7, -1, 1, { fence: 3 });
   // 街路樹・電柱・自販機・街灯
   for (let x = -100; x < 146; x += 12) { if (Math.abs(x + 40) < 6 || Math.abs(x - 64) < 6) continue; tree(x, 79, .8); tree(x + 6, 89, .8); }
-  for (let x = -100; x < 146; x += 16) { cyl(.14, 8, x, 0, 37.2, 0x8a8a84, 8); bx(1.4, .12, .12, x, 7.2, 37.2, 0x8a8a84); } for (let x = -100; x < 146; x += 16) for (const dy of [7.2, 6.9]) tbAdd(new THREE.CylinderGeometry(.012, .012, 16, 4), TMAT('wire', 0x2a2a2a), mtx(x + 8, dy, 37.2 + (dy > 7 ? .5 : -.5), 0, 0, Math.PI / 2));
+  for (let x = -100; x < 146; x += 16) { cyl(.14, 8, x, 0, 37.2, 0x8a8a84, 8); bx(1.4, .12, .12, x, 7.2, 37.2, 0x8a8a84); tplate(['満腹町一丁目'], .15, .54, x, 2.7, 37.04, Math.PI, { st: 'pole', cw: 64, ch: 192 }); } for (let x = -100; x < 146; x += 16) for (const dy of [7.2, 6.9]) tbAdd(new THREE.CylinderGeometry(.012, .012, 16, 4), TMAT('wire', 0x2a2a2a), mtx(x + 8, dy, 37.2 + (dy > 7 ? .5 : -.5), 0, 0, Math.PI / 2));
   for (const [x, z] of [[-6, 38.6], [60, 38.6], [-36, 90.4], [70, 90.4], [-62, 146.1], [27.5, 134.0]]) { bx(1, 1.8, .8, x, 0, z, 0x2a6ad8); bx(.8, .9, .06, x, .8, z - .42, 0xe8e8e8); obs(x - .5, x + .5, z - .4, z + .4, .1); }
   const farX = x => Math.abs(x + 40) > 9.5 && Math.abs(x - 64) > 9.5;
   for (let x = -94; x < 146; x += 24) if (farX(x)) lampPost(x, 78.6, 'z', 1); for (let x = -100; x < 146; x += 24) if (farX(x)) lampPost(x, 89.4, 'z', -1);
@@ -1653,7 +1735,7 @@ function buildMinimap() {
   g.fillStyle = '#c8b8a0'; for (const o of TOWN.obs) { if (o[1] - o[0] < 1.2 && o[3] - o[2] < 1.2) continue; R(o[0], o[2], o[1], o[3]); }
   for (const A of TOWN.addrs) if (A.kind === 'house') { g.fillStyle = '#' + new THREE.Color(A.roofC).getHexString(); g.fillRect(X(A.door.x - 1.8), Z(A.door.z + (A.face < 0 ? 1 : -8)), 8 * MM.s, 7 * MM.s); }
   g.fillStyle = '#e8523a'; R(0, 0, 20, 16); g.fillStyle = '#c8321e'; R(-21, 131, -15, 132);
-  g.fillStyle = '#3a2a1e'; for (const [t, x, z, fs] of [['ひまわりハイツ', 6, 52], ['グリーンマンション', 10, 102], ['さくら荘', -80, 51], ['オフィス', 78, 52], ['マート', 103, 48], ['公園', 2, 70], ['神社', -23, 121], ['P', 85, 126], ['まんぷくタワー', -9, 159], ['月見', -37, 158], ['若葉', 35, 159], ['商店街', -86, 161, 13], ['まんぷく駅', 82, 157], ['バス', 35, 150, 12]]) { g.font = `900 ${fs || 15}px sans-serif`; g.fillText(t, X(x), Z(z)); }
+  g.fillStyle = '#3a2a1e'; for (const [t, x, z, fs] of [['メゾン・ド・ひまわり', 4, 52, 13], ['グリーンハイム', 10, 102], ['第二さくら荘', -80, 51], ['オフィス', 78, 52], ['マート', 103, 48], ['公園', 2, 70], ['神社', -23, 121], ['P', 85, 126], ['タワーレジデンス', -9, 159, 13], ['ルミエール', -38, 158, 13], ['若葉', 35, 159], ['商店街', -86, 161, 13], ['まんぷく駅', 82, 157], ['バス', 35, 150, 12]]) { g.font = `900 ${fs || 15}px sans-serif`; g.fillText(t, X(x), Z(z)); }
   MM.src = c;
 }
 function drawMinimap(target) {
@@ -1689,7 +1771,7 @@ function newDelivery(cater) {
 const dlvPay = O => Math.round(O.dishes.reduce((a, d) => a + dishPrice(d), 0) * (O.cater ? 1.25 : 1.1) + 200 + O.dist * 3 + (O.cater ? 2000 : 0));
 function finishDelivery(O, who) {
   if (O.state === 'done') return; const late = SHOP.time > O.due, base = dlvPay(O), left = clamp((O.due - SHOP.time) / Math.max(1, O.due - O.t0), 0, 1), tip = late ? 0 : Math.round(base * left * .3), pay = Math.round(base * (late ? .6 : 1)) + tip;
-  earn(pay); if (G.dayLog) { G.dayLog.sales += pay; G.dayLog.dlv = (G.dayLog.dlv || 0) + 1; } SHOP.st.dlv = (SHOP.st.dlv || 0) + 1; if (O.cater) SHOP.st.cater = (SHOP.st.cater || 0) + 1; if (O.A.bld === 'グリーンマンション' && O.A.floor === 3) SHOP.st.top = 1; if (O.A.bld === 'まんぷくタワー' && O.A.floor === 9) SHOP.st.tower = 1; if (O.A.kind === 'apt') (SHOP.st.rooms = SHOP.st.rooms || {})[O.A.id] = 1;
+  earn(pay); if (G.dayLog) { G.dayLog.sales += pay; G.dayLog.dlv = (G.dayLog.dlv || 0) + 1; } SHOP.st.dlv = (SHOP.st.dlv || 0) + 1; if (O.cater) SHOP.st.cater = (SHOP.st.cater || 0) + 1; if (O.A.bld === 'グリーンハイム満腹' && O.A.floor === 3) SHOP.st.top = 1; if (O.A.bld === '満腹台タワーレジデンス' && O.A.floor === 9) SHOP.st.tower = 1; if (O.A.kind === 'apt') (SHOP.st.rooms = SHOP.st.rooms || {})[O.A.id] = 1;
   mission('earn', pay); mission('dlv', 1); addXP(10 + O.dishes.length * 3); SHOP.rep = clamp(SHOP.rep + (late ? -.03 : .015), 1, 5); floatText(O.A.door, `${late ? '⏰' : '🛵'} +${fmt(pay)}円`, late ? '#a04a3a' : '#1e7a3a', O.A.y);
   feed(`${late ? '⏰ ちょっとおそかった…' : '😋 とどけた！'} ${O.A.name}　+${fmt(pay)}円${tip ? `（チップ${fmt(tip)}円）` : ''}${who !== 'pl' ? '（' + who + '）' : ''}`); O.state = 'done'; const k = DLV.indexOf(O); if (k >= 0) DLV.splice(k, 1); AU.coin(); checkAch();
 }
@@ -1806,19 +1888,28 @@ function updTown2(dt) {
 // =========================================================================================
 //  エレベーター：乗り場で E →「階ボタン」をえらぶ → 扉が閉まる → 階の表示が上がっていく → チン！で扉が開く
 // =========================================================================================
-const ELV = { E: null };
+const ELV = { E: null, sel: null, tok: 0 };
 const curFloor = E => clamp(Math.round((PL.gy || 0) / E.fh), 0, E.floors - 1);
+function elevLcd(f, dir) { $('elvF').textContent = f + 1; $('elvA').textContent = dir > 0 ? '▲' : dir < 0 ? '▼' : ''; }
+// 操作盤：ステンレスの板に、四角い銀色の階ボタン（下の階から左→右・下→上）、開・閉ボタン、上に階の表示
 function elevOpen(E) {
   if (!PL || PL.lift) return; const cur = curFloor(E), d = PL.dlv && PL.dlv.A.bld === E.b ? PL.dlv.A.floor : null, cols = E.floors <= 4 ? 2 : (VH() < 480 ? 5 : 3), rows = [];
-  ELV.E = E; PL.elevUI = E; for (let f = 0; f < E.floors; f += cols) rows.push([...Array(Math.min(cols, E.floors - f)).keys()].map(k => f + k)); rows.reverse();
-  $('elvT').innerHTML = `🛗 ${E.b}<small>いま ${cur + 1}階${d !== null ? `　🛵 配達は <b>${d + 1}階</b>` : ''}</small>`;
-  const g = $('elvG'); g.style.gridTemplateColumns = `repeat(${cols}, auto)`; g.innerHTML = rows.map(r => r.map(f => `<button data-f="${f}" class="${f === cur ? 'cur' : ''}${f === d ? ' go' : ''}">${f + 1}${f === d ? '<i>🛵</i>' : ''}${f === 0 && E.B.f0 ? '<small>ロビー</small>' : ''}</button>`).join('') + '<span></span>'.repeat(cols - r.length)).join('');
-  g.querySelectorAll('button').forEach(b => { b.onclick = e => { e.stopPropagation(); elevGo(E, +b.dataset.f); }; });
+  ELV.E = E; ELV.sel = null; ELV.tok++; PL.elevUI = E; for (let f = 0; f < E.floors; f += cols) rows.push([...Array(Math.min(cols, E.floors - f)).keys()].map(k => f + k)); rows.reverse();
+  $('elvT').innerHTML = `${E.b}<small>${d !== null ? `🛵 配達は <b>${d + 1}階</b>` : '行きたい階のボタンを押してください'}</small>`; elevLcd(cur, 0);
+  const g = $('elvG'); g.style.gridTemplateColumns = `repeat(${cols}, auto)`; g.innerHTML = rows.map(r => r.map(f => `<button data-f="${f}" class="${f === d ? 'go' : ''}"><span>${f + 1}</span>${f === d ? '<i>🛵</i>' : ''}${f === 0 && E.B.f0 ? '<small>ロビー</small>' : ''}</button>`).join('') + '<em></em>'.repeat(cols - r.length)).join('');
+  g.querySelectorAll('button').forEach(b => { b.onclick = e => { e.stopPropagation(); elevPick(E, +b.dataset.f); }; });
   $('elv').classList.add('on'); AU.click();
 }
-function elevClose() { ELV.E = null; if (PL) PL.elevUI = null; const el = $('elv'); if (el) el.classList.remove('on'); }
-function elevGo(E, to) { if (!PL || PL.lift || ELV.go) return; const from = curFloor(E), b = $('elvG').querySelector(`[data-f="${to}"]`); if (b) b.classList.add('lit'); AU.tone(1568, .08, .04, 'square'); ELV.go = 1;
-  later(.3, () => { ELV.go = 0; elevClose(); if (to === from || !PL) return; PL.lift = { E, from, to, t: 0, ph: 'close', shown: from }; AU.tone(880, .25, .04, 'sine'); }); }
+function elevClose() { ELV.E = null; ELV.sel = null; ELV.tok++; if (PL) PL.elevUI = null; const el = $('elv'); if (el) el.classList.remove('on'); }
+// 階ボタンを押す：ボタンのふちがオレンジに光り、少しすると扉が閉まって動き出す（「閉」ですぐ・「開」でやめる）
+function elevPick(E, f) {
+  if (!PL || PL.lift || ELV.E !== E) return; const cur = curFloor(E), g = $('elvG'), b = g.querySelector(`[data-f="${f}"]`); AU.tone(1568, .06, .035, 'square');
+  if (f === cur) { if (b) { b.classList.add('lit'); setTimeout(() => b.classList.remove('lit'), 260); } return; }
+  g.querySelectorAll('button.lit').forEach(x => x.classList.remove('lit')); if (b) b.classList.add('lit'); ELV.sel = f; elevLcd(cur, f > cur ? 1 : -1);
+  const tk = ++ELV.tok; later(1.0, () => { if (ELV.tok === tk) elevDepart(); });
+}
+function elevDepart() { const E = ELV.E, to = ELV.sel; if (!E || to === null || !PL || PL.lift) return; const from = curFloor(E); elevClose(); PL.lift = { E, from, to, t: 0, ph: 'close', shown: from }; AU.tone(880, .25, .04, 'sine'); }
+function elevGo(E, to) { if (ELV.E !== E) elevOpen(E); elevPick(E, to); const tk = ++ELV.tok; later(.3, () => { if (ELV.tok === tk) elevDepart(); }); }
 function liftShow(L, dark) { const el = $('lift'); el.classList.add('on'); el.classList.toggle('dark', dark); $('liftA').textContent = L.to > L.from ? '▲' : '▼'; $('liftF').textContent = L.shown + 1; $('liftN').textContent = `${L.E.b}　${L.to + 1}階へ`; }
 function updLift(dt) {
   const L = PL && PL.lift; if (!L) return; L.t += dt; const E = L.E, n = Math.abs(L.to - L.from), per = .42;
@@ -1828,8 +1919,14 @@ function updLift(dt) {
   else if (L.ph === 'arrive') { if (L.t > .55) { PL.lift = null; $('lift').classList.remove('on'); if (PL.dlv && PL.dlv.A.bld === E.b && PL.dlv.A.floor === L.to) toast(`🛵 ${L.to + 1}階に着いた`, `${PL.dlv.A.name.split(' ')[1]}は 廊下の赤い目じるし`, 2.2); } }
 }
 function initElevUI() {
-  $('elvX').onclick = e => { e.stopPropagation(); elevClose(); }; $('elv').addEventListener('pointerdown', e => { if (e.target.id === 'elv') elevClose(); });
-  addEventListener('keydown', e => { const E = ELV.E; if (!E || e.repeat || !PL) return; let f = null; if (/^Digit\d$/.test(e.code)) { const d = +e.code.slice(5); f = (d === 0 ? 10 : d) - 1; } else if (e.code === 'KeyE' || e.code === 'Enter') { const d = PL.dlv && PL.dlv.A.bld === E.b ? PL.dlv.A.floor : null, cur = curFloor(E); f = d !== null && d !== cur ? d : (cur + 1) % E.floors; } else if (e.code === 'Escape') { elevClose(); return; } if (f !== null && f < E.floors) elevGo(E, f); });
+  const tap = () => AU.tone(1200, .05, .03, 'square');
+  $('elvO').onclick = e => { e.stopPropagation(); tap(); elevClose(); };   // 開：乗るのをやめる
+  $('elvC').onclick = e => { e.stopPropagation(); tap(); if (ELV.sel !== null) elevDepart(); };   // 閉：すぐ出発
+  $('elv').addEventListener('pointerdown', e => { if (e.target.id === 'elv') elevClose(); });
+  addEventListener('keydown', e => { const E = ELV.E; if (!E || e.repeat || !PL) return;
+    if (/^Digit\d$/.test(e.code)) { const d = +e.code.slice(5), f = (d === 0 ? 10 : d) - 1; if (f < E.floors) elevPick(E, f); }
+    else if (e.code === 'KeyE' || e.code === 'Enter') { if (ELV.sel !== null) elevDepart(); else { const d = PL.dlv && PL.dlv.A.bld === E.b ? PL.dlv.A.floor : null, cur = curFloor(E); elevGo(E, d !== null && d !== cur ? d : (cur + 1) % E.floors); } }
+    else if (e.code === 'Escape') elevClose(); });
 }
 // プレイヤーの「する」：受け取り・とどける・エレベーター・インターホン・スクーター
 function townActs(add) {
@@ -3393,7 +3490,7 @@ function renderPanel() {
       <div class="row"><div class="tx"><b>ボタンの大きさ</b></div>${[[.85, '小'], [1, '中'], [1.2, '大']].map(([v, n]) => `<button class="pill ${SET.bs === v ? 'on' : ''}" data-a="bs" data-i="${v}">${n}</button>`).join('')}</div>`}
       ${k === 'sys' ? `<h3 style="margin:12px 0 4px">データの引っこし</h3><p>下の文字をコピーしておけば、ほかの端末でも「読みこむ」で同じお店をつづけられる。</p><textarea id="exT" readonly>${btoa(unescape(encodeURIComponent(packShop())))}</textarea><div style="display:flex;gap:6px;margin-top:4px"><button class="btn w" data-a="copy">コピー</button><button class="btn w" data-a="import">貼りつけて 読みこむ</button></div>
       <button class="btn big r" data-a="title" style="margin-top:12px">タイトルにもどる（セーブする）</button>` : ''}`; }
-  else if (k === 'help') { h = `<h2>❓ 遊び方 ${X}</h2><p>📋 <b>担当表</b>（スタッフ）：シェフ・ウェイター・案内役・そうじ係・配達員の<b>枠</b>に従業員を入れる。シェフ・ウェイター・案内役がそろうと自分なしでお店が回り、<b>デリバリー</b>が解放。そうじ係で<b>まとめ仕入れ</b>（材料費15%引き）、配達員で<b>ケータリング</b>も。</p><p>🛵 <b>デリバリー</b>：できた料理を配膳台で受け取り、店の前のスクーターに<b>E</b>で乗って町へ（<b>ジャンプ</b>でどこでも降りられる）。地図の赤い印の家・お店や、アパートの階段・マンションのエレベーターで部屋の前まで行って、ピンポン！ 住人がドアを開けて出てきて受け取ってくれる。早いほどチップ。</p><p>🛗 <b>マンション</b>：エレベーターの乗り場で <b>E</b> → 階ボタンをえらぶ（配達先の階に🛵）。10階建ての<b>まんぷくタワー</b>は入口がオートロック：インターホンで よびだすと自動ドアが開く。廊下の表札と部屋番号を見て、目当ての部屋へ。</p><p>🏙️ <b>町</b>：3本の通りに家・アパート・マンション・会社・コンビニ・公園・神社・駐車場、まんぷく商店街（花屋・本屋・とこやにも配達）、バス停、駅（電車がときどき止まる）。信号で車が止まり、夜は窓と街灯に明かりがつく。</p><p>🌸 <b>季節と天気</b>：7日ごとに春・夏・秋・冬。旬の料理が人気。雨・雪・猛暑・お祭り・テレビ取材などのイベントもある。</p><p>💛 <b>常連さん</b>：8人のおなじみさんが来る。好きな料理で満足させると なかよしになり、プレゼントがもらえる。</p><p>🛵 <b>テイクアウト</b>（Lv3〜）：電話の注文を時間内につくると、配達員さんが取りに来る。</p><p>🎖️ <b>料理コンテスト</b>：7日ごとに開店前に出場。調理シーンの点数でライバルと勝負、優勝でトロフィー。</p><p>🐈 <b>看板猫</b>：ねこベッドを置くと猫が住みつく。なでるとお客さんもにっこり。　💦 こぼれた飲み物は早くふこう。</p><p>🏪 <b>お店をひらく</b>：上の「開店する」を押すと一日がはじまる（10:00〜22:00）。</p><p>🙋 <b>お客さん</b>：入口で待つ→席に案内→メニューを見て注文→料理を待つ→食べる→お会計。待たせすぎると怒って帰ってしまう。</p><p>🧑‍🍳 <b>じぶんで働く</b>：近づくと調べる物の上に <b>E</b> の吹き出しが出る（タップでもいい）。案内・注文・調理・配膳・かたづけ、なんでもできる。調理すると料理ごとの調理シーン！「いま！」のタイミングで味が決まる。</p><p>👩‍🍳 <b>スタッフ</b>：やとうと自動で働いてくれる。研修でレベルアップ。</p><p>🔨 <b>建てる</b>：席・調理機器・かざり・照明・かべかざり・床とかべ紙・外観・増築。かざりが多いほど満足度と評判が上がる。</p><p>📋 <b>メニュー</b>：料理をえらんで、値段とレシピを強化。新しい料理はレベルが上がると覚える。</p><p>⭐ <b>評判</b>が上がると、VIPやグルメ評論家も来るように。毎日の目標と実績でボーナス。</p><p>💾 セーブは3つまで。自動でもセーブされる。</p><p>🎮 <b>操作</b>（「卵を盗む」と同じ）：PCは WASD で歩く・マウスをドラッグで視点・ホイールで近づく／はなれる（いちばん近いと一人称）・スペースでジャンプ・E で調べる物の上の吹き出しの「する」。スマホは左下のスティックで歩く・画面をドラッグで視点・2本指で近づく／はなれる・右下でジャンプ・吹き出しをタップで「する」。B：建てる　R：回す</p>`; }
+  else if (k === 'help') { h = `<h2>❓ 遊び方 ${X}</h2><p>📋 <b>担当表</b>（スタッフ）：シェフ・ウェイター・案内役・そうじ係・配達員の<b>枠</b>に従業員を入れる。シェフ・ウェイター・案内役がそろうと自分なしでお店が回り、<b>デリバリー</b>が解放。そうじ係で<b>まとめ仕入れ</b>（材料費15%引き）、配達員で<b>ケータリング</b>も。</p><p>🛵 <b>デリバリー</b>：できた料理を配膳台で受け取り、店の前のスクーターに<b>E</b>で乗って町へ（<b>ジャンプ</b>でどこでも降りられる）。地図の赤い印の家・お店や、アパートの階段・マンションのエレベーターで部屋の前まで行って、ピンポン！ 住人がドアを開けて出てきて受け取ってくれる。早いほどチップ。</p><p>🛗 <b>マンション</b>：エレベーターの乗り場で <b>E</b> → 階ボタンをえらぶ（配達先の階に🛵）。10階建ての<b>満腹台タワーレジデンス</b>は入口がオートロック：インターホンで よびだすと自動ドアが開く。廊下の部屋番号札を見て、目当ての部屋へ。家の門柱の表札と、青い住居表示（満腹町○丁目○-○）も目じるしに。</p><p>🏙️ <b>町</b>：3本の通りに家・アパート・マンション・会社・コンビニ・公園・神社・駐車場、まんぷく商店街（花屋・本屋・とこやにも配達）、バス停、駅（電車がときどき止まる）。信号で車が止まり、夜は窓と街灯に明かりがつく。</p><p>🌸 <b>季節と天気</b>：7日ごとに春・夏・秋・冬。旬の料理が人気。雨・雪・猛暑・お祭り・テレビ取材などのイベントもある。</p><p>💛 <b>常連さん</b>：8人のおなじみさんが来る。好きな料理で満足させると なかよしになり、プレゼントがもらえる。</p><p>🛵 <b>テイクアウト</b>（Lv3〜）：電話の注文を時間内につくると、配達員さんが取りに来る。</p><p>🎖️ <b>料理コンテスト</b>：7日ごとに開店前に出場。調理シーンの点数でライバルと勝負、優勝でトロフィー。</p><p>🐈 <b>看板猫</b>：ねこベッドを置くと猫が住みつく。なでるとお客さんもにっこり。　💦 こぼれた飲み物は早くふこう。</p><p>🏪 <b>お店をひらく</b>：上の「開店する」を押すと一日がはじまる（10:00〜22:00）。</p><p>🙋 <b>お客さん</b>：入口で待つ→席に案内→メニューを見て注文→料理を待つ→食べる→お会計。待たせすぎると怒って帰ってしまう。</p><p>🧑‍🍳 <b>じぶんで働く</b>：近づくと調べる物の上に <b>E</b> の吹き出しが出る（タップでもいい）。案内・注文・調理・配膳・かたづけ、なんでもできる。調理すると料理ごとの調理シーン！「いま！」のタイミングで味が決まる。</p><p>👩‍🍳 <b>スタッフ</b>：やとうと自動で働いてくれる。研修でレベルアップ。</p><p>🔨 <b>建てる</b>：席・調理機器・かざり・照明・かべかざり・床とかべ紙・外観・増築。かざりが多いほど満足度と評判が上がる。</p><p>📋 <b>メニュー</b>：料理をえらんで、値段とレシピを強化。新しい料理はレベルが上がると覚える。</p><p>⭐ <b>評判</b>が上がると、VIPやグルメ評論家も来るように。毎日の目標と実績でボーナス。</p><p>💾 セーブは3つまで。自動でもセーブされる。</p><p>🎮 <b>操作</b>（「卵を盗む」と同じ）：PCは WASD で歩く・マウスをドラッグで視点・ホイールで近づく／はなれる（いちばん近いと一人称）・スペースでジャンプ・E で調べる物の上の吹き出しの「する」。スマホは左下のスティックで歩く・画面をドラッグで視点・2本指で近づく／はなれる・右下でジャンプ・吹き出しをタップで「する」。B：建てる　R：回す</p>`; }
   $('pBox').innerHTML = h;
 }
 const ADS = [['チラシをくばる', 1, 1500, 1], ['SNSキャンペーン', 3, 7000, 4], ['テレビCM', 7, 40000, 9]];
