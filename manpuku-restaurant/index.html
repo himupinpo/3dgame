@@ -643,6 +643,23 @@ const DISH = {
   smoothie: { n: 'いちごスムージー', e: '🥤', app: 'blender', t: 5, cost: 90, price: 520, lv: 4, cat: 'drink', g: 'カ', sc: 'smoothie' },
   parfait: { n: 'フルーツパフェ', e: '🍨', app: 'dessert', t: 7, cost: 140, price: 720, lv: 6, cat: 'sweet', g: 'カ', sc: 'parfait' },
   icecream: { n: 'アイスクリーム', e: '🍦', app: 'dessert', t: 4, cost: 50, price: 350, lv: 5, cat: 'sweet', g: 'カ', sc: 'icecream' },
+  // ---- 追加の16品 ----
+  udon: { n: 'きつねうどん', e: '🍥', app: 'pot', t: 8, cost: 110, price: 580, lv: 2, cat: 'main', g: '和', sc: 'udon' },
+  onigiri: { n: 'おにぎりセット', e: '🍙', app: 'salad', t: 5, cost: 60, price: 320, lv: 2, cat: 'side', g: '和', sc: 'onigiri' },
+  hotdog: { n: 'ホットドッグ', e: '🌭', app: 'grill', t: 6, cost: 80, price: 420, lv: 2, cat: 'main', g: '洋', sc: 'hotdog' },
+  oyakodon: { n: '親子丼', e: '🥚', app: 'stove', t: 10, cost: 150, price: 720, lv: 3, cat: 'main', g: '和', sc: 'oyakodon' },
+  napolitan: { n: 'ナポリタン', e: '🍅', app: 'stove', t: 9, cost: 130, price: 680, lv: 3, cat: 'main', g: '洋', sc: 'napolitan' },
+  korokke: { n: 'コロッケ', e: '🥔', app: 'fryer', t: 8, cost: 70, price: 380, lv: 3, cat: 'side', g: '洋', sc: 'korokke' },
+  matcha: { n: '抹茶ラテ', e: '🍵', app: 'coffee', t: 6, cost: 90, price: 550, lv: 3, cat: 'drink', g: '和', sc: 'matcha' },
+  pudding: { n: 'カスタードプリン', e: '🍮', app: 'dessert', t: 4, cost: 60, price: 420, lv: 4, cat: 'sweet', g: 'カ', sc: 'pudding' },
+  yakizakana: { n: 'さんまの塩焼き', e: '🐟', app: 'grill', t: 10, cost: 180, price: 760, lv: 4, cat: 'main', g: '和', sc: 'yakizakana' },
+  shake: { n: 'バナナシェイク', e: '🍌', app: 'blender', t: 5, cost: 80, price: 480, lv: 5, cat: 'drink', g: 'カ', sc: 'shake' },
+  tonkatsu: { n: 'ロースとんかつ', e: '🐷', app: 'fryer', t: 11, cost: 260, price: 1100, lv: 6, cat: 'main', g: '和', sc: 'tonkatsu' },
+  yakisoba: { n: 'ソース焼きそば', e: '🥢', app: 'wok', t: 8, cost: 100, price: 600, lv: 6, cat: 'main', g: '中', sc: 'yakisoba' },
+  crepe: { n: 'いちごクレープ', e: '🍓', app: 'dessert', t: 7, cost: 120, price: 600, lv: 7, cat: 'sweet', g: 'カ', sc: 'crepe' },
+  stew: { n: 'ビーフシチュー', e: '🍲', app: 'pot', t: 13, cost: 380, price: 1350, lv: 7, cat: 'main', g: '洋', sc: 'stew' },
+  ebichili: { n: 'エビチリ', e: '🦐', app: 'wok', t: 10, cost: 300, price: 1200, lv: 8, cat: 'main', g: '中', sc: 'ebichili' },
+  kaisendon: { n: '海鮮丼', e: '🍱', app: 'sushi', t: 10, cost: 600, price: 2000, lv: 9, cat: 'main', g: '和', sc: 'kaisendon' },
 };
 const APPN = { grill: 'グリル', pot: '寸胴なべ', stove: 'コンロ', fryer: 'フライヤー', oven: 'オーブン', dessert: 'デザート台', pizza: 'ピザ窯', wok: '中華コンロ', sushi: 'すし台', salad: '調理台', coffee: 'コーヒーマシン', blender: 'ミキサー台' };
 const APP_ITEM = { grill: 'grill', pot: 'pot', stove: 'stove', fryer: 'fryer', oven: 'oven', dessert: 'dessert', pizza: 'pizza', wok: 'wok', sushi: 'sushi', salad: 'salad', coffee: 'coffee', blender: 'blender' };
@@ -678,7 +695,7 @@ const ACH = [
   ['serve10', 'はじめてのお客さん', '10人に料理を出す', s => s.st.served >= 10, 300], ['serve100', '人気のお店', '100人に料理を出す', s => s.st.served >= 100, 2000], ['serve500', '行列のできる店', '500人に料理を出す', s => s.st.served >= 500, 8000], ['serve2000', '町の名物', '2000人に料理を出す', s => s.st.served >= 2000, 30000], ['serve5000', '伝説のレストラン', '5000人に料理を出す', s => s.st.served >= 5000, 100000],
   ['earn10k', 'はじめての売上1万', '売上の合計 1万円', s => s.st.earned >= 1e4, 500], ['earn100k', '売上10万', '売上の合計 10万円', s => s.st.earned >= 1e5, 3000], ['earn1m', '売上100万', '売上の合計 100万円', s => s.st.earned >= 1e6, 20000], ['earn10m', '売上1000万', '売上の合計 1000万円', s => s.st.earned >= 1e7, 150000],
   ['rep4', '四つ星のお店', '評判 ★4.0', s => s.rep >= 4, 3000], ['rep45', '星がかがやく', '評判 ★4.5', s => s.rep >= 4.5, 10000], ['rep5', '最高の五つ星', '評判 ★4.9', s => s.rep >= 4.9, 50000],
-  ['menu8', 'メニューがいっぱい', 'メニューに8品', s => Object.values(s.menu).filter(m => m.on).length >= 8, 2000], ['menu15', 'なんでもそろう店', 'メニューに15品', s => Object.values(s.menu).filter(m => m.on).length >= 15, 10000], ['alldish', '料理の達人', '25品ぜんぶ覚える', s => s.lv >= 8, 15000],
+  ['menu8', 'メニューがいっぱい', 'メニューに8品', s => Object.values(s.menu).filter(m => m.on).length >= 8, 2000], ['menu15', 'なんでもそろう店', 'メニューに15品', s => Object.values(s.menu).filter(m => m.on).length >= 15, 10000], ['alldish', '料理の達人', '41品ぜんぶ覚える', s => s.lv >= 9, 15000],
   ['deco50', 'おしゃれなお店', 'かざり点 50', s => decoTotal() >= 50, 2000], ['deco150', 'うっとりする店内', 'かざり点 150', s => decoTotal() >= 150, 10000], ['deco300', '美術館のようなお店', 'かざり点 300', s => decoTotal() >= 300, 40000],
   ['staff3', 'なかまがふえた', 'スタッフ3人', s => s.staff.length >= 3, 1500], ['staff8', '大きなチーム', 'スタッフ8人', s => s.staff.length >= 8, 12000], ['stafflv', 'ベテランスタッフ', 'スタッフがレベル10', s => s.staff.some(f => f.lvl >= 10), 8000],
   ['perfect10', '料理じょうず', 'パーフェクト調理 10回', s => s.st.perfect >= 10, 1500], ['perfect100', '神の手', 'パーフェクト調理 100回', s => s.st.perfect >= 100, 15000],
@@ -1031,7 +1048,7 @@ function renderCook() { renderer.render(CK.scene, CK.cam); }
 // ---------- お皿にのった料理（テーブル・配膳台用の小さな形） ----------
 function dishMini(id) {
   const g = new THREE.Group(), add = (geo, col, x, y, z, o = {}) => { const m = new THREE.Mesh(geo, o.m || mat(col, o.mo || { roughness: .5 })); m.position.set(x, y, z); if (o.s) m.scale.set(...o.s); if (o.r) m.rotation.set(...o.r); g.add(m); return m; };
-  const plate = () => add(new THREE.CylinderGeometry(.17, .14, .02, 24), 0xffffff, 0, .01, 0, { mo: { roughness: .2 } }), bowl = (col = 0xffffff) => add(new THREE.CylinderGeometry(.14, .08, .09, 20), col, 0, .045, 0, { mo: { roughness: .25 } });
+  const plate = () => add(new THREE.CylinderGeometry(.17, .14, .02, 24), 0xffffff, 0, .01, 0, { mo: { roughness: .2 } }), bowl = (col = 0xffffff) => { add(new THREE.CylinderGeometry(.08, .08, .006, 20), col, 0, .003, 0, { mo: { roughness: .25 } }); return add(new THREE.CylinderGeometry(.14, .08, .09, 20, 1, true), col, 0, .045, 0, { mo: { roughness: .25, side: THREE.DoubleSide } }); };
   switch (id) {
     case 'burger': plate(); add(new THREE.CylinderGeometry(.08, .08, .03, 16), 0xd8a05a, 0, .035, 0); add(new THREE.CylinderGeometry(.085, .085, .02, 16), 0x6aa83a, 0, .055, 0); add(new THREE.CylinderGeometry(.08, .08, .025, 16), 0x5a3020, 0, .075, 0); add(new THREE.BoxGeometry(.12, .006, .12), 0xf2c84a, 0, .09, 0, { r: [0, .7, 0] }); add(new THREE.SphereGeometry(.082, 16, 8, 0, TAU, 0, Math.PI / 2), 0xd8902a, 0, .093, 0); break;
     case 'steak': plate(); add(new THREE.BoxGeometry(.16, .03, .1), 0x6a3420, 0, .035, 0, { mo: { roughness: .4 } }); add(new THREE.SphereGeometry(.03, 8, 6), 0xe8803a, .09, .03, .04); add(new THREE.SphereGeometry(.025, 8, 6), 0x3a8a3a, .08, .03, -.05); break;
@@ -1058,7 +1075,7 @@ function dishMini(id) {
     case 'smoothie': add(new THREE.CylinderGeometry(.04, .033, .13, 16), 0xf28aa8, 0, .065, 0); add(new THREE.CylinderGeometry(.004, .004, .1, 6), 0xffffff, .015, .14, 0); break;
     case 'parfait': add(new THREE.CylinderGeometry(.045, .025, .16, 16), 0xfff0e0, 0, .08, 0); add(new THREE.SphereGeometry(.045, 12, 8), 0xffffff, 0, .17, 0); add(new THREE.SphereGeometry(.015, 8, 6), 0xd81e2a, 0, .21, 0); break;
     case 'icecream': add(new THREE.CylinderGeometry(.05, .035, .04, 16), 0xf2f0ea, 0, .02, 0); add(new THREE.SphereGeometry(.045, 12, 8), 0xfff4d8, 0, .07, 0); break;
-    default: plate();
+    default: if (!dishMini2(id, add, plate, bowl)) plate();
   }
   g.traverse(o => { if (o.isMesh) o.castShadow = true; }); return g;
 }
@@ -1740,6 +1757,309 @@ SCN.icecream = K => {
 };
 // そのほか（念のため）
 SCN.generic = K => { const pl = K.plate(0, 0); const m = dishMini(CK.dish); m.position.y = .01; m.scale.setScalar(.01); CK.grp.add(m); return [{ txt: '心をこめて 調理中…', d: 2, s() { camAt(0, 0, .4, .4); }, f(k) { m.scale.setScalar(Math.max(.01, ez(k)) * .9); } }, fin(0, 0)]; };
+
+// =========================================================================================
+//  料理ごとの調理の手順（その4）：追加の16品（うどん・シチュー・親子丼・ナポリタン・とんかつ・コロッケ・
+//  焼きそば・エビチリ・海鮮丼・おにぎり・抹茶ラテ・バナナシェイク・プリン・クレープ・ホットドッグ・さんまの塩焼き）
+// =========================================================================================
+// てぼ（麺の湯切りかご）
+function tebo(x, z, y) { const g = grp(x, y, z); const tm = new THREE.MeshStandardMaterial({ color: 0xc8ccd0, metalness: .9, roughness: .3, wireframe: true }); ME(new THREE.CylinderGeometry(.05, .045, .12, 14, 4, true), tm, 0, -.03, 0, g).castShadow = false; ME(new THREE.CylinderGeometry(.005, .005, .25, 8), fm(0x8a5a34), .03, .14, 0, g).rotation.z = -.35; return g; }
+// パン粉の衣（ざらざら）
+const panko = () => TX('pnk', () => noiseTex('#e8cc8a', ['#f6e0a8', '#d8b068', '#fff0c0', '#c89a50'], 3000, 256, { r: 2.2, a: .7 }));
+// うず巻きのしぼり（ホイップ）
+function swirl(r, h, turns = 3, th = .011, col = 0xfffaf0) { const pts = []; for (let i = 0; i <= 70; i++) { const t = i / 70, a = t * TAU * turns, rr2 = r * (1 - t * .9); pts.push(V3(Math.cos(a) * rr2, t * h, Math.sin(a) * rr2)); } const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 220, th, 9); const m = new THREE.Mesh(g, fp(col, { roughness: .4 })); m.castShadow = true; return { m, g, pts, n: g.index.count }; }
+// きざみキャベツの山
+function cabbage(x, z, p, n = 60) { const m = fm(0xe0ecc0, { roughness: .6 }), out = []; for (let i = 0; i < n; i++) { const a = rr(0, TAU), d = Math.sqrt(Math.random()) * .045; const s = ME(new THREE.BoxGeometry(.05, .0025, .004), i % 4 ? m : fm(0xc8e090), x + Math.cos(a) * d, .012 + (1 - d / .045) * .03 + rr(0, .01), z + Math.sin(a) * d, p); s.rotation.set(rr(-.4, .4), rr(0, TAU), rr(-.4, .4)); out.push(s); } return out; }
+// 細長い魚（さんま）
+function fishR(x) { const u = clamp(Math.abs(x) / .12, 0, 1); return .02 * Math.pow(Math.max(0, 1 - Math.pow(u, x < 0 ? 2.4 : 1.7)), .55); }
+function fishGeo() { const pts = []; for (let i = 0; i <= 48; i++) { const x = .12 - i / 48 * .24; pts.push(new THREE.Vector2(Math.max(i % 48 ? .0006 : 0, fishR(x)), -x)); } pts.reverse(); const g = new THREE.LatheGeometry(pts.map(v => new THREE.Vector2(v.x, v.y)).sort((A, B) => A.y - B.y), 20); g.rotateZ(Math.PI / 2); const p = g.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) * .55); g.rotateX(-Math.PI / 2); const col = [], c = new THREE.Color(), back = new THREE.Color(0x2e3a48), mid = new THREE.Color(0x8a9aac), belly = new THREE.Color(0xf2f2ee); for (let i = 0; i < p.count; i++) { const z = p.getZ(i), y = p.getY(i), w = Math.max(.002, fishR(p.getX(i))); const t = clamp((z / w + 1) / 2, 0, 1); if (t < .45) c.copy(back).lerp(mid, t / .45); else c.copy(mid).lerp(belly, (t - .45) / .55); if (y < 0) c.multiplyScalar(.9); col.push(c.r, c.g, c.b); } g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals(); return g; }
+// ---------------------------------------------------------------- きつねうどん
+SCN.udon = K => {
+  K.stoveTop(-.2, -.05); K.pot(-.2, -.05, .13, .16); const wy = .02 + .16 * .75;
+  const bw = K.bowl(.14, .05, .12, .08, 0x3a2418); ME(new THREE.TorusGeometry(.12, .003, 6, 48), fm(0xd8b060), 0, .08, 0, bw).rotation.x = Math.PI / 2;
+  const soupM = fp(0xd8a85a, { roughness: .05, clearcoat: 1, transparent: true, opacity: .62, depthWrite: false }); const soup = ME(new THREE.CylinderGeometry(.06, .055, .004, 36), soupM, 0, .006, 0, bw); soup.scale.set(.01, 1, .01);
+  const tb = tebo(-.2, -.05, wy + .02); const nd = new THREE.Mesh(noodleGeo(12, .042, .035, .0058), fp(0xfaf6ea, { roughness: .35, clearcoat: .3 })); nd.castShadow = true; tb.add(nd); nd.position.y = -.07;
+  const la = ladle(.04); la.position.set(-.2, .3, -.05); const strm = K.stream(0xd8a85a, .006);
+  const age = ME(new RoundedBoxGeometry(.07, .012, .05, 2, .004), fp(0xc87a2a, { roughness: .4, clearcoat: .6 }), .3, .3, .1); age.visible = false;
+  const kama = grp(.32, .3, 0); ME(new THREE.CylinderGeometry(.022, .022, .006, 20, 1, false, 0, Math.PI), [fm(0xf6a0a8), fm(0xfaf8f2), fm(0xfaf8f2)], 0, 0, 0, kama).rotation.z = Math.PI / 2; kama.visible = false;
+  const sY = .058;
+  return [
+    { txt: '太い麺を 大きななべで ゆでる', d: 2.2, at: .35, timing: { hint: '湯切り！', btn: 'チャッ！' }, s() { cam(-.2, .52, .2, -.2, .1, -.05); }, f(k, dt) { tb.position.y = wy + .02 + Math.sin(CK.t * 5) * .005; boiling(-.2, wy, -.05, .11, 1.2, dt); } },
+    { txt: '湯切り！', d: .9, f(k, dt) { const sh = k < .8 ? Math.abs(Math.sin(k * Math.PI * 3)) : 0; tb.position.y = wy + .1 + sh * .06; tb.rotation.z = -sh * .15; if (Math.sin(k * Math.PI * 3) < -.6) FX2.drop(-.2, tb.position.y - .08, -.05, .04, 6, dt); } },
+    { txt: 'どんぶりに 麺を入れる', d: 1, s() { camAt(0, 0, .42, .4); }, f(k, dt) { arcTo(tb, [-.2, wy + .1, -.05], [.14, sY + .1, .05], ez(k), .05); tb.rotation.z = -ez(k) * 1.3; if (k > .6) { CK.grp.attach(nd); nd.position.lerp(V3(.14, .012, .05), .2); nd.scale.y = .75; } if (k > .95) tb.visible = false; } },
+    { txt: 'かつおと昆布の だしを たっぷり', d: 1.8, s() { AU.pour(1); }, f(k, dt) { const a = [-.2, wy, -.05], b = [.1, .16, .05]; if (k < .4) arcTo(la, [-.2, .3, -.05], k < .2 ? a : b, ez(k / .4), .06); else { la.position.set(...b); la.rotation.z = -ez(sub(k, .4, .55)) * 1.4; if (k > .5 && k < .95) KT.setStream(strm, V3(.135, .155, .05), V3(.14, .03 + sub(k, .5, .95) * .03, .05)); else strm.visible = false; }
+        const f = sub(k, .5, 1); soup.position.y = lerp(.006, sY, f); soup.scale.set(Math.max(.01, lerp(.6, 1.8, f)), 1, Math.max(.01, lerp(.6, 1.8, f))); FX2.steam(.14, sY + .03, .05, .07, f, dt); if (k > .97) { la.visible = false; AU.lvl('pour', 0); } } },
+    { txt: 'あまからい おあげと かまぼこ・ねぎ', d: 2, s() { age.visible = kama.visible = true; camAt(.14, .05, .3, .32); }, f(k, dt) { arcTo(age, [.3, .3, .1], [.14, sY + .01, .04], ez(sub(k, 0, .4)), .05); arcTo(kama, [.32, .3, 0], [.18, sY + .006, .08], ez(sub(k, .35, .65)), .05);
+        if (k > .65 && !this.ng) { this.ng = 1; bits({ n: 16, mk: () => new THREE.Mesh(new THREE.TorusGeometry(.004, .0018, 5, 10), fm(pick([0x4aa83a, 0x8ad05a]))), x: .12, z: .07, r: .02, y0: .16, y1: sY + .004, flat: 1, gap: .02 }); } FX2.steam(.14, sY + .03, .05, .07, .8, dt); } },
+    fin(.14, .05, .06),
+  ];
+};
+// ---------------------------------------------------------------- ビーフシチュー
+SCN.stew = K => {
+  K.stoveTop(-.17, -.04); const pot = K.pot(-.17, -.04, .12, .14); const wy = .02 + .14 * .75, liq = pot.userData.liq; liq.material = fp(0x6a2a14, { roughness: .2, map: TEX.curry() }); liq.scale.y = 3;
+  const meat = [], veg = []; for (let i = 0; i < 6; i++) { const m = ME(lumpGeo(.018, 2, .2), fm(0x5a2a1a, { roughness: .6 }), -.17 + rr(-.06, .06), .3, -.04 + rr(-.06, .06)); m.visible = false; meat.push(m); }
+  for (let i = 0; i < 10; i++) { const m = ME(new RoundedBoxGeometry(.016, .014, .016, 1, .004), fm(i % 2 ? 0xe8802a : 0xf2d890), -.17 + rr(-.07, .07), .32, -.04 + rr(-.07, .07)); m.visible = false; veg.push(m); }
+  const la = ladle(.035); la.position.set(-.1, .2, -.04); const pl = K.bowl(.18, .08, .13, .035); const pool = ME(new THREE.SphereGeometry(.1, 40, 12, 0, TAU, 0, Math.PI / 2), fp(0x5a2412, { map: TEX.curry(), roughness: .15, clearcoat: 1 }), .18, .012, .08); pool.scale.set(.001, .1, .001); const strm = K.stream(0x5a2412, .008);
+  const cream = swirl(.03, .004, 2, .0028, 0xfaf6ea); cream.m.position.set(.2, .03, .08); CK.grp.add(cream.m); cream.g.setDrawRange(0, 0);
+  return [
+    { txt: '焼いた牛肉と 野菜を なべへ', d: 1.6, s() { camAt(-.17, -.04, .3, .36); }, f(k, dt) { meat.concat(veg).forEach((m, i) => { const kk = sub(k, i * .04, i * .04 + .35); m.visible = kk > 0; m.position.y = lerp(.3, wy + .006, ez(kk)); }); FX2.bub(-.17, wy, -.04, .1, .5, dt, .012); AU.boil(.5); } },
+    { txt: 'デミグラスで ことこと 煮こむ…', d: 2.6, at: .4, timing: { hint: 'ちょうどいい とろみ！' }, f(k, dt) { const a = CK.t * 2.6; la.position.set(-.17 + Math.cos(a) * .06, wy + .012, -.04 + Math.sin(a) * .06); la.rotation.y = -a; meat.concat(veg).forEach((m, i) => { m.position.y = wy + .006 + Math.sin(CK.t * 2 + i) * .002; m.rotation.y += dt * .3; });
+        cookCol(liq.material.color, 0x6a2a14, 0x4a1a0c, k); if (Math.random() < dt * 6) ckBubble(-.17 + rr(-.07, .07), wy + .004, -.04 + rr(-.07, .07), rr(.008, .016), rr(.5, 1)); FX2.steam(-.17, wy + .02, -.04, .08, .7, dt); } },
+    { txt: '深皿に よそう', d: 1.8, s() { AU.stopCook(); camAt(.15, .06, .34, .34); la.position.set(-.17, wy + .01, -.04); }, f(k, dt) { const B = [.22, .14, .08]; if (k < .35) arcTo(la, [-.17, wy + .01, -.04], B, ez(k / .35), .1); else { la.position.set(...B); la.rotation.z = -ez(sub(k, .35, .5)) * 1.5; if (k > .45 && k < .9) KT.setStream(strm, V3(.19, .13, .08), V3(.18 + Math.sin(k * 16) * .02, .02, .08)); else strm.visible = false; const s = ez(sub(k, .45, .95)); pool.scale.set(Math.max(.001, s), .1, Math.max(.001, s)); }
+        if (k > .7 && !this.mv) { this.mv = 1; meat.slice(0, 4).concat(veg.slice(0, 5)).forEach((m, i) => { m.position.set(.18 + Math.cos(i * 1.7) * .04, .03, .08 + Math.sin(i * 1.7) * .04); }); } if (k > .97) la.visible = false; } },
+    { txt: '生クリームを くるりと', d: 1.2, s() { camAt(.18, .08, .26, .3); }, f(k) { cream.g.setDrawRange(0, Math.floor(ez(k) * cream.n / 6) * 6); if (k > .8 && !this.p) { this.p = 1; bits({ n: 10, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.004, .002, .004), fm(0x2a7a2a)), x: .19, z: .08, r: .03, y0: .15, y1: .034, gap: .02 }); } } },
+    fin(.18, .08, .04),
+  ];
+};
+// ---------------------------------------------------------------- 親子丼
+SCN.oyakodon = K => {
+  K.stoveTop(-.12, -.02); const pan = K.pan(-.12, -.02, .1); const bw = K.bowl(.2, .08, .1, .07, 0x2a1e1a); const rice = riceDome(.075, .03); rice.position.set(0, .05, 0); bw.add(rice);
+  const dashi = ME(new THREE.CylinderGeometry(.088, .088, .006, 30), fp(0xc8903a, { roughness: .05, transparent: true, opacity: .8 }), -.12, .03, -.02); dashi.scale.set(.01, 1, .01);
+  const gr = grp(-.12, 0, -.02); const chick = []; for (let i = 0; i < 9; i++) { const m = ME(lumpGeo(.014, 1, .25), fm(0xf2c8b8, { roughness: .5 }), rr(-.06, .06), .3, rr(-.06, .06), gr); m.scale.y = .7; chick.push(m); }
+  for (let i = 0; i < 10; i++) { const m = ME(new THREE.TorusGeometry(.018, .002, 4, 12, Math.PI), fp(0xf6f0d8, { transparent: true, opacity: .8 }), rr(-.06, .06), .3, rr(-.06, .06), gr); m.rotation.set(Math.PI / 2, 0, rr(0, TAU)); chick.push(m); }
+  const eggM = fp(0xffffff, { map: TX('egm', () => noiseTex('#f8c838', ['#fff2c0', '#fbe08a', '#f2b020', '#fffaf0'], 420, 256, { r: 18, a: .75 })), roughness: .4, transparent: true, opacity: .9 }); const egg = ME(lumpGeo(.085, 3, .12), eggM, 0, .04, 0, gr); egg.scale.set(.01, .16, .01);
+  const lidG = lid(.1); lidG.position.set(-.12, .35, -.2); const cup = K.bowl(.05, -.2, .05, .045); ME(new THREE.CylinderGeometry(.04, .04, .004, 18), eggM, 0, .03, 0, cup); const strm = K.stream(0xf8c030, .006);
+  return [
+    { txt: 'だしで 鶏肉と 玉ねぎを 煮る', d: 1.8, s() { camAt(-.12, -.02, .3, .32); }, f(k, dt) { const s = ez(sub(k, 0, .3)); dashi.scale.set(Math.max(.01, s), 1, Math.max(.01, s)); chick.forEach((m, i) => m.position.y = lerp(.3, .038, ez(sub(k, .1 + i * .03, .4 + i * .03)))); chick.slice(0, 9).forEach(m => cookCol(m.material.color, 0xf2c8b8, 0xf2e6d8, sub(k, .5, 1))); FX2.bub(-.12, .034, -.02, .08, .8, dt, .006); AU.boil(.6); } },
+    { txt: 'とき卵を まわし入れて ふた', d: 1.6, f(k, dt) { arcTo(cup, [.05, 0, -.2], [-.04, .11, -.06], ez(sub(k, 0, .3)), .04); cup.rotation.z = ez(sub(k, .28, .45)) * 1.6; if (k > .35 && k < .75) KT.setStream(strm, V3(-.07, .12, -.06), V3(-.12 + Math.cos(k * 14) * .04, .04, -.02 + Math.sin(k * 14) * .04)); else strm.visible = false; const s = ez(sub(k, .35, .85)); egg.scale.set(Math.max(.01, s), .16, Math.max(.01, s)); if (k > .7) arcTo(lidG, [-.12, .35, -.2], [-.12, .045, -.02], ez(sub(k, .7, 1)), .05); } },
+    { txt: '半熟になるまで…', d: 2.2, at: .3, timing: { hint: '火を止める！', z: [.4, .75], z2: [.52, .64] }, s() { cup.visible = false; }, f(k, dt) { eggM.opacity = lerp(.9, 1, k); cookCol(eggM.color, 0xffffff, CK.steps[2].late ? 0xf6e2b0 : 0xfff4dc, k); FX2.steam(-.12 + .1, .05, -.02, .02, 1, dt); lidG.position.y = .045 + Math.abs(Math.sin(CK.t * 18)) * .0015; } },
+    { txt: 'ごはんの上に するりと のせる', d: 1.6, s() { AU.stopCook(); camAt(.05, .04, .42, .4); }, f(k) { arcTo(lidG, [-.12, .045, -.02], [-.36, .1, -.22], ez(sub(k, 0, .25)), .05); pan.rotation.z = -ez(sub(k, .3, .7)) * .6; const f = ez(sub(k, .3, .9)); gr.position.set(lerp(-.12, .2, f), lerp(0, .046, f) + Math.sin(f * Math.PI) * .06, lerp(-.02, .08, f)); dashi.visible = f < .2; } },
+    { txt: 'みつばを のせて', d: .9, s() { camAt(.2, .08, .26, .3); bits({ n: 5, mk: () => { const m = new THREE.Mesh(new THREE.SphereGeometry(.009, 8, 6), fm(0x3a9a3a)); m.scale.set(1, .2, .7); return m; }, x: .2, z: .08, r: .02, y0: .2, y1: .1, gap: .08, flat: 1 }); } },
+    fin(.2, .08, .06),
+  ];
+};
+// ---------------------------------------------------------------- ナポリタン
+SCN.napolitan = K => {
+  K.stoveTop(-.1, -.02); const pan = K.pan(-.1, -.02, .13); const pl = K.plate(.2, .1, .15); pl.visible = false;
+  const gr = grp(-.1, 0, -.02); const its = []; for (let i = 0; i < 7; i++) { const m = ME(new THREE.CylinderGeometry(.011, .011, .005, 14), fm(0xd8806a, { roughness: .5 }), rr(-.07, .07), .3, rr(-.07, .07), gr); its.push(m); }
+  for (let i = 0; i < 7; i++) { const m = ME(new THREE.TorusGeometry(.012, .0025, 5, 14), fp(0x3a9a2a), rr(-.07, .07), .3, rr(-.07, .07), gr); m.rotation.x = Math.PI / 2; its.push(m); }
+  const nd = new THREE.Mesh(noodleGeo(22, .06, .035, .0024), fp(0xf2d68a, { roughness: .35, clearcoat: .3 })); nd.castShadow = true; nd.visible = false; gr.add(nd);
+  const bot = grp(.2, .2, -.1); ME(new THREE.CylinderGeometry(.02, .02, .09, 16), fp(0xd8141e), 0, .05, 0, bot); bot.rotation.z = 2.2; const strm = K.stream(0xc8141e, .006);
+  return [
+    { txt: 'ウインナー・ピーマン・玉ねぎを 炒める', d: 1.6, s() { camAt(-.1, -.02, .3, .32); }, f(k, dt) { its.forEach((m, i) => m.position.y = lerp(.3, .032, ez(sub(k, i * .04, i * .04 + .3)))); if (k > .3) { AU.sizzle(.8); FX2.smoke(-.1, .05, -.02, .08, .8, dt); its.slice(0, 7).forEach(m => cookCol(m.material.color, 0xd8806a, 0xa84a2a, sub(k, .3, 1))); } } },
+    { txt: '太めのスパゲッティを 入れる', d: 1, f(k, dt) { nd.visible = true; nd.position.y = lerp(.25, .03, ez(k)); FX2.steam(-.1, .06, -.02, .08, 1, dt); } },
+    { txt: 'ケチャップで 焼きつけるように からめる', d: 2.4, at: .4, timing: { hint: 'からめる！' }, f(k, dt) { if (k < .4) { bot.position.set(-.06, .2, -.06); if (k > .1) KT.setStream(strm, V3(-.06, .17, -.06), V3(-.1 + Math.sin(k * 30) * .04, .05, -.02)); } else { strm.visible = false; bot.visible = false; }
+        cookCol(nd.material.color, 0xf2d68a, 0xd85a2a, sub(k, .1, .6)); const j = Math.max(0, Math.sin(k * Math.PI * 8)); pan.rotation.x = Math.sin(k * Math.PI * 8) * .1; nd.position.y = .03 + j * .03; nd.rotation.y += dt * 2; its.forEach((m, i) => m.position.y = .032 + j * .03 * ((i % 3) / 2)); FX2.smoke(-.1, .06, -.02, .09, 1.2, dt); AU.sizzle(1); } },
+    { txt: 'お皿に もりつけ', d: 1.4, s() { AU.stopCook(); pl.visible = true; camAt(.12, .06, .4, .38); }, f(k) { const f = ez(k); gr.position.set(lerp(-.1, .2, f), lerp(0, -.012, f) + Math.sin(f * Math.PI) * .1, lerp(-.02, .1, f)); pan.rotation.z = -Math.sin(k * Math.PI) * .5; } },
+    { txt: '粉チーズと パセリ', d: 1, s() { camAt(.2, .1, .26, .3); bits({ n: 40, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.003, .002, .003), fm(0xfff4d8)), x: .2, z: .1, r: .045, y0: .2, y1: .045, jit: .01, gap: .01 }); bits({ n: 10, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.004, .002, .004), fm(0x2a7a2a)), x: .2, z: .1, r: .04, y0: .2, y1: .05, gap: .02 }); } },
+    fin(.2, .1, .04),
+  ];
+};
+// ---------------------------------------------------------------- とんかつ・コロッケ（揚げ物：衣→揚げる→切る／もる）
+function cutletScene(K, kind) {
+  const isK = kind === 'korokke', fr = fryer(-.14, -.04); const oy = fr.userData.oilY; K.board(.24, -.08, .3, .2);
+  const crust = fm(isK ? 0xd8b070 : 0xf2b8a8, { roughness: .7 }), inner = fm(isK ? 0xf2e0a0 : 0xfaf2e8, { roughness: .6 });
+  const pcs = []; const N = isK ? 3 : 1;
+  for (let n = 0; n < N; n++) { const g = grp(.2 + n * .05 - (isK ? .05 : 0), .035, -.08); g.userData.sl = [];
+    if (isK) { const m = ME(new THREE.SphereGeometry(.03, 18, 12), crust, 0, 0, 0, g); m.scale.set(1.3, .55, .9); }
+    else { const W = .15, S = 5, w = W / S; for (let i = 0; i < S; i++) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, .022, .09, 2, .003), [i === S - 1 ? crust : inner, i === 0 ? crust : inner, crust, crust, crust, crust]); m.position.x = -W / 2 + w / 2 + i * w; m.castShadow = true; m.visible = false; g.add(m); g.userData.sl.push(m); } g.userData.whole = ME(new RoundedBoxGeometry(W, .022, .09, 3, .008), crust, 0, 0, 0, g); }
+    pcs.push(g); }
+  const kn = K.knife(.24, .1); kn.visible = false; const pl = K.plate(.2, .14, .16); pl.visible = false;
+  const tray = K.plate(.0, .14, .07); tray.visible = false;
+  return [
+    { txt: isK ? 'じゃがいものたねに 小麦粉・卵・パン粉' : '豚ロースに 小麦粉・とき卵・パン粉', d: 1.6, s() { camAt(.22, -.08, .3, .3); }, f(k) { pcs.forEach((g, i) => { g.position.y = .035 + Math.abs(Math.sin(k * 8 + i)) * .03 * (1 - k); }); if (k > .5) { crust.map = panko(); crust.needsUpdate = true; cookCol(crust.color, isK ? 0xd8b070 : 0xf2b8a8, 0xfaf2e0, sub(k, .5, 1)); crust.roughness = 1; } } },
+    { txt: '170℃の油へ', d: 1.2, s() { camAt(-.02, -.06, .44, .42); }, f(k, dt) { pcs.forEach((g, i) => { if (!g.userData.a) g.userData.a = g.position.toArray(); arcTo(g, g.userData.a, [-.14 + (i - (N - 1) / 2) * .07, oy + .008, -.04], ez(sub(k, i * .15, .6 + i * .15)), .1); }); if (k > .5) fryHeat(-.14, oy, -.04, .1, 1.4, dt); } },
+    { txt: 'ジュワーッと 揚げる…きつね色になったら', d: 2.4, at: .35, timing: { hint: '引き上げる！' }, s() { camAt(-.14, -.04, .28, .3); }, f(k, dt) { cookCol(crust.color, 0xfaf2e0, CK.steps[2].late ? 0x9a5a1e : 0xd8963a, k); pcs.forEach((g, i) => { g.position.y = oy + .008 + Math.sin(CK.t * 4 + i) * .002; }); fryHeat(-.14, oy, -.04, .11, 1.2, dt); } },
+    { txt: '油を切る', d: 1, s() { cam(-.14, .34, .3, -.14, .1, -.04); }, f(k, dt) { pcs.forEach((g, i) => { g.position.y = oy + .008 + ez(sub(k, 0, .4)) * .1; }); if (k > .4) for (let q = 0; q < 2; q++) ckPart('drop', -.14 + rr(-.06, .06), oy + .09, -.04 + rr(-.04, .04), { vx: 0, vy: -.2, vz: 0, g: 3, s: .004, T: .3, grow: 0 }); fryHeat(-.14, oy, -.04, .11, .5, dt); } },
+    isK ? { txt: 'キャベツと いっしょに もりつけ', d: 1.6, s() { AU.stopCook(); pl.visible = true; cabbage(-.04, 0, pl); camAt(.2, .14, .32, .32); }, f(k) { pcs.forEach((g, i) => { if (!g.userData.b) g.userData.b = g.position.toArray(); arcTo(g, g.userData.b, [.22 + (i - 1) * .045, .04, .15 + (i % 2) * .02], ez(sub(k, i * .15, .6 + i * .15)), .12); g.rotation.y = i * .5; }); } }
+      : { txt: 'ザクッと 切って キャベツとお皿へ', d: 2.2, s() { AU.stopCook(); pl.visible = true; cabbage(-.05, -.01, pl); camAt(.2, .14, .3, .3); kn.visible = true; },
+        cut() { const g = pcs[0]; if (g.userData.whole.visible) { g.userData.whole.visible = false; g.userData.sl.forEach(m => m.visible = true); } },
+        f(k) { const g = pcs[0]; arcTo(g, [-.14, oy + .108, -.04], [.23, .036, .15], ez(sub(k, 0, .25)), .1); const c = sub(k, .3, .85), idx = Math.min(3, Math.floor(c * 4)), ph = (c * 4) % 1; if (c > 0) this.cut(); kn.position.set(.23 - .075 + (idx + 1) * .03, .14 - Math.sin(ph * Math.PI) * .09, .15); kn.rotation.set(0, Math.PI / 2, -.3); if (ph > .5 && ph < .55) AU.chop();
+          const sp = ez(sub(k, .85, 1)); g.userData.sl.forEach((m, i) => { m.position.x = -.075 + .015 + i * .03 * (1 + sp * .2) ; m.rotation.z = sp * .3; }); if (k > .9) kn.visible = false; } },
+    { txt: 'ソースと からしを そえて', d: 1, s() { bits({ n: 1, mk: () => { const m = new THREE.Mesh(new THREE.SphereGeometry(.008, 8, 6), fp(0xf2c82a)); m.scale.y = .5; return m; }, x: .3, z: .2, r: 0, y0: .15, y1: .015 }); const sc = swirl(.02, .002, 1.2, .003, 0x3a1e0e); sc.m.position.set(.22, .055, .15); CK.grp.add(sc.m); this.sc = sc; sc.g.setDrawRange(0, 0); }, f(k) { this.sc.g.setDrawRange(0, Math.floor(ez(k) * this.sc.n / 6) * 6); } },
+    fin(.2, .14, .04),
+  ];
+}
+SCN.tonkatsu = K => cutletScene(K, 'tonkatsu');
+SCN.korokke = K => cutletScene(K, 'korokke');
+// ---------------------------------------------------------------- 焼きそば・エビチリ（中華なべ）
+SCN.yakisoba = K => {
+  const st = K.stoveTop(-.06, -.02); st.userData.fl.scale.setScalar(1.4); const wk = wok(-.06, -.02, .17); const wy = wk.userData.y;
+  const pork = [], cab = []; for (let i = 0; i < 8; i++) { const m = ME(new THREE.BoxGeometry(.03, .004, .02), fm(0xe8b0a0), rr(-.06, .06), .3, rr(-.06, .06), wk); m.rotation.y = rr(0, 3); pork.push(m); }
+  for (let i = 0; i < 14; i++) { const m = ruffle(.018, fm(0xd8e8b0, { roughness: .6 }), .004, 4); m.position.set(rr(-.07, .07), .3, rr(-.07, .07)); m.rotation.set(rr(-.5, .5), rr(0, 3), rr(-.5, .5)); wk.add(m); cab.push(m); }
+  const nd = new THREE.Mesh(noodleGeo(24, .07, .03, .0022, .004), fp(0xe8d08a, { roughness: .4, clearcoat: .3 })); nd.castShadow = true; nd.visible = false; nd.position.y = .3; wk.add(nd);
+  const sauce = K.stream(0x3a1e0e, .004); const pl = K.plate(.24, .14, .16); pl.visible = false;
+  const heat = (dt, a) => { FX2.fire(-.06, .02, -.02, .16, a, dt, .9); CK.fireL.position.set(-.06, .05, -.02); CK.fireL.intensity = 1 + a * Math.random(); AU.fire(.4 + a * .3); };
+  return [
+    { txt: '豚肉と キャベツを 強火で炒める', d: 1.6, s() { camAt(-.04, -.02, .44, .42); }, f(k, dt) { pork.concat(cab).forEach((m, i) => { const y = wy(Math.hypot(m.position.x, m.position.z)) + .006; m.position.y = Math.max(y, m.position.y - dt * .6); }); pork.forEach(m => cookCol(m.material.color, 0xe8b0a0, 0xb8704a, sub(k, .3, 1))); AU.sizzle(1); heat(dt, .6); FX2.smoke(-.06, .07, -.02, .09, 1, dt); } },
+    { txt: '蒸し麺を ほぐして 入れる', d: 1.1, f(k, dt) { nd.visible = true; nd.position.y = lerp(.3, wy(0) + .002, ez(k)); FX2.steam(-.06, .08, -.02, .08, 1, dt); heat(dt, .5); } },
+    { txt: 'ソースを まわしかけて あおる！', d: 2.6, at: .25, timing: { hint: 'あおる！', btn: 'あおる！' }, f(k, dt) { if (k < .3) KT.setStream(sauce, V3(.12, .2, -.04), V3(-.06 + Math.cos(k * 30) * .05, .06, -.02 + Math.sin(k * 30) * .05)); else sauce.visible = false;
+        cookCol(nd.material.color, 0xe8d08a, CK.steps[2].late ? 0x5a2a12 : 0x8a4a1e, sub(k, .05, .7)); const j = Math.max(0, Math.sin(k * Math.PI * 7)); wk.rotation.x = Math.sin(k * Math.PI * 7) * .12; nd.position.y = wy(0) + .002 + j * .04; nd.rotation.y += dt * 2; cab.forEach((m, i) => m.position.y = wy(Math.hypot(m.position.x, m.position.z)) + .006 + j * .05 * ((i % 3) / 2)); FX2.smoke(-.06, .08, -.02, .1, 2, dt); heat(dt, 1 + j); AU.sizzle(1); } },
+    { txt: 'お皿にもって 青のりと 紅しょうが', d: 1.8, s() { AU.stopCook(); CK.fireL.intensity = 0; pl.visible = true; camAt(.14, .07, .42, .4); },
+      f(k) { const f = ez(sub(k, 0, .6)); wk.position.set(lerp(-.06, .14, f), f * .1, lerp(-.02, .1, f)); wk.rotation.z = -f * .9; if (f > .5 && !this.mv) { this.mv = 1; CK.grp.attach(nd); nd.position.set(.24, .014, .14); nd.rotation.set(0, 0, 0); cab.slice(0, 8).forEach(m => { CK.grp.attach(m); m.position.set(.24 + rr(-.05, .05), .03, .14 + rr(-.05, .05)); }); pork.forEach(m => { CK.grp.attach(m); m.position.set(.24 + rr(-.05, .05), .032, .14 + rr(-.05, .05)); }); wk.visible = false;
+          bits({ n: 40, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.003, .001, .003), fm(0x2a6a2a)), x: .24, z: .14, r: .05, y0: .2, y1: .046, jit: .006, gap: .008 }); bits({ n: 8, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.012, .002, .003), fp(0xe83a5a)), x: .28, z: .1, r: .01, y0: .2, y1: .05, gap: .05 }); } } },
+    fin(.24, .14, .04),
+  ];
+};
+SCN.ebichili = K => {
+  const st = K.stoveTop(-.06, -.02); st.userData.fl.scale.setScalar(1.4); const wk = wok(-.06, -.02, .17); const wy = wk.userData.y;
+  const ebi = []; for (let i = 0; i < 7; i++) { const g = grp(rr(-.06, .06), .3, rr(-.06, .06), wk); const pts = []; for (let q = 0; q <= 6; q++) { const a = q / 6 * 2.2; pts.push(V3(Math.cos(a) * .02, 0, Math.sin(a) * .02)); } ME(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, .008, 8), fp(0xd8d0c8, { roughness: .4 }), 0, 0, 0, g); ME(new THREE.ConeGeometry(.007, .014, 3), fp(0xe8401e), .02, 0, -.006, g).rotation.z = 1.2; g.rotation.y = rr(0, TAU); ebi.push(g); }
+  const sM = fp(0xc8301a, { roughness: .12, clearcoat: 1 }); const sauce = ME(new THREE.CylinderGeometry(.1, .08, .004, 40), sM, 0, wy(.06), 0, wk); sauce.scale.set(.01, 1, .01); const strm = K.stream(0xd84a1e, .006);
+  const pl = K.plate(.24, .14, .16); pl.visible = false; const pool = ME(new THREE.SphereGeometry(.085, 40, 12, 0, TAU, 0, Math.PI / 2), sM, .24, .01, .14); pool.scale.set(.001, .1, .001);
+  const heat = (dt, a) => { FX2.fire(-.06, .02, -.02, .16, a, dt, .9); CK.fireL.position.set(-.06, .05, -.02); CK.fireL.intensity = 1 + a * Math.random(); AU.fire(.5); };
+  return [
+    { txt: '片栗粉をまぶした えびを 油通し', d: 1.6, s() { camAt(-.04, -.02, .44, .42); }, f(k, dt) { ebi.forEach((g, i) => { g.position.y = Math.max(wy(Math.hypot(g.position.x, g.position.z)) + .008, g.position.y - dt * .6); g.children[0].material.color.lerpColors(new THREE.Color(0xd8d0c8), new THREE.Color(0xfab090), sub(k, .3, 1)); }); AU.sizzle(1); FX2.spat(-.06, .05, -.02, .08, 1.2, dt); heat(dt, .7); } },
+    { txt: '豆板醤とケチャップの チリソースを 入れる', d: 1.4, f(k, dt) { if (k < .7) KT.setStream(strm, V3(.12, .2, -.04), V3(-.06, .06, -.02)); else strm.visible = false; const s = ez(sub(k, .1, .9)); sauce.scale.set(Math.max(.01, s), 1, Math.max(.01, s)); FX2.smoke(-.06, .07, -.02, .1, 1.5, dt); heat(dt, .5); } },
+    { txt: 'ぐつぐつ からめる…', d: 2.2, at: .35, timing: { hint: 'とろみ！' }, f(k, dt) { FX2.bub(-.06, wy(.06) + .003, -.02, .08, 1, dt, .01); ebi.forEach((g, i) => { g.position.y = wy(.06) + .006 + Math.max(0, Math.sin(CK.t * 5 + i)) * .01; g.rotation.y += dt; }); sM.roughness = lerp(.12, .04, k); heat(dt, .6); } },
+    { txt: 'お皿にもって ねぎを ちらす', d: 1.6, s() { AU.stopCook(); CK.fireL.intensity = 0; pl.visible = true; camAt(.16, .08, .42, .4); },
+      f(k) { const f = ez(sub(k, 0, .5)); wk.position.set(lerp(-.06, .12, f), f * .1, lerp(-.02, .1, f)); wk.rotation.z = -f * .9; const g = ez(sub(k, .35, .8)); pool.scale.set(Math.max(.001, g), .1, Math.max(.001, g)); if (g > .3 && !this.mv) { this.mv = 1; ebi.forEach((e, i) => { CK.grp.attach(e); const a = i / ebi.length * TAU, d = i ? .045 : 0; e.position.set(.24 + Math.cos(a) * d, .026, .14 + Math.sin(a) * d); e.rotation.set(0, a, 0); e.scale.setScalar(1.25); }); wk.visible = false; bits({ n: 14, mk: () => new THREE.Mesh(new THREE.TorusGeometry(.004, .0017, 5, 10), fm(0x4aa83a)), x: .24, z: .14, r: .05, y0: .2, y1: .03, gap: .03, flat: 1 }); } } },
+    fin(.24, .14, .04),
+  ];
+};
+// ---------------------------------------------------------------- 海鮮丼
+SCN.kaisendon = K => {
+  const bw = K.bowl(0, .04, .13, .07, 0x1e2a3a); const rice = riceDome(.1, .03); rice.position.set(0, .05, 0); rice.visible = false; bw.add(rice);
+  const stripe = (base, line, w) => T2((g, s) => { g.fillStyle = base; g.fillRect(0, 0, s, s); g.strokeStyle = line; g.lineWidth = w; for (let x = -s; x < s * 2; x += 34) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + s * .5, s); g.stroke(); } });
+  const NE = [stripe('#f28a5a', 'rgba(255,240,230,.85)', 7), stripe('#c81e2a', 'rgba(150,20,30,.5)', 3), stripe('#faece6', 'rgba(240,170,170,.6)', 4), stripe('#f6f6f2', 'rgba(220,220,214,.8)', 3), stripe('#c81e2a', 'rgba(150,20,30,.5)', 3), stripe('#f28a5a', 'rgba(255,240,230,.85)', 7)];
+  const sl = NE.map((t, i) => { const a = i / NE.length * TAU, g = new THREE.BoxGeometry(.085, .009, .038, 10, 1, 3); const p = g.attributes.position; for (let q = 0; q < p.count; q++) { const x = p.getX(q); p.setY(q, p.getY(q) - x * x * 3); } g.computeVertexNormals(); const m = ME(g, fp(0xffffff, { map: t, roughness: .25, clearcoat: .8 }), Math.cos(a) * .05, .3, .04 + Math.sin(a) * .05); m.rotation.set(-.22, -a + Math.PI / 2, 0); m.visible = false; m.userData.t = [Math.cos(a) * .052, .094, .04 + Math.sin(a) * .052]; return m; });
+  const ikura = []; for (let i = 0; i < 26; i++) { const m = ME(new THREE.SphereGeometry(.005, 10, 8), fp(0xf2601e, { roughness: .05, clearcoat: 1, transparent: true, opacity: .9 }), rr(-.015, .015), .3, .04 + rr(-.015, .015)); m.visible = false; ikura.push(m); }
+  const tama = ME(new RoundedBoxGeometry(.03, .02, .02, 2, .004), fm(0xf8d040), .03, .3, -.01); tama.visible = false; const shiso = ME(new THREE.SphereGeometry(.025, 10, 6), fm(0x2a8a3a, { side: THREE.DoubleSide }), -.04, .3, 0); shiso.scale.set(1, .1, .7); shiso.visible = false;
+  return [
+    { txt: '酢めしを どんぶりに よそう', d: 1, s() { camAt(0, .04, .32, .34); rice.visible = true; }, f(k) { const s = ez(k); rice.scale.set(s, s * .3, s); } },
+    { txt: '大葉と ネタを 花びらのように ならべる', d: 2.6, s() { shiso.visible = true; }, f(k) { shiso.position.y = lerp(.3, .084, ez(sub(k, 0, .15))); sl.forEach((m, i) => { const kk = sub(k, .1 + i * .13, .3 + i * .13); m.visible = kk > 0; m.position.y = lerp(.3, m.userData.t[1], ez(kk)); if (kk > .95 && !m.userData.p) { m.userData.p = 1; AU.place(); } }); } },
+    { txt: 'いくらを まん中に ひと山', d: 1.8, at: .3, timing: { hint: 'そっと！' }, s() { camAt(0, .04, .24, .28); }, f(k) { ikura.forEach((m, i) => { m.visible = k > i / 30; m.position.y = Math.max(.09 + (i % 5) * .002, .3 - (k - i / 30) * 2); }); } },
+    { txt: '玉子と わさびを そえて', d: 1, s() { tama.visible = true; }, f(k) { tama.position.y = lerp(.3, .095, ez(k)); if (k > .8 && !this.w) { this.w = 1; bits({ n: 1, mk: () => { const m = new THREE.Mesh(new THREE.SphereGeometry(.008, 8, 6), fm(0x8ac84a)); m.scale.set(1.4, .5, 1); return m; }, x: -.02, z: .1, r: 0, y0: .2, y1: .09 }); } } },
+    fin(0, .04, .07, .28),
+  ];
+};
+// ---------------------------------------------------------------- おにぎり
+SCN.onigiri = K => {
+  const hg = grp(-.25, 0, -.06); ME(new THREE.CylinderGeometry(.1, .09, .05, 32, 1, true), fm(0xd8b07a, { side: THREE.DoubleSide }), 0, .025, 0, hg); ME(new THREE.CylinderGeometry(.09, .09, .02, 32), fm(0xfbf8f0, { map: TEX.rice() }), 0, .03, 0, hg);
+  const pl = K.plate(.15, .08, .15);
+  const triGeo = () => { const sh = new THREE.Shape(), r = .038; for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + Math.PI / 2, b = a + TAU / 3; sh.absarc(Math.cos(a) * r * .55, Math.sin(a) * r * .55, r * .45, a - Math.PI / 3, a + Math.PI / 3, false); } const g = new THREE.ExtrudeGeometry(sh, { depth: .03, bevelEnabled: true, bevelSize: .006, bevelThickness: .008, bevelSegments: 3, curveSegments: 6 }); g.center(); return g; };
+  const ons = [0, 1].map(i => { const g = grp(i ? .19 : .12, .3, .08 + (i ? .02 : -.01)); const m = ME(triGeo(), fm(0xfbf8f0, { map: TEX.rice(), roughness: .6 }), 0, 0, 0, g); const nori = ME(new RoundedBoxGeometry(.046, .032, .05, 2, .006), fm(0x1a2a1a, { roughness: .8 }), 0, -.024, 0, g); nori.visible = false; g.rotation.y = i ? -.3 : .2; g.visible = false; g.userData = { m, nori }; return g; });
+  const ball = ME(lumpGeo(.03, 2, .15), fm(0xfbf8f0, { map: TEX.rice(), roughness: .6 }), -.25, .3, -.06); ball.visible = false;
+  const takuan = []; for (let i = 0; i < 3; i++) takuan.push(ME(new THREE.CylinderGeometry(.012, .012, .004, 16), fp(0xf2d82a), .2 + i * .012, .3, .14)); takuan.forEach(m => { m.rotation.z = 1.2; m.visible = false; });
+  return [
+    { txt: '手に塩をつけて ごはんを とる', d: 1.2, s() { camAt(-.1, 0, .4, .38); ball.visible = true; }, f(k) { arcTo(ball, [-.25, .06, -.06], [.12, .06, .07], ez(k), .1); } },
+    { txt: '三角に キュッ キュッと にぎる', d: 2.2, at: .3, timing: { hint: 'にぎる！', btn: 'キュッ！' }, s() { camAt(.12, .07, .26, .28); }, f(k) { const p = Math.sin(CK.t * 9); ball.scale.set(1 - p * .1, 1 + p * .15, 1 - p * .05); ball.rotation.y += .1; if (k > .8) { ball.visible = false; ons[0].visible = true; ons[0].position.set(.12, .06, .07); } } },
+    { txt: 'のりを まいて もうひとつ', d: 1.8, f(k) { const o = ons[0]; o.userData.nori.visible = true; o.userData.nori.scale.y = Math.max(.01, ez(sub(k, 0, .3))); arcTo(o, [.12, .06, .07], [.12, .042, .07], ez(sub(k, .2, .4)), .02); o.rotation.x = 0; const o2 = ons[1]; o2.visible = k > .45; o2.position.y = lerp(.3, .042, ez(sub(k, .45, .8))); o2.userData.nori.visible = k > .8; } },
+    { txt: 'たくあんを そえて', d: .9, f(k) { takuan.forEach((m, i) => { m.visible = true; m.position.y = lerp(.3, .016, ez(sub(k, i * .2, .5 + i * .2))); }); } },
+    fin(.15, .08, .04, .26),
+  ];
+};
+// ---------------------------------------------------------------- 抹茶ラテ
+SCN.matcha = K => {
+  const bw = K.bowl(-.12, -.04, .07, .06, 0x3a4a2e); const powder = ME(lumpGeo(.018, 2, .2), fm(0x6a9a3a, { roughness: 1 }), 0, .012, 0, bw); powder.scale.set(1, .3, 1); powder.visible = false;
+  const tea = ME(new THREE.CylinderGeometry(.05, .045, .004, 30), fp(0x4a7a2a, { roughness: .2 }), 0, .02, 0, bw); tea.scale.set(.01, 1, .01); const foam = ME(new THREE.CircleGeometry(.052, 30), fm(0xb8d888, { roughness: .7 }), 0, .028, 0, bw); foam.rotation.x = -Math.PI / 2; foam.visible = false;
+  const ch = grp(-.12, .3, -.04); ME(new THREE.CylinderGeometry(.012, .012, .06, 12), fm(0xd8c08a), 0, .05, 0, ch); for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; const t = ME(new THREE.CylinderGeometry(.0012, .0012, .05, 4), fm(0xe8d8a8), Math.cos(a) * .014, 0, Math.sin(a) * .014, ch); t.rotation.set(Math.sin(a) * .35, 0, -Math.cos(a) * .35); }
+  const kettle = grp(.08, 0, -.2); ME(new THREE.SphereGeometry(.05, 16, 12), CKM.steel, 0, .06, 0, kettle).scale.y = .8; ME(new THREE.CylinderGeometry(.006, .008, .07, 8), CKM.steel, .05, .08, 0, kettle).rotation.z = -.9; const wS = K.stream(0xd8eaf0, .004);
+  const cup = grp(.16, .015, .08); const pts = []; for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push(new THREE.Vector2(.026 + Math.sin(t * Math.PI / 2) * .02, t * .07)); } pts.unshift(new THREE.Vector2(0, 0)); ME(new THREE.LatheGeometry(pts, 36), CKM.glass, 0, 0, 0, cup);
+  const cupLiq = ME(new THREE.CylinderGeometry(.04, .026, 1, 30), fp(0x6a9a3a, { roughness: .2 }), 0, .002, 0, cup); cupLiq.scale.y = .001; cupLiq.visible = false;
+  const leafT = T2((g, s) => { g.clearRect(0, 0, s, s); g.fillStyle = '#f6f8ee'; for (let i = 0; i < 6; i++) { const y = s * .2 + i * s * .1, w = s * (.36 - i * .04); g.beginPath(); g.ellipse(s / 2, y, w, s * .035, 0, 0, TAU); g.fill(); } g.fillRect(s / 2 - 3, s * .15, 6, s * .7); });
+  const art = ME(new THREE.CircleGeometry(.042, 30), new THREE.MeshStandardMaterial({ map: leafT, transparent: true, depthWrite: false, roughness: .4 }), 0, .071, 0, cup); art.rotation.x = -Math.PI / 2; art.scale.setScalar(.01); const ms = K.stream(0xf6f8ee, .004);
+  return [
+    { txt: '抹茶を ふるって 茶わんへ', d: 1, s() { camAt(-.12, -.04, .26, .3); powder.visible = true; }, f(k) { powder.scale.set(Math.max(.01, ez(k)), .3 * ez(k) + .01, Math.max(.01, ez(k))); } },
+    { txt: 'お湯を そそぐ', d: 1.2, f(k, dt) { arcTo(kettle, [.08, 0, -.2], [-.04, .1, -.08], ez(sub(k, 0, .3)), .03); kettle.rotation.z = ez(sub(k, .25, .4)) * .9; if (k > .35 && k < .85) KT.setStream(wS, V3(-.09, .13, -.08), V3(-.12, .03, -.04)); else wS.visible = false; const s = ez(sub(k, .35, 1)); tea.scale.set(Math.max(.01, s), 1, Math.max(.01, s)); powder.visible = k < .6; FX2.steam(-.12, .04, -.04, .03, s, dt); } },
+    { txt: '茶せんで シャカシャカ 点てる', d: 2.2, at: .35, timing: { hint: 'クリーミー！' }, s() { kettle.visible = false; }, f(k, dt) { ch.position.set(-.12 + Math.sin(CK.t * 22) * .025, .045, -.04); ch.rotation.z = Math.sin(CK.t * 22) * .3; if (Math.random() < dt * 20) AU.noise(.03, 3000, .03, 'bandpass'); if (k > .4) { foam.visible = true; foam.scale.setScalar(sub(k, .4, 1)); } } },
+    { txt: 'グラスに うつして ミルクで 葉っぱを描く', d: 2.4, s() { ch.visible = false; camAt(.16, .08, .2, .3, .05); cupLiq.visible = true; },
+      f(k, dt) { cupLiq.scale.y = Math.max(.001, ez(sub(k, 0, .3)) * .03 + ez(sub(k, .35, .9)) * .036); cupLiq.position.y = .002 + cupLiq.scale.y / 2; if (k > .35 && k < .9) KT.setStream(ms, V3(.13, .16, .08), V3(.16, .07, .08)); else ms.visible = false; art.position.y = cupLiq.scale.y + .003; art.scale.setScalar(Math.max(.01, ez(sub(k, .45, .95)))); } },
+    fin(.16, .08, .06, .22),
+  ];
+};
+// ---------------------------------------------------------------- バナナシェイク
+SCN.shake = K => {
+  const bl = grp(-.12, 0, -.06); ME(new RoundedBoxGeometry(.13, .08, .13, 3, .015), fp(0x2a2a2e, { roughness: .3 }), 0, .04, 0, bl); const jar = grp(0, .08, 0, bl); ME(new THREE.CylinderGeometry(.055, .045, .2, 28, 1, true), CKM.glass, 0, .1, 0, jar); const lidJ = ME(new THREE.CylinderGeometry(.058, .058, .015, 28), fm(0x2a2a2e), 0, .45, 0, jar);
+  const liqM = fp(0xfbfaf6, { roughness: .2 }); const liq = ME(new THREE.CylinderGeometry(.052, .045, 1, 28), liqM, 0, .006, 0, jar); liq.scale.y = .001;
+  const ban = []; for (let i = 0; i < 6; i++) { const m = ME(new THREE.CylinderGeometry(.016, .016, .01, 16), fm(0xf8f0c0), .22 + (i % 3) * .035, .02, .1 + Math.floor(i / 3) * .04); ban.push(m); }
+  const scoop = ME(lumpGeo(.025, 2, .08), fm(0xfff4d8), .32, .3, -.02); scoop.visible = false;
+  const gl = K.glass(.22, .12, .04, .14); const gq = ME(new THREE.CylinderGeometry(.037, .032, 1, 24), fp(0xf6e8a8, { roughness: .2 }), 0, .006, 0, gl); gq.scale.y = .001; gq.visible = false; const ps = K.stream(0xf6e8a8, .01);
+  const wh = swirl(.03, .05, 3, .009); wh.m.position.set(.22, .145, .12); CK.grp.add(wh.m); wh.g.setDrawRange(0, 0);
+  return [
+    { txt: 'バナナ・バニラアイス・牛乳を ミキサーへ', d: 1.8, s() { cam(.02, .4, .42, -.06, .12, -.04); }, f(k) { ban.forEach((m, i) => { if (!m.userData.a) m.userData.a = m.position.toArray(); arcTo(m, m.userData.a, [-.12 + Math.cos(i * 2) * .02, .1 + i * .01, -.06 + Math.sin(i * 2) * .02], ez(sub(k, i * .07, i * .07 + .35)), .25); }); scoop.visible = k > .5; arcTo(scoop, [.32, .3, -.02], [-.12, .16, -.06], ez(sub(k, .5, .75)), .1); liq.scale.y = Math.max(.001, ez(sub(k, .7, 1)) * .1); liq.position.y = .006 + liq.scale.y / 2; } },
+    { txt: 'ミキサー スタート！', d: 2.4, at: .4, timing: { hint: 'なめらか！', btn: 'ストップ！' }, s() { camAt(-.12, -.06, .34, .34, .12); }, f(k, dt) { lidJ.position.y = lerp(.45, .2, ez(sub(k, 0, .15))); if (k > .15) { AU.blend(1); jar.position.x = rr(-.0015, .0015); ban.concat([scoop]).forEach((m, i) => { const a = CK.t * 18 + i, r = .025 * (1 - k); m.position.set(-.12 + Math.cos(a) * r, .1 + .05 * Math.sin(CK.t * 7 + i) * (1 - k), -.06 + Math.sin(a) * r); m.scale.setScalar(Math.max(.01, 1 - k * 1.3)); }); }
+        cookCol(liqM.color, 0xfbfaf6, 0xf6e8a8, sub(k, .15, .8)); liq.scale.y = lerp(.1, .15, sub(k, .15, .6)); liq.position.y = .006 + liq.scale.y / 2; } },
+    { txt: 'グラスに そそいで ホイップを しぼる', d: 2.4, s() { AU.lvl('blend', 0); ban.forEach(m => m.visible = false); scoop.visible = false; gq.visible = true; cam(.16, .38, .52, .16, .13, .08); },
+      f(k, dt) { const f = ez(sub(k, 0, .25)); jar.position.set(lerp(0, .3, f), lerp(.08, .24, f), lerp(0, .18, f)); jar.rotation.z = lerp(0, 1.7, ez(sub(k, .2, .35))); lidJ.visible = k < .2; if (k > .3 && k < .65) KT.setStream(ps, V3(.12, .25, .12), V3(.22, .02 + gq.scale.y, .12)); else ps.visible = false; gq.scale.y = Math.max(.001, ez(sub(k, .3, .65)) * .13); gq.position.y = .006 + gq.scale.y / 2; liq.scale.y = Math.max(.001, .15 * (1 - sub(k, .3, .65)));
+        if (k > .7) { bl.visible = false; camAt(.22, .12, .26, .24, .12); wh.g.setDrawRange(0, Math.floor(ez(sub(k, .7, 1)) * wh.n / 6) * 6); } } },
+    { txt: 'バナナと ストローで かざる', d: 1, s() { const s = ME(new THREE.CylinderGeometry(.004, .004, .22, 8), fm(0xf2c82a), .21, .4, .12); s.rotation.z = .2; this.s = s; this.b = ME(new THREE.CylinderGeometry(.016, .016, .01, 16), fm(0xf8f0c0), .25, .4, .12); this.b.rotation.x = 1.2; }, f(k) { this.s.position.y = lerp(.4, .16, ez(k)); this.b.position.y = lerp(.4, .2, ez(sub(k, .3, 1))); } },
+    fin(.22, .12, .12, .26),
+  ];
+};
+// ---------------------------------------------------------------- カスタードプリン
+SCN.pudding = K => {
+  const pl = K.plate(0, .04, .12); const ram = grp(.0, .3, .04); const pts = [new THREE.Vector2(0, 0), new THREE.Vector2(.034, 0), new THREE.Vector2(.042, .05), new THREE.Vector2(.044, .052)]; ME(new THREE.LatheGeometry(pts, 32), CKM.glass, 0, 0, 0, ram);
+  const pud = grp(0, .012, .04); const body = ME(new THREE.CylinderGeometry(.03, .04, .046, 32), fp(0xf6d070, { roughness: .25, clearcoat: .5 }), 0, .023, 0, pud); const car = ME(new THREE.CylinderGeometry(.0305, .0305, .008, 32), fp(0x8a3a0a, { roughness: .05, clearcoat: 1 }), 0, .049, 0, pud); pud.visible = false;
+  const drips = []; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .3; const d = ME(new THREE.CapsuleGeometry(.003, .012, 3, 6), car.material, Math.cos(a) * .033, .04, Math.sin(a) * .033, pud); d.visible = false; drips.push(d); }
+  const wh = swirl(.016, .02, 2.5, .006); wh.m.position.set(.035, .014, .04); CK.grp.add(wh.m); wh.g.setDrawRange(0, 0);
+  const cherry = ME(new THREE.SphereGeometry(.009, 12, 10), fp(0xc8101e, { roughness: .1, clearcoat: 1 }), 0, .3, .04); cherry.visible = false;
+  return [
+    { txt: '冷やしたプリンを お皿に ひっくり返す', d: 1.4, s() { camAt(0, .04, .3, .3); }, f(k) { ram.position.y = lerp(.3, .062, ez(sub(k, 0, .5))); ram.rotation.x = Math.PI * ez(sub(k, .2, .6)); } },
+    { txt: 'そっと 器を持ち上げる…', d: 2, at: .3, timing: { hint: 'ぷるん！', btn: 'ぷるん！' }, f(k) { pud.visible = true; ram.position.y = .062 + (CK.timing ? 0 : ez(sub(k, .85, 1)) * .2); const w = Math.sin(CK.t * 16) * Math.exp(-sub(k, .85, 1) * 3) * (k > .85 ? .08 : 0); pud.scale.set(1 + w, 1 - w, 1 + w); } },
+    { txt: 'カラメルが とろり', d: 1.2, s() { ram.visible = false; }, f(k) { drips.forEach((d, i) => { const q = sub(k, i * .1, .5 + i * .1); d.visible = q > 0; d.position.y = .045 - q * .02; d.scale.y = Math.max(.01, q); }); } },
+    { txt: 'ホイップと さくらんぼ', d: 1.4, s() { cherry.visible = true; }, f(k) { wh.g.setDrawRange(0, Math.floor(ez(sub(k, 0, .6)) * wh.n / 6) * 6); cherry.position.y = lerp(.3, .07, ez(sub(k, .6, 1))); } },
+    fin(0, .04, .03, .22),
+  ];
+};
+// ---------------------------------------------------------------- いちごクレープ
+SCN.crepe = K => {
+  const plate = grp(-.08, 0, -.02); ME(new THREE.CylinderGeometry(.17, .17, .03, 40), fp(0x2a2a2c, { metalness: .7, roughness: .4 }), 0, .015, 0, plate);
+  const bM = fm(0xf6e6b0, { roughness: .6 }), lace = new THREE.MeshStandardMaterial({ map: TEX.char(), transparent: true, opacity: 0, depthWrite: false }); const cr = grp(-.08, .031, -.02); const disc = ME(new THREE.CylinderGeometry(.15, .15, .002, 48), bM, 0, 0, 0, cr); const lc = ME(new THREE.CircleGeometry(.15, 48), lace, 0, .0012, 0, cr); lc.rotation.x = -Math.PI / 2; cr.scale.set(.01, 1, .01);
+  const tstick = grp(-.08, .04, -.02); ME(new THREE.BoxGeometry(.18, .004, .01), fm(0xc89a64), 0, 0, 0, tstick); ME(new THREE.CylinderGeometry(.005, .005, .08, 6), fm(0xc89a64), 0, .04, 0, tstick); tstick.visible = false;
+  const la = ladle(.035); la.position.set(.1, .25, -.18); const strm = K.stream(0xf6e6b0, .008);
+  const cream = ME(lumpGeo(.05, 2, .1), fp(0xfffaf0, { roughness: .4 }), .12, .02, .08); cream.scale.set(.001, .001, .001); const berries = []; for (let i = 0; i < 5; i++) { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(.012, 12, 8, 0, Math.PI), fp(0xd81e2a)); b.scale.set(1, 1.3, 1); g.add(b); g.position.set(.1 + i * .012, .3, .06 + (i % 2) * .02); g.rotation.x = -1.2; g.visible = false; CK.grp.add(g); berries.push(g); }
+  const cone = grp(.12, .02, .08); const cm = ME(new THREE.ConeGeometry(.055, .15, 32, 1, true, 0, Math.PI * 1.4), fm(0xe8c880, { side: THREE.DoubleSide, roughness: .6 }), 0, 0, 0, cone); cm.rotation.set(Math.PI / 2 + .3, 0, 0); cone.visible = false; const paper = ME(new THREE.ConeGeometry(.058, .08, 32, 1, true), fm(0xfaf6ee, { side: THREE.DoubleSide }), 0, -.04, -.04, cone); paper.rotation.set(Math.PI / 2 + .3, 0, 0);
+  return [
+    { txt: '生地を流して トンボで うすく のばす', d: 2, s() { camAt(-.08, -.02, .34, .34); tstick.visible = true; }, f(k, dt) { if (k < .3) { arcTo(la, [.1, .25, -.18], [-.08, .1, -.02], ez(k / .3), .02); la.rotation.z = -ez(sub(k, .2, .3)) * 1.3; KT.setStream(strm, V3(-.05, .09, -.02), V3(-.08, .035, -.02)); } else { strm.visible = false; la.visible = false; } const s = ez(sub(k, .2, 1)); cr.scale.set(Math.max(.01, s), 1, Math.max(.01, s)); tstick.rotation.y = k * 12; AU.sizzle(.3); } },
+    { txt: 'ふちが こんがりしたら', d: 2.2, at: .3, timing: { hint: 'はがす！' }, s() { tstick.visible = false; camAt(-.08, -.02, .26, .26); }, f(k, dt) { lace.opacity = k * .7; cookCol(bM.color, 0xf6e6b0, CK.steps[1].late ? 0xc8883a : 0xf2d090, k); FX2.steam(-.08, .04, -.02, .1, .5, dt); } },
+    { txt: '台にうつして クリームと いちご', d: 2, s() { AU.stopCook(); camAt(.08, .06, .36, .34); }, f(k) { arcTo(cr, [-.08, .031, -.02], [.12, .014, .08], ez(sub(k, 0, .3)), .08); const s = ez(sub(k, .3, .6)); cream.scale.set(Math.max(.001, s * 1.2), Math.max(.001, s * .4), Math.max(.001, s * .8)); berries.forEach((b, i) => { b.visible = k > .55; b.position.y = lerp(.3, .045, ez(sub(k, .55 + i * .06, .75 + i * .05))); }); } },
+    { txt: 'くるくる 巻いて 紙につつむ', d: 1.6, f(k) { const f = ez(k); cr.scale.set(1 - f * .9, 1, 1 - f * .9); cream.scale.multiplyScalar(1); cone.visible = f > .4; cone.scale.setScalar(Math.max(.01, f)); berries.forEach((b, i) => b.position.set(.12 + Math.cos(i * 1.3) * .02, .05 + f * .02, .08 - .04 + Math.sin(i * 1.3) * .01)); cream.position.set(.12, .03 + f * .02, .06); } },
+    fin(.12, .08, .05, .26),
+  ];
+};
+// ---------------------------------------------------------------- ホットドッグ
+SCN.hotdog = K => {
+  griddle(-.12, 0, .36, .26); const pl = K.plate(.22, .08, .13);
+  const sm = fp(0xc8705a, { roughness: .35, clearcoat: .6 }); const sg = grp(-.3, .1, .14); ME(new THREE.CapsuleGeometry(.012, .13, 6, 12), sm, 0, 0, 0, sg).rotation.z = Math.PI / 2; const mk = new THREE.MeshBasicMaterial({ color: 0x3a1a0a, transparent: true, opacity: 0 }); for (let i = 0; i < 4; i++) { const m = ME(new THREE.BoxGeometry(.003, .002, .026), mk, -.045 + i * .03, .012, 0, sg); m.rotation.y = .5; }
+  const bun = grp(.22, .02, .08); const bunM = fm(0xe8b070, { roughness: .6 }); for (const s of [-1, 1]) { const h = ME(new THREE.CapsuleGeometry(.026, .12, 6, 14), bunM, 0, .026, s * .02, bun); h.rotation.z = Math.PI / 2; h.scale.set(1, .85, .75); } ME(new RoundedBoxGeometry(.15, .02, .03, 2, .008), fm(0xfaecc8, { roughness: .9 }), 0, .03, 0, bun);
+  const zig = (col, ph) => { const pts = []; for (let i = 0; i <= 20; i++) { const t = i / 20; pts.push(V3(-.06 + t * .12, .05, Math.sin(t * Math.PI * 6 + ph) * .01)); } const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 100, .003, 6); const m = new THREE.Mesh(g, fp(col, { roughness: .15 })); bun.add(m); g.setDrawRange(0, 0); return { g, n: g.index.count }; };
+  const z1 = zig(0xf2c82a, 0), z2 = zig(0xd8141e, Math.PI);
+  return [
+    { txt: 'ソーセージを 鉄板で ころがして焼く', d: 2.4, at: .35, timing: { hint: 'パリッと！' }, s() { camAt(-.12, 0, .3, .28); }, f(k, dt) { arcTo(sg, [-.3, .1, .14], [-.12, .044, 0], ez(sub(k, 0, .2)), .05); sg.rotation.x = k * 10; cookCol(sm.color, 0xc8705a, CK.steps[0].late ? 0x6a2a14 : 0xa8503a, sub(k, .2, 1)); mk.opacity = sub(k, .4, 1) * .8; if (k > .2) { AU.sizzle(.9); FX2.smoke(-.12, .06, 0, .05, 1, dt); FX2.spat(-.12, .05, 0, .06, .8, dt); } } },
+    { txt: 'パンに はさむ', d: 1.2, s() { AU.stopCook(); camAt(.15, .06, .36, .34); }, f(k) { arcTo(sg, [-.12, .044, 0], [.22, .054, .08], ez(k), .1); sg.rotation.x = 0; } },
+    { txt: 'マスタードと ケチャップを ジグザグに', d: 1.6, s() { camAt(.22, .08, .24, .28); }, f(k) { z1.g.setDrawRange(0, Math.floor(ez(sub(k, 0, .5)) * z1.n / 6) * 6); z2.g.setDrawRange(0, Math.floor(ez(sub(k, .5, 1)) * z2.n / 6) * 6); } },
+    fin(.22, .08, .05, .26),
+  ];
+};
+// ---------------------------------------------------------------- さんまの塩焼き
+SCN.yakizakana = K => {
+  const gr = charGrill(-.1, -.03, .4, .22); const fm2 = fp(0xffffff, { vertexColors: true, roughness: .25, clearcoat: .6 }); const fish = grp(.22, .03, -.1);
+  const body = ME(fishGeo(), fm2, 0, 0, 0, fish); const snout = ME(new THREE.ConeGeometry(.0035, .016, 8), fm(0xd8a848), -.136, 0, -.002, fish); snout.rotation.z = Math.PI / 2; for (const sy of [1, -1]) { ME(new THREE.SphereGeometry(.0045, 10, 8), fp(0x101418, { roughness: .05 }), -.11, sy * .0072, -.002, fish); const gill = ME(new THREE.TorusGeometry(.012, .0012, 4, 16, 2.2), fm(0x5a6a7a), -.097, sy * .0086, 0, fish); gill.rotation.set(-Math.PI / 2, 0, -1.1); } const tail = ME(new THREE.ConeGeometry(.018, .03, 3), fm(0x3a4a5a), .135, 0, 0, fish); tail.position.x = .14; tail.rotation.z = -Math.PI / 2; tail.scale.set(1.2, 1, .25); tail.rotation.x = Math.PI / 2;
+  const charM = new THREE.MeshBasicMaterial({ color: 0x2a1408, transparent: true, opacity: 0 }); for (let i = 0; i < 28; i++) { const x = rr(-.08, .09), R = fishR(x), z = rr(-.6, .6) * R, y = R * .55 * Math.sqrt(Math.max(0, 1 - Math.pow(z / R, 2))); const c = ME(new THREE.SphereGeometry(rr(.003, .006), 8, 6), charM, x, i % 2 ? y : -y, z, fish); c.scale.set(1.6, .15, 1); c.rotation.y = rr(0, 3); }
+  const pl = grp(.05, 0, .14); ME(new RoundedBoxGeometry(.34, .014, .1, 2, .006), fp(0x26303c, { roughness: .3 }), 0, .007, 0, pl); ME(new THREE.PlaneGeometry(.26, .07), fm(0x2a7a3a, { side: THREE.DoubleSide, roughness: .4 }), -.01, .0146, -.005, pl).rotation.x = -Math.PI / 2; pl.visible = false;
+  const daikon = ME(lumpGeo(.018, 2, .2), fm(0xfaf8f0, { roughness: .9 }), .17, .3, .16); daikon.scale.y = .6; daikon.visible = false; const sud = ME(new THREE.SphereGeometry(.016, 14, 10, 0, TAU, 0, Math.PI / 2), [fp(0x4a9a2a)], .19, .3, .13); sud.visible = false;
+  const heat = (dt, a) => { FX2.smoke(-.1, .12, -.03, .14, a, dt); FX2.fire(-.1, .1, -.03, .14, a * .3, dt, .7); CK.fireL.position.set(-.1, .1, -.03); CK.fireL.intensity = 1.5 + a + Math.random(); };
+  return [
+    { txt: 'さんまに 塩を ふる', d: 1.2, s() { camAt(.2, -.1, .26, .26); this.salt = bits({ n: 40, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.0025, .0025, .0025), fm(0xffffff)), x: 0, z: 0, r: .1, sx: 1, sz: .15, y0: .12, y1: .012, p: fish, gap: .015 }); } },
+    { txt: '炭火で 焼く…脂が落ちて ジュッ', d: 2.4, at: .35, timing: { hint: '返す！' }, s() { camAt(-.1, -.03, .22, .22); }, f(k, dt) { arcTo(fish, [.22, .03, -.1], [-.1, .115, -.03], ez(sub(k, 0, .2)), .06); cookCol(fm2.color, 0xffffff, 0xf0d6a8, sub(k, .2, 1)); charM.opacity = sub(k, .5, 1) * .5; heat(dt, 1 + Math.max(0, Math.sin(CK.t * 3)) * 1.5); if (Math.random() < dt * 3) { FX2.fire(-.1 + rr(-.1, .1), .09, -.03, .02, 3, .05, 1.4); AU.noise(.15, 2000, .08, 'highpass'); } AU.sizzle(.6); } },
+    { txt: 'くるっと 返す', d: .6, f(k) { fish.rotation.x = Math.PI * ez(k); fish.position.y = .115 + Math.sin(Math.PI * k) * .06; if (k > .5) CK.steps[0].salt.forEach(m => m.visible = false); } },
+    { txt: 'もう片面も こんがり', d: 1.6, f(k, dt) { cookCol(fm2.color, 0xf0d6a8, CK.steps[1].late ? 0x9a6a34 : 0xe6c08a, k); charM.opacity = .42 + k * .2; heat(dt, 1); } },
+    { txt: '大根おろしと すだちを そえて', d: 1.4, s() { AU.stopCook(); CK.fireL.intensity = 0; pl.visible = daikon.visible = sud.visible = true; camAt(.05, .14, .34, .3); }, f(k) { arcTo(fish, [-.1, .115, -.03], [.04, .026, .135], ez(sub(k, 0, .5)), .1); daikon.position.y = lerp(.3, .022, ez(sub(k, .5, .75))); sud.position.y = lerp(.3, .015, ez(sub(k, .7, 1))); } },
+    fin(.05, .14, .03, .23),
+  ];
+};
+// ---------------------------------------------------------------- 追加の料理の、小さなお皿の形（テーブル・配膳台用）
+function dishMini2(id, add, plate, bowl) {
+  switch (id) {
+    case 'udon': bowl(0x3a2418); add(new THREE.CylinderGeometry(.125, .125, .01, 20), 0xd8a85a, 0, .08, 0); add(new THREE.BoxGeometry(.07, .012, .05), 0xc87a2a, 0, .09, 0); add(new THREE.CylinderGeometry(.02, .02, .006, 12), 0xf6a0a8, .05, .088, .03); return true;
+    case 'stew': bowl(); add(new THREE.CylinderGeometry(.12, .12, .01, 20), 0x5a2412, 0, .075, 0); for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(.025, .02, .025), [0x5a2a1a, 0xe8802a][k % 2], rr(-.05, .05), .082, rr(-.05, .05)); return true;
+    case 'oyakodon': bowl(0x2a1e1a); add(new THREE.CylinderGeometry(.12, .12, .012, 20), 0xf8cc48, 0, .08, 0); add(new THREE.SphereGeometry(.012, 8, 6), 0x3a9a3a, .02, .09, .01); return true;
+    case 'napolitan': plate(); add(new THREE.TorusKnotGeometry(.05, .02, 40, 6, 3, 5), 0xd85a2a, 0, .045, 0, { s: [1, .45, 1] }); return true;
+    case 'tonkatsu': plate(); add(new THREE.BoxGeometry(.15, .022, .08), 0xd8963a, .02, .025, 0); add(new THREE.SphereGeometry(.05, 10, 6), 0xd8e8b0, -.08, .02, .02, { s: [1, .5, 1] }); return true;
+    case 'korokke': plate(); for (let k = 0; k < 2; k++) add(new THREE.SphereGeometry(.035, 12, 8), 0xd8963a, -.03 + k * .06, .03, 0, { s: [1.3, .55, .9] }); add(new THREE.SphereGeometry(.045, 10, 6), 0xd8e8b0, -.06, .02, .05, { s: [1, .5, 1] }); return true;
+    case 'yakisoba': plate(); add(new THREE.TorusKnotGeometry(.055, .02, 40, 6, 3, 5), 0x8a4a1e, 0, .045, 0, { s: [1, .4, 1] }); add(new THREE.BoxGeometry(.02, .004, .006), 0xe83a5a, .03, .07, .02); return true;
+    case 'ebichili': plate(); add(new THREE.CylinderGeometry(.1, .11, .01, 20), 0xd8401e, 0, .02, 0); for (let k = 0; k < 4; k++) add(new THREE.TorusGeometry(.016, .007, 6, 10, 2.4), 0xf2905a, Math.cos(k * 1.6) * .045, .035, Math.sin(k * 1.6) * .045, { r: [Math.PI / 2, 0, 0] }); return true;
+    case 'kaisendon': bowl(0x1e2a3a); add(new THREE.CylinderGeometry(.125, .125, .012, 20), 0xfbf8f0, 0, .08, 0); for (let k = 0; k < 5; k++) add(new THREE.BoxGeometry(.05, .008, .03), [0xf28a5a, 0xc81e2a, 0xfaece6, 0xf28a5a, 0xc81e2a][k], Math.cos(k * 1.26) * .05, .09, Math.sin(k * 1.26) * .05, { r: [0, -k * 1.26, 0] }); add(new THREE.SphereGeometry(.02, 10, 8), 0xf2601e, 0, .095, 0); return true;
+    case 'onigiri': plate(); for (let k = 0; k < 2; k++) { const x = -.04 + k * .08; add(new THREE.CylinderGeometry(.045, .045, .03, 3), 0xfbf8f0, x, .045, k * .01, { r: [-Math.PI / 2, 0, (k - .5) * .3] }); add(new THREE.BoxGeometry(.05, .026, .034), 0x1a2a1a, x, .03, k * .01, { r: [0, 0, (k - .5) * .3] }); } add(new THREE.CylinderGeometry(.012, .012, .006, 10), 0xf2d82a, .1, .025, .05, { r: [0, 0, 1.2] }); return true;
+    case 'matcha': add(new THREE.CylinderGeometry(.045, .03, .1, 18), 0xd8e8c8, 0, .05, 0); add(new THREE.CylinderGeometry(.043, .043, .004, 18), 0xb8d888, 0, .098, 0); return true;
+    case 'shake': add(new THREE.CylinderGeometry(.04, .033, .14, 16), 0xf6e8a8, 0, .07, 0); add(new THREE.SphereGeometry(.035, 10, 8), 0xfffaf0, 0, .15, 0); add(new THREE.CylinderGeometry(.004, .004, .1, 6), 0xf2c82a, .015, .17, 0); return true;
+    case 'pudding': plate(); add(new THREE.CylinderGeometry(.035, .045, .05, 18), 0xf6d070, 0, .035, 0); add(new THREE.CylinderGeometry(.036, .036, .008, 18), 0x8a3a0a, 0, .062, 0); add(new THREE.SphereGeometry(.01, 8, 6), 0xc8101e, 0, .075, 0); return true;
+    case 'crepe': add(new THREE.ConeGeometry(.05, .14, 16), 0xe8c880, 0, .07, 0, { r: [Math.PI, 0, 0] }); add(new THREE.SphereGeometry(.045, 10, 8), 0xfffaf0, 0, .14, 0, { s: [1, .5, 1] }); add(new THREE.SphereGeometry(.014, 8, 6), 0xd81e2a, .02, .16, .01); return true;
+    case 'hotdog': plate(); add(new THREE.CapsuleGeometry(.024, .12, 4, 8), 0xd8a05a, 0, .03, 0, { r: [0, 0, Math.PI / 2], s: [1, .8, .9] }); add(new THREE.CapsuleGeometry(.012, .13, 4, 8), 0xa8503a, 0, .048, 0, { r: [0, 0, Math.PI / 2] }); return true;
+    case 'yakizakana': add(new THREE.BoxGeometry(.3, .014, .1), 0x26303c, 0, .007, 0); add(new THREE.BoxGeometry(.24, .002, .06), 0x2a7a3a, -.01, .015, 0); add(new THREE.CapsuleGeometry(.018, .2, 4, 10), 0xe2c08a, 0, .026, 0, { r: [0, 0, Math.PI / 2], s: [1, .55, 1.15] }); add(new THREE.SphereGeometry(.018, 8, 6), 0xfaf8f0, .1, .025, .03, { s: [1, .6, 1] }); return true;
+  }
+  return false;
+}
 
 // =========================================================================================
 //  プレイヤー・カメラ・建築モード・パネル・タイトル・メインループ
