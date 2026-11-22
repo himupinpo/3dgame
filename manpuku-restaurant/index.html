@@ -1175,7 +1175,7 @@ SCN.steak = K => {
   const gr = charGrill(-.13, -.02, .4, .26); K.board(.24, -.08, .3, .2); const pl = K.plate(.24, .15, .16); pl.visible = false;
   const crust = fm(0xc0505a, { map: TEX.gray(), roughness: .6 }), pink = fm(0xd8707a, { map: TEX.gray(), roughness: .45 }); const st = grp(.24, .039, -.08); const N = 5, L = .17, w = L / N; const sl = [];
   for (let i = 0; i < N; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, .03, .1), [i === N - 1 ? crust : pink, i === 0 ? crust : pink, crust, crust, crust, crust]); m.position.x = -L / 2 + w / 2 + i * w; m.castShadow = true; st.add(m); sl.push(m); }
-  const mkM = new THREE.MeshBasicMaterial({ color: 0x1a0e08 }); for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(.005, .001, .085), mkM); m.position.set(-.07 + i * .035, -.0157, 0); m.rotation.y = .55; st.add(m); }
+  const mkM = new THREE.MeshBasicMaterial({ color: 0x3a1c0c, transparent: true, opacity: .8 }); for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(.0032, .001, .08), mkM); m.position.set(-.07 + i * .035, -.0157, 0); m.rotation.y = .55; st.add(m); }
   const kn = K.knife(.24, .05); kn.visible = false; let sb = [];
   return [
     { txt: '塩・こしょうをふる', d: 1.4, s() { camAt(.24, -.08, .3, .3); sb = bits({ n: 34, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.0025, .0025, .0025), fm(0xffffff)), x: 0, z: 0, r: .07, sx: 1.1, y0: .12, y1: .0155, p: st, gap: .02 }).concat(bits({ n: 26, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.002, .002, .002), fm(0x1a1a1a)), x: 0, z: 0, r: .07, y0: .14, y1: .0155, p: st, gap: .025 })); } },
@@ -1185,7 +1185,7 @@ SCN.steak = K => {
     { txt: 'もう片面も焼く', d: 1.6, f(k, dt) { cookCol(crust.color, 0x6a3420, CK.steps[2].late ? 0x3a1a10 : 0x5a2a18, k); cookCol(pink.color, 0xd8707a, CK.steps[2].late ? 0xa87060 : CK.steps[2].early ? 0xc84a5a : 0xd86a6a, k); FX2.smoke(-.13, .13, -.02, .07, 1, dt); FX2.fire(-.13, .1, -.02, .14, .2, dt, .6); CK.fireL.intensity = 2 + Math.random(); } },
     { txt: 'お皿で切り分ける', d: 2.6, s() { AU.stopCook(); CK.fireL.intensity = 0; pl.visible = true; camAt(.24, .15, .3, .3); kn.visible = true; },
       f(k) { arcTo(st, [-.13, .118, -.02], [.24, .043, .15], ez(sub(k, 0, .25)), .1); const c = sub(k, .3, .85), idx = Math.min(N - 2, Math.floor(c * (N - 1))), ph = (c * (N - 1)) % 1; kn.position.set(.24 + (-L / 2 + (idx + 1) * w), .14 - Math.sin(ph * Math.PI) * .09, .15); kn.rotation.set(0, Math.PI / 2, -.3 + Math.sin(ph * TAU) * .2); if (ph > .5 && ph < .55) AU.chop();
-        const sp = ez(sub(k, .85, 1)); sl.forEach((m, i) => { m.position.x = -L / 2 + w / 2 + i * w + (i - 2) * sp * .02; m.rotation.z = (i === 2 ? .5 : (i - 2) * .22) * sp; m.position.y = sp * .004; }); if (k > .9) kn.visible = false; } },
+        const sp = ez(sub(k, .85, 1)); sl.forEach((m, i) => { m.position.x = -L / 2 + w / 2 + i * w * (1 + sp * .25) - sp * .02; m.rotation.z = sp * 1.15; m.position.y = -sp * .004; }); mkM.opacity = .8 * clamp(1 - sp * 4, 0, 1); if (k > .9) kn.visible = false; } },
     { txt: '付け合わせを そえる', d: 1.2, s() { bits({ n: 3, mk: i => new THREE.Mesh(new THREE.CylinderGeometry(.012, .014, .02, 10), fp(0xe8702a)), x: .31, z: .2, r: .025, y0: .1, y1: .02, flat: 1, gap: .1 }); bits({ n: 3, mk: () => new THREE.Mesh(lumpGeo(.017, 1, .35), fm(0x3a8a2a, { roughness: .8 })), x: .18, z: .22, r: .02, y0: .12, y1: .022, gap: .1 }); bits({ n: 4, mk: () => new THREE.Mesh(new THREE.BoxGeometry(.03, .012, .015), fm(0xe8c070)), x: .3, z: .1, r: .02, y0: .1, y1: .02, flat: 1, gap: .1 }); } },
     fin(.24, .15),
   ];
