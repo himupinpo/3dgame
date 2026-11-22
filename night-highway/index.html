@@ -26,6 +26,8 @@ body.battle #gap { display: block; }
 #gapF { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; background: var(--cyan); }
 #gapF.neg { background: var(--pink); }
 #gapN { font-size: 26px; margin-top: 2px; } #gapN.neg { color: var(--pink); } #gapN.pos { color: var(--cyan); }
+#fpsV { left: 50%; bottom: calc(3px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 12px; color: var(--green); display: none; z-index: 40; white-space: nowrap; } body.fpsv #fpsV { display: block; } #fpsV small { color: var(--dim); font-size: 10px; margin-left: 4px; }
+#fpsNote { font-size: 12px; color: var(--dim); margin: 4px 0; line-height: 1.5; }
 #info { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 15px; line-height: 1.5; }
 body.hub #info { left: calc(58px + env(safe-area-inset-left, 0px)); }
 #info b { color: var(--amber); font-weight: 400; } #info small { display: block; color: var(--dim); font-size: 13px; }
@@ -186,7 +188,7 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
 <div class="hud" id="meter"><canvas id="gauge" width="128" height="128"></canvas><div id="dig"><div id="spdN">0<small>km/h</small></div><div id="tach"></div><div style="margin-top:6px"><span id="gearN">N</span><span id="bl">BOOST</span><span id="boost"><b id="boostB"></b></span></div></div></div>
 <canvas class="hud" id="mini" width="150" height="150"></canvas>
 <div class="hud" id="mirrorF"></div><div class="hud" id="rvPin"><div class="pi"><span id="rvPinT"></span><canvas id="rvPinC" width="12" height="16"></canvas></div></div>
-<div class="hud" id="msg"></div><div class="hud" id="sub"></div><div class="hud" id="slip">SLIPSTREAM</div><div class="hud" id="toast"></div>
+<div class="hud" id="fpsV"></div><div class="hud" id="msg"></div><div class="hud" id="sub"></div><div class="hud" id="slip">SLIPSTREAM</div><div class="hud" id="toast"></div>
 <button id="pauseB" class="px" type="button">Ⅱ</button>
 <div class="tb" id="tGy"><i></i><small>ジャイロ　タップでまっすぐ</small></div><div class="tb" id="tL">◀</div><div class="tb" id="tR">▶</div><div class="tb" id="tPad">◀ ハンドル ▶<i id="tKnob"></i></div>
 <div class="tb" id="tGas">アクセル</div><div class="tb" id="tBrake">ブレーキ</div><div class="tb" id="tCam">視点</div><div class="tb" id="tUp">▲<small>シフト</small></div><div class="tb" id="tDn">▼<small>シフト</small></div>
@@ -232,6 +234,8 @@ body.wide #garage .panel, #garage .panel { background: rgba(9, 7, 32, .86); }
   <div class="lab">音量</div><input type="range" id="sVol" min="0" max="1" step="0.05">
   <div class="lab">視点</div><div class="seg" id="sCam"><button data-v="0">うしろ</button><button data-v="1">遠め</button><button data-v="2">主観（ミラーつき）</button></div>
   <div class="lab">変速（ギア）</div><div class="seg" id="sMt"><button data-v="0">オートマ</button><button data-v="1">マニュアル（自分で変える）</button></div>
+  <div class="lab">フレームレート（1秒に何回絵を描くか。多いほどなめらか）</div><div class="seg" id="sFps"><button data-v="30">30</button><button data-v="60">60</button><button data-v="120">120</button><button data-v="0">上限なし</button></div>
+  <div class="lab">FPS（いまのフレームレート）の表示</div><div class="seg" id="sFpsV"><button data-v="0">なし</button><button data-v="1">あり</button></div><p id="fpsNote"></p>
   <div class="lab">速度計</div><div class="seg" id="sMeter"><button data-v="0">針のメーター</button><button data-v="1">数字だけ</button></div>
   <div class="lab">ボタンと表示の配置・大きさ</div><button class="mb" id="sLayout" type="button">配置を変える<small>速度計・地図・ボタンなどを動かす</small></button>
   <div class="touchonly"><div class="lab">ボタンのこさ</div><input type="range" id="sOpa" min="0.15" max="1" step="0.05">
@@ -294,7 +298,7 @@ const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in wi
 if (IS_TOUCH) document.body.classList.add('touch');
 
 // ---------- 設定（この端末に保存） ----------
-const SET = { dot: 1, crt: 0, bgm: 1, vol: .8, cam: 0, steer: 0, auto: 0, meter: 0, mt: 0, opa: .55, tilt: 1, tinv: 0, keys: {}, lay: {} };
+const SET = { fps: 120, fpsv: 0, dot: 1, crt: 0, bgm: 1, vol: .8, cam: 0, steer: 0, auto: 0, meter: 0, mt: 0, opa: .55, tilt: 1, tinv: 0, keys: {}, lay: {} };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('nhw-settings')) || {}); } catch (e) { /* はじめて */ }
 const saveSet = () => { try { localStorage.setItem('nhw-settings', JSON.stringify(SET)); } catch (e) { /* 保存できない */ } };
 // 3dgame のホーム画面から渡される設定（横画面・音）
@@ -3085,14 +3089,14 @@ function gyroMeter() {
 }
 function openSettings(from) {
   SCR.back = from; const seg = (id, key) => { for (const b of $(id).querySelectorAll('button')) b.classList.toggle('on', +b.dataset.v === (SET[key] | 0)); };
-  seg('sDot', 'dot'); seg('sCrt', 'crt'); seg('sBgm', 'bgm'); seg('sCam', 'cam'); seg('sSteer', 'steer'); seg('sAuto', 'auto'); seg('sMeter', 'meter'); seg('sMt', 'mt'); seg('sTinv', 'tinv'); $('sVol').value = SET.vol; $('sOpa').value = SET.opa; $('sTilt').value = SET.tilt; drawKeys(); tiltNote(); show('settings'); if (!GYT) gyroMeter();
+  seg('sDot', 'dot'); seg('sCrt', 'crt'); seg('sBgm', 'bgm'); seg('sCam', 'cam'); seg('sSteer', 'steer'); seg('sAuto', 'auto'); seg('sMeter', 'meter'); seg('sMt', 'mt'); seg('sTinv', 'tinv'); seg('sFps', 'fps'); seg('sFpsV', 'fpsv'); fpsNote(); $('sVol').value = SET.vol; $('sOpa').value = SET.opa; $('sTilt').value = SET.tilt; drawKeys(); tiltNote(); show('settings'); if (!GYT) gyroMeter();
 }
 function wireSettings() {
-  const segs = { sDot: 'dot', sCrt: 'crt', sBgm: 'bgm', sCam: 'cam', sSteer: 'steer', sAuto: 'auto', sMeter: 'meter', sMt: 'mt', sTinv: 'tinv' };
+  const segs = { sDot: 'dot', sCrt: 'crt', sBgm: 'bgm', sCam: 'cam', sSteer: 'steer', sAuto: 'auto', sMeter: 'meter', sMt: 'mt', sTinv: 'tinv', sFps: 'fps', sFpsV: 'fpsv' };
   for (const [id, key] of Object.entries(segs)) for (const b of $(id).querySelectorAll('button')) b.addEventListener('click', () => {
     if (key === 'steer' && SET.steer !== 2) GYRO_PREV = SET.steer; SET[key] = +b.dataset.v; saveSet(); AUDIO.click(); for (const o of $(id).querySelectorAll('button')) o.classList.toggle('on', o === b);
     if (key === 'tinv') { TILT.ang = -TILT.ang; TILT.c0 = -TILT.c0; tiltApply(); } if (key === 'dot' || key === 'crt') onResize(); if (key === 'bgm') AUDIO.setVol(); if (key === 'steer') { document.body.classList.toggle('slide', SET.steer === 1); if (SET.steer === 2) gyroStart(); tiltNote(); }
-    if (key === 'meter') document.body.classList.toggle('meterD', SET.meter === 1); if (key === 'mt') { document.body.classList.toggle('mt', SET.mt === 1); IN.shift = 0; }
+    if (key === 'meter') document.body.classList.toggle('meterD', SET.meter === 1); if (key === 'mt') { document.body.classList.toggle('mt', SET.mt === 1); IN.shift = 0; } if (key === 'fps' || key === 'fpsv') { FR.last = -1e9; fpsNote(); document.body.classList.toggle('fpsv', SET.fpsv === 1); }
   });
   $('sVol').addEventListener('input', () => { SET.vol = +$('sVol').value; saveSet(); AUDIO.setVol(); });
   $('sOpa').addEventListener('input', () => { SET.opa = +$('sOpa').value; saveSet(); applyLayout(); });
@@ -3256,7 +3260,30 @@ function passCheck() {
 }
 // ---------- はじまり ----------
 let RUN = true, LAST = 0;
-function frame(t) { if (!RUN) return; requestAnimationFrame(frame); const dt = Math.min(.05, Math.max(.001, (t - LAST) / 1000)); LAST = t; tick(dt); composer.render(); renderMirror(); }
+// フレームレート：30・60・120（設定）。120 は 120Hz 以上の画面で 1秒に120回。上限なしは画面の速さのまま（144Hz・240Hz など）
+// 画面の速さ（FR.hz）は、間引く前の呼ばれかたから測る。60Hz の画面では 120 にしても 60 まで
+const FR = { last: -1e9, prev: 0, list: [], hz: 0, n: 0, t0: 0, fps: 0, shown: '' };
+const fpsCap = () => { const v = SET.fps | 0; return v === 30 || v === 60 || v === 120 ? v : 0; };
+function frameOk(t) {
+  if (FR.prev) { const d = t - FR.prev; if (d > 2 && d < 60) { FR.list.push(d); if (FR.list.length > 40) FR.list.shift(); if (FR.list.length >= 20) { const a = FR.list.slice().sort((p, q) => p - q), hz = 1000 / a[a.length >> 2]; FR.hz = hz > 100 ? Math.round(hz) : Math.round(hz / 5) * 5 || Math.round(hz); } } }
+  FR.prev = t; const cap = fpsCap(); if (!cap) return true; const iv = 1000 / cap;
+  if (t - FR.last < iv - 1.5) return false; FR.last = t - FR.last < iv * 2 ? FR.last + iv : t; return true;
+}
+function fpsCount(t) {
+  FR.n++; if (!FR.t0) FR.t0 = t; if (t - FR.t0 < 500) return; FR.fps = FR.n * 1000 / (t - FR.t0); FR.n = 0; FR.t0 = t;
+  if (SET.fpsv === 1) { const h = `${Math.round(FR.fps)} FPS<small>${fpsCap() ? '上限' + fpsCap() : '上限なし'}${FR.hz ? '・画面' + FR.hz + 'Hz' : ''}</small>`; if (h !== FR.shown) { FR.shown = h; $('fpsV').innerHTML = h; } }
+  if (GAME.scr === 'settings') fpsNote();
+}
+function fpsNote() {
+  const el = $('fpsNote'); if (!el) return; const hz = FR.hz, cap = fpsCap();
+  const now = FR.fps ? `いま ${Math.round(FR.fps)} FPS（この画面は ${hz || '—'}Hz）。` : '';
+  const tip = hz && hz < 100 && (cap === 120 || !cap) ? '画面が 120Hz より遅いので、120 にしても画面の速さまでしか出ません（iPhone の Safari は、設定アプリ → Safari → 詳細 → Feature Flags の「Prefer Page Rendering Updates near 60fps」をオフにすると 120 になります）。' : '120 は 120Hz 以上の画面で使えます。重いときは 60 や、ドットを「あらい」に。';
+  const h = now + tip; if (el.textContent !== h) el.textContent = h;
+}
+function frame(t) {
+  if (!RUN) return; requestAnimationFrame(frame); if (!frameOk(t)) return; fpsCount(t);
+  const dt = Math.min(.05, Math.max(.001, (t - LAST) / 1000)); LAST = t; tick(dt); composer.render(); renderMirror();
+}
 async function boot() {
   const say = t => { $('loadmsg').textContent = t; };
   if (HUB.embedded) { try { applyHome(JSON.parse(localStorage.getItem('3dame-settings'))); } catch (e) { /* なし */ } addEventListener('message', e => { if (e.data && e.data.h3dSet) applyHome(e.data.h3dSet); }); }
@@ -3268,12 +3295,12 @@ async function boot() {
     say('車を用意しています…'); await nextFrame();
     carMats(); buildTrafficMeshes(); initTraffic(); setDensity(TRAF_D[1]); initSparks(); initWeather(); setWeather(0); initHud(); initMirror(); drawPinIcon();
     setPlayerCar(); placeCar(PL, 60, -3.5, 36); resetTraffic(PL.s, [{ s: PL.s }]);
-    wireUI(); document.body.classList.toggle('slide', SET.steer === 1); document.body.classList.toggle('meterD', SET.meter === 1); document.body.classList.toggle('mt', SET.mt === 1); applyLayout();
+    wireUI(); document.body.classList.toggle('slide', SET.steer === 1); document.body.classList.toggle('meterD', SET.meter === 1); document.body.classList.toggle('mt', SET.mt === 1); document.body.classList.toggle('fpsv', SET.fpsv === 1); applyLayout();
     tick(.016); renderer.compile(scene, camera); composer.render();
     refreshTitle(); show('title'); LAST = performance.now(); requestAnimationFrame(frame);
   } catch (e) { say('エラー：' + (e && e.message)); console.error(e); }
 }
-window.__NH = { SIGNS, isTun, TILT, onResize, show, loadStage, STAGES, get STG() { return STG; }, MONO, WHEEL, BOTS, FREE, startFree, openFreeSet, freeOrder, progOf, setDensity, loop(on) { RUN = on; if (on) { LAST = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { composer.render(); renderMirror(); }, composer, GAME, SAVE, SET, TRK, TRAFFIC, RIVALS, CARS, AUDIO,
+window.__NH = { FR, SIGNS, isTun, TILT, onResize, show, loadStage, STAGES, get STG() { return STG; }, MONO, WHEEL, BOTS, FREE, startFree, openFreeSet, freeOrder, progOf, setDensity, loop(on) { RUN = on; if (on) { LAST = performance.now(); requestAnimationFrame(frame); } }, tick, render: () => { composer.render(); renderMirror(); }, composer, GAME, SAVE, SET, TRK, TRAFFIC, RIVALS, CARS, AUDIO,
   get PL() { return PL; }, get RV() { return RV; }, MIRROR, LOW, renderMirror, MAT, TEX, CMAT, SPOT, hemi, moon, WORLD, startBattle, startFree, openGarage, layoutEdit, applyLayout, openSettings, LAMPS, RETRO, GLB, aiControl, statsOf, playerCtl, setWeather, setDawn, WX, get WET() { return WET; }, SPR, openRecords, STORY, FINAL, chatSay, freeSpec, drawFreeCar, time200, physics, openStory, preBattle, toTitle, showResult, IN, CAM, camera, scene, renderer };
 boot();
 </script>
